@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./Login.css";
+import "./login.css";
 import { login } from "./services/api";
 
 const Login = () => {
@@ -10,11 +10,8 @@ const Login = () => {
   const handleLogin = async () => {
     try {
       setError("");
-
       const data = await login(username, password);
-
       localStorage.setItem("token", data.token);
-
       alert("Login Successful!");
     } catch (err: unknown) {
       if (err instanceof Error) {

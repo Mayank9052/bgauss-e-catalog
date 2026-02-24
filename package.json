@@ -1,0 +1,16 @@
+{
+  "name": "bgauss-orchestrator",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "api": "dotnet run --project BGAUSS.Api",
+    "client": "cd vite-project && npm run dev",
+    "dev-all": "concurrently \"npm run api\" \"npm run client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "react-router-dom": "^7.13.1"
+  }
+}

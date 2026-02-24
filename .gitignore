@@ -1,0 +1,25 @@
+# Node
+node_modules/
+dist/
+vite-project/node_modules/
+vite-project/dist/
+
+# Logs
+*.log
+
+# Environment
+.env
+
+# .NET
+bin/
+obj/
+BGAUSS.Api/bin/
+BGAUSS.Api/obj/
+
+# VS
+.vs/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

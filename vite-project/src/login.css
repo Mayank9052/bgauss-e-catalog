@@ -1,0 +1,124 @@
+/* ===== FULL PAGE BACKGROUND ===== */
+.login-wrapper {
+  height: 100vh;
+  width: 100%;
+  background: #cfd8df;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* ===== MAIN CARD ===== */
+.login-card {
+  width: 900px;
+  height: 450px;
+  display: flex;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 25px 40px rgba(0, 0, 0, 0.25);
+  background: #e9edf1;
+}
+
+/* ===== LEFT SECTION ===== */
+.login-left {
+  flex: 1;
+  padding: 70px 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #e3e8ee;
+}
+
+/* ===== RIGHT SECTION ===== */
+.login-right {
+  flex: 1;
+  position: relative;
+  background: #b7c2cb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ===== PERFECT DIAGONAL ===== */
+.login-right::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: #6b9db6;
+  clip-path: polygon(35% 0, 100% 0, 100% 100%, 0% 100%);
+}
+
+/* ===== RIGHT TEXT ===== */
+.login-right h2 {
+  position: relative;
+  color: white;
+  font-size: 26px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
+  z-index: 2;
+}
+
+/* ===== INPUT STYLE ===== */
+.form-group {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 14px 45px 14px 14px;
+  border: none;
+  border-bottom: 2px solid #000;
+  background: #dbe2ea;
+  font-size: 15px;
+  outline: none;
+}
+
+/* ===== ICON POSITION ===== */
+.icon {
+  position: absolute;
+  right: 12px;
+  top: 14px;
+  font-size: 18px;
+}
+
+/* ===== LOGIN BUTTON ===== */
+.login-btn {
+  margin-top: 10px;
+  padding: 14px;
+  border: none;
+  border-radius: 28px;
+  background: #0e4f67;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.login-btn:hover {
+  background: #083a4f;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .login-card {
+    flex-direction: column;
+    width: 90%;
+    height: auto;
+  }
+
+  .login-right {
+    display: none;
+  }
+
+  .login-left {
+    padding: 40px;
+  }
+}

@@ -18,7 +18,7 @@ export async function login(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message);
+    throw new Error(error.message || "Login failed");
   }
 
   return response.json();

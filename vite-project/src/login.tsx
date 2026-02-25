@@ -1,6 +1,8 @@
 import { useState } from "react";
 import "./login.css";
 import { login } from "./services/api";
+import logo from "./assets/logo.jpg";
+import ev from "./assets/ev.png";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -13,7 +15,7 @@ const Login = () => {
       setError("");
       const data = await login(username, password, debugTrigger);
       localStorage.setItem("token", data.token);
-      alert("Login Successful!");
+      window.location.href = "/dashboard";
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -26,7 +28,13 @@ const Login = () => {
   return (
     <div className="login-wrapper">
       <div className="login-card">
+
+        {/* LEFT SIDE - LOGIN */}
         <div className="login-left">
+          <div className="logo-section">
+            <img src={logo} alt="BGAUSS Logo" />
+            <h2>BGAUSS Auto India Pvt Ltd</h2>
+          </div>
 
           <div className="form-group">
             <input
@@ -35,7 +43,6 @@ const Login = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
-            <span className="icon">👤</span>
           </div>
 
           <div className="form-group">
@@ -45,7 +52,6 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <span className="icon">👁</span>
           </div>
 
           <div className="form-group">
@@ -66,12 +72,11 @@ const Login = () => {
           </button>
         </div>
 
+        {/* RIGHT SIDE - EV IMAGE */}
         <div className="login-right">
-          <h2>
-            Electronic Parts <br />
-            Catalog
-          </h2>
+          <img src={ev} alt="Electric Scooter" className="ev-image" />
         </div>
+
       </div>
     </div>
   );

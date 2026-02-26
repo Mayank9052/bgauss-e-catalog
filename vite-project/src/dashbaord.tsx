@@ -1,7 +1,15 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logo from "./assets/logo.jpg";
 import "./dashbaord.css";
+import {
+  getVehicleModels,
+  getVehicleVariants,
+  getVehicleColours,
+  VehicleModel,
+  VehicleVariant,
+  VehicleColour,
+} from "./services/api";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -13,6 +21,52 @@ const Dashboard = () => {
 
   const [vinError, setVinError] = useState("");
   const [modelError, setModelError] = useState("");
+
+  // API data states
+  const [models, setModels] = useState<VehicleModel[]>([]);
+  const [variants, setVariants] = useState<VehicleVariant[]>([]);
+  const [colours, setColours] = useState<VehicleColour[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch models and colours on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [modelsData, coloursData] = await Promise.all([
+          getVehicleModels(),
+          getVehicleColours(),
+        ]);
+        setModels(modelsData);
+        setColours(coloursData);
+        setLoading(false);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch variants when model changes
+  useEffect(() => {
+    if (model) {
+      const fetchVariants = async () => {
+        try {
+          const modelId = parseInt(model);
+          const variantsData = await getVehicleVariants(modelId);
+          setVariants(variantsData);
+          setVariant(""); // Reset variant when model changes
+        } catch (error) {
+          console.error("Failed to fetch variants:", error);
+        }
+      };
+
+      fetchVariants();
+    } else {
+      setVariants([]);
+    }
+  }, [model]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -32,7 +86,7 @@ const Dashboard = () => {
     }
 
     setVinError("");
-    navigate("/parts");
+    navigate("/parts", { state: { searchType: "vin", vin } });
   };
 
   // ================= MODEL SEARCH =================
@@ -43,7 +97,14 @@ const Dashboard = () => {
     }
 
     setModelError("");
-    navigate("/parts");
+    navigate("/parts", {
+      state: {
+        searchType: "model",
+        modelId: parseInt(model),
+        variantId: parseInt(variant),
+        colourId: parseInt(colour),
+      },
+    });
   };
 
   return (
@@ -102,70 +163,86 @@ const Dashboard = () => {
         <div className="modern-card">
           <h3>Search by Model & Colour</h3>
 
-          <div className="floating-input">
-            <select
-              value={model}
-              onChange={(e) => {
-                setModel(e.target.value);
-                setModelError("");
-              }}
-            >
-              <option value=""> </option>
-              <option>C12</option>
-              <option>D15</option>
-            </select>
-            <label>Vehicle Model</label>
-          </div>
+          {loading ? (
+            <p>Loading options...</p>
+          ) : (
+            <>
+              <div className="floating-input">
+                <select
+                  value={model}
+                  onChange={(e) => {
+                    setModel(e.target.value);
+                    setModelError("");
+                  }}
+                >
+                  <option value=""> </option>
+                  {models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.modelName}
+                    </option>
+                  ))}
+                </select>
+                <label>Vehicle Model</label>
+              </div>
 
-          <div className="floating-input">
-            <select
-              value={variant}
-              onChange={(e) => {
-                setVariant(e.target.value);
-                setModelError("");
-              }}
-            >
-              <option value=""> </option>
-              <option>Standard</option>
-              <option>Pro</option>
-            </select>
-            <label>Vehicle Variant</label>
-          </div>
+              <div className="floating-input">
+                <select
+                  value={variant}
+                  onChange={(e) => {
+                    setVariant(e.target.value);
+                    setModelError("");
+                  }}
+                  disabled={!model}
+                >
+                  <option value=""> </option>
+                  {variants.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.variantName}
+                    </option>
+                  ))}
+                </select>
+                <label>Vehicle Variant</label>
+              </div>
 
-          <div className="floating-input">
-            <select
-              value={colour}
-              onChange={(e) => {
-                setColour(e.target.value);
-                setModelError("");
-              }}
-            >
-              <option value=""> </option>
-              <option>White</option>
-              <option>Black</option>
-            </select>
-            <label>Vehicle Colour</label>
-          </div>
+              <div className="floating-input">
+                <select
+                  value={colour}
+                  onChange={(e) => {
+                    setColour(e.target.value);
+                    setModelError("");
+                  }}
+                >
+                  <option value=""> </option>
+                  {colours.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.colourName}
+                    </option>
+                  ))}
+                </select>
+                <label>Vehicle Colour</label>
+              </div>
 
-          {modelError && <p className="error-text">{modelError}</p>}
+              {modelError && <p className="error-text">{modelError}</p>}
 
-          <div className="btn-row">
-            <button className="primary-btn" onClick={handleModelSearch}>
-              Search
-            </button>
+              <div className="btn-row">
+                <button className="primary-btn" onClick={handleModelSearch}>
+                  Search
+                </button>
 
-            <button
-              className="secondary-btn"
-              onClick={() => {
-                setModel("");
-                setVariant("");
-                setColour("");
-                setModelError("");
-              }}
-            >
-              Reset
-            </button>
-          </div>
+                <button
+                  className="secondary-btn"
+                  onClick={() => {
+                    setModel("");
+                    setVariant("");
+                    setColour("");
+                    setModelError("");
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
       </div>

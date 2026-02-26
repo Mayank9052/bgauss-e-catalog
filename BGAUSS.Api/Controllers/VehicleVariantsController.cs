@@ -15,6 +15,20 @@ public class VehicleVariantsController : ControllerBase
         _context = context;
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetAll(int? modelId)
+    {
+        IQueryable<VehicleVariant> query = _context.VehicleVariants;
+
+        if (modelId.HasValue)
+        {
+            query = query.Where(v => v.ModelId == modelId.Value);
+        }
+
+        var variants = await query.ToListAsync();
+        return Ok(variants);
+    }
+
     [HttpGet("by-model/{modelId}")]
     public async Task<IActionResult> GetByModel(int modelId)
     {

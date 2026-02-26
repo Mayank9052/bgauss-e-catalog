@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import logo from "./assets/logo.jpg";
 import "./dashbaord.css";
+import TableSelect from "./components/TableSelect";
 import {
   getVehicleModels,
   getVehicleVariants,
@@ -168,58 +169,62 @@ const Dashboard = () => {
           ) : (
             <>
               <div className="floating-input">
-                <select
+                <TableSelect
+                  label="Vehicle Model"
+                  columns={["Model Name", "ID"]}
+                  options={models.map((m) => ({
+                    id: m.id,
+                    "Model Name": m.modelName,
+                    "Model name": m.modelName,
+                    id: m.id,
+                  }))}
                   value={model}
-                  onChange={(e) => {
-                    setModel(e.target.value);
+                  onChange={(id) => {
+                    setModel(String(id));
                     setModelError("");
                   }}
-                >
-                  <option value=""> </option>
-                  {models.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.modelName}
-                    </option>
-                  ))}
-                </select>
-                <label>Vehicle Model</label>
+                  displayColumn="modelName"
+                />
               </div>
 
               <div className="floating-input">
-                <select
+                <TableSelect
+                  label="Vehicle Variant"
+                  columns={["Variant Name", "Model ID"]}
+                  options={variants.map((v) => ({
+                    id: v.id,
+                    "Variant Name": v.variantName,
+                    "variant name": v.variantName,
+                    "Model ID": v.modelId,
+                    "model id": v.modelId,
+                  }))}
                   value={variant}
-                  onChange={(e) => {
-                    setVariant(e.target.value);
+                  onChange={(id) => {
+                    setVariant(String(id));
                     setModelError("");
                   }}
+                  displayColumn="variantName"
                   disabled={!model}
-                >
-                  <option value=""> </option>
-                  {variants.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.variantName}
-                    </option>
-                  ))}
-                </select>
-                <label>Vehicle Variant</label>
+                />
               </div>
 
               <div className="floating-input">
-                <select
+                <TableSelect
+                  label="Vehicle Colour"
+                  columns={["Colour Name", "ID"]}
+                  options={colours.map((c) => ({
+                    id: c.id,
+                    "Colour Name": c.colourName,
+                    "colour name": c.colourName,
+                    id: c.id,
+                  }))}
                   value={colour}
-                  onChange={(e) => {
-                    setColour(e.target.value);
+                  onChange={(id) => {
+                    setColour(String(id));
                     setModelError("");
                   }}
-                >
-                  <option value=""> </option>
-                  {colours.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.colourName}
-                    </option>
-                  ))}
-                </select>
-                <label>Vehicle Colour</label>
+                  displayColumn="colourName"
+                />
               </div>
 
               {modelError && <p className="error-text">{modelError}</p>}

@@ -122,6 +122,39 @@
   outline: none;
 }
 
+.floating-input .table-select-wrapper {
+  width: 100%;
+}
+
+.floating-input .table-select-trigger {
+  background: white;
+  border: 1px solid #ccc;
+  color: #333;
+  padding: 14px;
+}
+
+.floating-input .table-select-label {
+  position: absolute;
+  left: 12px;
+  top: -8px;
+  font-size: 11px;
+  color: #0e4f67;
+  background: white;
+  padding: 0 4px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.floating-input .table-select-value {
+  color: #333;
+  text-align: left;
+  margin: 0;
+}
+
+.floating-input .table-select-arrow {
+  order: 3;
+}
+
 .floating-input label {
   position: absolute;
   left: 12px;

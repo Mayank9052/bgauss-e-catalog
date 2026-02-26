@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BGAUSS.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260225095800_CreateUsersTable")]
-    partial class CreateUsersTable
+    [Migration("20260226073537_SyncWithExistingDb")]
+    partial class SyncWithExistingDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

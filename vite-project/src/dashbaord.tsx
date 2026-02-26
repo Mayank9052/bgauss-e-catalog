@@ -174,7 +174,7 @@ const Dashboard = () => {
                   columns={["Model Name"]}
                   options={models.map((m) => ({
                     id: m.id,
-                    "Model Name": m.modelName,
+                    modelName: m.modelName,
                   }))}
                   value={model}
                   onChange={(id) => {
@@ -191,7 +191,7 @@ const Dashboard = () => {
                   columns={["Variant Name"]}
                   options={variants.map((v) => ({
                     id: v.id,
-                    "Variant Name": v.variantName,
+                    variantName: v.variantName,
                   }))}
                   value={variant}
                   onChange={(id) => {
@@ -209,7 +209,7 @@ const Dashboard = () => {
                   columns={["Colour Name"]}
                   options={colours.map((c) => ({
                     id: c.id,
-                    "Colour Name": c.colourName,
+                    colourName: c.colourName,
                   }))}
                   value={colour}
                   onChange={(id) => {

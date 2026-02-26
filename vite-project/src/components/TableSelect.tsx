@@ -9,6 +9,7 @@ interface TableSelectProps {
   onChange: (id: string | number) => void;
   displayColumn: string;
   disabled?: boolean;
+  columnKeys?: string[]; // Mapping for column display names to object keys
 }
 
 const TableSelect = ({
@@ -19,10 +20,22 @@ const TableSelect = ({
   onChange,
   displayColumn,
   disabled = false,
+  columnKeys,
 }: TableSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<number | string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Create a mapping of column display names to object keys
+  const columnMapping = columnKeys || columns.map((col) => {
+    // Convert "Model Name" -> "modelName"
+    return col
+      .split(" ")
+      .map((word, idx) => 
+        idx === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      )
+      .join("");
+  });
 
   const selectedOption = options.find((opt) => String(opt.id) === String(value));
   const displayValue = selectedOption ? selectedOption[displayColumn] : "";
@@ -105,16 +118,11 @@ const TableSelect = ({
                     onMouseEnter={() => setHoveredId(option.id)}
                     onMouseLeave={() => setHoveredId(null)}
                   >
-                    {columns.map((col) => {
-                      const colKey = Object.keys(option).find(
-                        (key) => key.toLowerCase() === col.toLowerCase()
-                      );
-                      return (
-                        <td key={col}>
-                          {colKey ? option[colKey as keyof typeof option] : "-"}
-                        </td>
-                      );
-                    })}
+                    {columnMapping.map((key, idx) => (
+                      <td key={idx}>
+                        {option[key] || "-"}
+                      </td>
+                    ))}
                   </tr>
                 ))
               )}

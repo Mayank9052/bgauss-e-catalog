@@ -77,15 +77,6 @@ const TableSelect = ({
         </span>
       </div>
 
-      {selectedObj && displayValue && (
-        <div className="table-select-details">
-          <div className="detail-row">
-            <span className="detail-label">Selected:</span>
-            <span className="detail-value">{displayValue}</span>
-          </div>
-        </div>
-      )}
-
       {isOpen && (
         <div className="table-select-dropdown">
           <table className="table-select-table">

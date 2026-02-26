@@ -31,17 +31,8 @@ export interface Part {
 
 export async function login(
   username: string,
-  password: string,
-  debug = false
+  password: string
 ): Promise<LoginResponse> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (debug) {
-    headers["X-Debug-Break"] = "true";
-  }
-
   const response = await fetch("/api/auth/login", {
     method: "POST",
     headers: {

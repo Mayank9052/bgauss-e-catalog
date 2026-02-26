@@ -8,12 +8,11 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [debugTrigger, setDebugTrigger] = useState(false);
 
   const handleLogin = async () => {
     try {
       setError("");
-      const data = await login(username, password, debugTrigger);
+      const data = await login(username, password);
       localStorage.setItem("token", data.token);
       window.location.href = "/dashboard";
     } catch (err: unknown) {
@@ -52,17 +51,6 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-          </div>
-
-          <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="checkbox"
-                checked={debugTrigger}
-                onChange={(e) => setDebugTrigger(e.target.checked)}
-              />
-              <span style={{ fontSize: 12 }}>Trigger Debugger</span>
-            </label>
           </div>
 
           {error && <p className="error">{error}</p>}

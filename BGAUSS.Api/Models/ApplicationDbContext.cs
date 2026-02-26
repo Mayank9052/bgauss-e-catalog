@@ -19,6 +19,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Part> Parts { get; set; }
     public DbSet<ModelPart> ModelParts { get; set; }
     public DbSet<PartImage> PartImages { get; set; }
+    public DbSet<Cart> Carts { get; set; }
+    public DbSet<CartItem> CartItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,6 +28,10 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Vehicle>()
             .HasIndex(v => v.VIN)
+            .IsUnique();
+
+        modelBuilder.Entity<CartItem>()
+            .HasIndex(ci => new { ci.CartId, ci.PartId })
             .IsUnique();
     }
 }

@@ -1,0 +1,21 @@
+.header-bar {
+  background-color: #0b5c74;
+  padding: 12px 20px;
+  border-radius: 4px;
+}
+
+.cart-icon {
+  color: white;
+  font-size: 20px;
+}
+
+.image-section {
+  background-color: #f5f5f5;
+  padding: 15px;
+  border-radius: 5px;
+}
+
+table th,
+table td {
+  vertical-align: middle;
+}

@@ -48,11 +48,23 @@
 
 /* SELECTED DETAILS SECTION */
 .table-select-details {
-  background: rgba(11, 60, 77, 0.08);
-  padding: 10px 12px;
-  margin-top: 8px;
+  background: #f5fafb;
+  padding: 12px 14px;
+  margin-top: 10px;
   border-radius: 6px;
-  border: 1px solid rgba(11, 60, 77, 0.2);
+  border: 1px solid #d4e8ed;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .detail-row {
@@ -60,17 +72,24 @@
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  margin: 4px 0;
+  margin: 5px 0;
+}
+
+.detail-row:last-child {
+  margin-bottom: 0;
 }
 
 .detail-label {
-  color: #666;
+  color: #0e4f67;
   font-weight: 600;
+  min-width: 70px;
 }
 
 .detail-value {
-  color: #0b3c4d;
+  color: #145f7a;
   font-weight: 500;
+  text-align: right;
+  flex: 1;
 }
 
 /* DROPDOWN */

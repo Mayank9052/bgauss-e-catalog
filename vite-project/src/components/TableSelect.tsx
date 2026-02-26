@@ -24,7 +24,7 @@ const TableSelect = ({
   const [hoveredId, setHoveredId] = useState<number | string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find((opt) => opt.id === value);
+  const selectedOption = options.find((opt) => String(opt.id) === String(value));
   const displayValue = selectedOption ? selectedOption[displayColumn] : "";
 
   // Close dropdown when clicking outside
@@ -47,7 +47,7 @@ const TableSelect = ({
     setIsOpen(false);
   };
 
-  const selectedObj = options.find((opt) => opt.id === value);
+  const selectedObj = options.find((opt) => String(opt.id) === String(value));
 
   return (
     <div className="table-select-wrapper" ref={containerRef}>
@@ -99,8 +99,8 @@ const TableSelect = ({
                   <tr
                     key={option.id}
                     className={`table-select-row ${
-                      option.id === value ? "selected" : ""
-                    } ${hoveredId === option.id ? "hovered" : ""}`}
+                      String(option.id) === String(value) ? "selected" : ""
+                    } ${String(hoveredId) === String(option.id) ? "hovered" : ""}`}
                     onClick={() => handleSelect(option.id)}
                     onMouseEnter={() => setHoveredId(option.id)}
                     onMouseLeave={() => setHoveredId(null)}

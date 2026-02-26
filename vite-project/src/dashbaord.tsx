@@ -1,11 +1,14 @@
+import { useNavigate } from "react-router-dom";
 import logo from "./assets/logo.jpg";
 import "./dashbaord.css";
 
 
 const Dashboard = () => {
+   const navigate = useNavigate();
   const handleLogout = () => {
     localStorage.removeItem("token");
     window.location.href = "/";
+    
   };
 
   return (
@@ -40,15 +43,14 @@ const Dashboard = () => {
           <h3>Search with VIN</h3>
 
           <div className="floating-input">
-            <input type="text" placeholder=" " />
-            <label>Enter 17 Digit VIN Number</label>
+            <input type="text" placeholder="Enter 17 Digit VIN" />
           </div>
 
           <p className="note">
             VIN is a unique 17-digit identification number assigned to every vehicle.
           </p>
 
-          <button className="primary-btn">Search</button>
+          <button className="primary-btn" onClick={() => navigate("/parts")}>Search</button>
         </div>
 
         {/* MODEL CARD */}
@@ -81,9 +83,8 @@ const Dashboard = () => {
             </select>
             <label>Vehicle Colour</label>
           </div>
-
           <div className="btn-row">
-            <button className="primary-btn">Search</button>
+            <button className="primary-btn" onClick={() => navigate("/parts")}>Search</button>
             <button className="secondary-btn">Reset</button>
           </div>
         </div>

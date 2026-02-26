@@ -171,12 +171,10 @@ const Dashboard = () => {
               <div className="floating-input">
                 <TableSelect
                   label="Vehicle Model"
-                  columns={["Model Name", "ID"]}
+                  columns={["Model Name"]}
                   options={models.map((m) => ({
                     id: m.id,
                     "Model Name": m.modelName,
-                    "Model name": m.modelName,
-                    id: m.id,
                   }))}
                   value={model}
                   onChange={(id) => {
@@ -190,13 +188,10 @@ const Dashboard = () => {
               <div className="floating-input">
                 <TableSelect
                   label="Vehicle Variant"
-                  columns={["Variant Name", "Model ID"]}
+                  columns={["Variant Name"]}
                   options={variants.map((v) => ({
                     id: v.id,
                     "Variant Name": v.variantName,
-                    "variant name": v.variantName,
-                    "Model ID": v.modelId,
-                    "model id": v.modelId,
                   }))}
                   value={variant}
                   onChange={(id) => {
@@ -211,12 +206,10 @@ const Dashboard = () => {
               <div className="floating-input">
                 <TableSelect
                   label="Vehicle Colour"
-                  columns={["Colour Name", "ID"]}
+                  columns={["Colour Name"]}
                   options={colours.map((c) => ({
                     id: c.id,
                     "Colour Name": c.colourName,
-                    "colour name": c.colourName,
-                    id: c.id,
                   }))}
                   value={colour}
                   onChange={(id) => {

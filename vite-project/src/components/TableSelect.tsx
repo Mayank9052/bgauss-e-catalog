@@ -87,9 +87,16 @@ const TableSelect = ({
                     }`}
                     onClick={() => handleSelect(option.id)}
                   >
-                    {columns.map((col) => (
-                      <td key={col}>{option[col.toLowerCase()] || "-"}</td>
-                    ))}
+                    {columns.map((col) => {
+                      const colKey = Object.keys(option).find(
+                        (key) => key.toLowerCase() === col.toLowerCase()
+                      );
+                      return (
+                        <td key={col}>
+                          {colKey ? option[colKey as keyof typeof option] : "-"}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))
               )}

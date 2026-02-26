@@ -6,10 +6,9 @@ interface TableSelectProps {
   columns: string[];
   options: Array<{ id: number | string; [key: string]: any }>;
   value: string | number;
-  onChange: (id: string | number, fullObject?: any) => void;
+  onChange: (id: string | number) => void;
   displayColumn: string;
   disabled?: boolean;
-  onSelect?: (selectedObject: any) => void;
 }
 
 const TableSelect = ({
@@ -20,7 +19,6 @@ const TableSelect = ({
   onChange,
   displayColumn,
   disabled = false,
-  onSelect,
 }: TableSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<number | string | null>(null);
@@ -45,11 +43,7 @@ const TableSelect = ({
   }, []);
 
   const handleSelect = (id: string | number) => {
-    const selectedObj = options.find((opt) => opt.id === id);
-    onChange(id, selectedObj);
-    if (onSelect && selectedObj) {
-      onSelect(selectedObj);
-    }
+    onChange(id);
     setIsOpen(false);
   };
 
@@ -70,7 +64,7 @@ const TableSelect = ({
         </span>
       </div>
 
-      {selectedObj && (
+      {selectedObj && displayValue && (
         <div className="table-select-details">
           <div className="detail-row">
             <span className="detail-label">Selected:</span>

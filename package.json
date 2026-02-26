@@ -5,10 +5,11 @@
   "scripts": {
     "api": "dotnet run --project BGAUSS.Api",
     "client": "cd vite-project && npm run dev",
-    "dev-all": "concurrently \"npm run api\" \"npm run client\""
+    "dev-all": "concurrently -k -n API,CLIENT \"npm run api\" \"wait-on tcp:5000 && npm run client\""
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "wait-on": "^9.0.4"
   },
   "dependencies": {
     "react-router-dom": "^7.13.1"

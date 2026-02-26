@@ -196,7 +196,8 @@
 }
 
 .error-text {
-  color: red;
+  color: #e63946;
   font-size: 12px;
-  margin-top: 5px;
+  margin-top: -15px;
+  margin-bottom: 15px;
 }

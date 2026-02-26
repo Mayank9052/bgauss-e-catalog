@@ -6,9 +6,10 @@ interface TableSelectProps {
   columns: string[];
   options: Array<{ id: number | string; [key: string]: any }>;
   value: string | number;
-  onChange: (id: string | number) => void;
+  onChange: (id: string | number, fullObject?: any) => void;
   displayColumn: string;
   disabled?: boolean;
+  onSelect?: (selectedObject: any) => void;
 }
 
 const TableSelect = ({
@@ -19,8 +20,10 @@ const TableSelect = ({
   onChange,
   displayColumn,
   disabled = false,
+  onSelect,
 }: TableSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [hoveredId, setHoveredId] = useState<number | string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.id === value);
@@ -42,9 +45,15 @@ const TableSelect = ({
   }, []);
 
   const handleSelect = (id: string | number) => {
-    onChange(id);
+    const selectedObj = options.find((opt) => opt.id === id);
+    onChange(id, selectedObj);
+    if (onSelect && selectedObj) {
+      onSelect(selectedObj);
+    }
     setIsOpen(false);
   };
+
+  const selectedObj = options.find((opt) => opt.id === value);
 
   return (
     <div className="table-select-wrapper" ref={containerRef}>
@@ -60,6 +69,19 @@ const TableSelect = ({
           ▼
         </span>
       </div>
+
+      {selectedObj && (
+        <div className="table-select-details">
+          <div className="detail-row">
+            <span className="detail-label">Selected:</span>
+            <span className="detail-value">{displayValue}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">ID:</span>
+            <span className="detail-value">{selectedObj.id}</span>
+          </div>
+        </div>
+      )}
 
       {isOpen && (
         <div className="table-select-dropdown">
@@ -84,8 +106,10 @@ const TableSelect = ({
                     key={option.id}
                     className={`table-select-row ${
                       option.id === value ? "selected" : ""
-                    }`}
+                    } ${hoveredId === option.id ? "hovered" : ""}`}
                     onClick={() => handleSelect(option.id)}
+                    onMouseEnter={() => setHoveredId(option.id)}
+                    onMouseLeave={() => setHoveredId(null)}
                   >
                     {columns.map((col) => {
                       const colKey = Object.keys(option).find(

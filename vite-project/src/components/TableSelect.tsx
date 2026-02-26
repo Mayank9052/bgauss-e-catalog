@@ -83,10 +83,6 @@ const TableSelect = ({
             <span className="detail-label">Selected:</span>
             <span className="detail-value">{displayValue}</span>
           </div>
-          <div className="detail-row">
-            <span className="detail-label">ID:</span>
-            <span className="detail-value">{selectedObj.id}</span>
-          </div>
         </div>
       )}
 

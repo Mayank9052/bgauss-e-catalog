@@ -117,5 +117,67 @@ namespace BGAUSS.Api.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Username))
+                return BadRequest("Username is required");
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username == request.Username && u.IsActive);
+
+            if (user == null)
+                return Ok(new { message = "If user exists, reset instructions sent." });
+
+            // Generate token
+            var resetToken = Guid.NewGuid().ToString();
+
+            user.PasswordResetToken = resetToken;
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(30);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // In real project → send email
+            // For now return token (for testing)
+            return Ok(new
+            {
+                message = "Password reset token generated",
+                resetToken = resetToken
+            });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Username) ||
+                string.IsNullOrWhiteSpace(request.Token) ||
+                string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                return BadRequest("Invalid request");
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u =>
+                    u.Username == request.Username &&
+                    u.PasswordResetToken == request.Token &&
+                    u.PasswordResetTokenExpiry > DateTime.UtcNow);
+
+            if (user == null)
+                return BadRequest("Invalid or expired token");
+
+            // Hash new password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+            // Clear token
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiry = null;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Password reset successful" });
+        }
     }
 }

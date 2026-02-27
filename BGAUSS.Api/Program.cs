@@ -1,15 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
+using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//builder.Services.AddControllers();
+ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler =
             System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

@@ -22,6 +22,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<Cart> Carts { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
 
+    public DbSet<Assembly> Assemblies { get; set; }
+    public DbSet<AssemblyPart> AssemblyParts { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -32,6 +35,23 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<CartItem>()
             .HasIndex(ci => new { ci.CartId, ci.PartId })
+            .IsUnique();
+
+        modelBuilder.Entity<AssemblyPart>()
+            .HasOne(ap => ap.Assembly)
+            .WithMany(a => a.AssemblyParts)
+            .HasForeignKey(ap => ap.AssemblyId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AssemblyPart>()
+            .HasOne(ap => ap.Part)
+            .WithMany()
+            .HasForeignKey(ap => ap.PartId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // 🔥 Prevent duplicate part inside same assembly
+        modelBuilder.Entity<AssemblyPart>()
+            .HasIndex(ap => new { ap.AssemblyId, ap.PartId })
             .IsUnique();
     }
 }

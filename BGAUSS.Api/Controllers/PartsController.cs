@@ -26,15 +26,15 @@ public class PartsController : ControllerBase
             .Select(p => new PartResponse
             {
                 Id = p.Id,
-                PartNumber = p.PartNumber,
-                PartName = p.PartName,
-                Description = p.Description,
-                BDP = p.BDP,
-                MRP = p.MRP,
-                TaxPercent = p.TaxPercent,
-                PageReference = p.PageReference,
-                ImagePath = p.ImagePath,
-                CategoryName = p.Category != null ? p.Category.CategoryName : null
+                PartNumber = p.PartNumber ?? string.Empty,
+                PartName = p.PartName ?? string.Empty,
+                Description = p.Description ?? string.Empty,
+                BDP = p.BDP ?? 0,
+                MRP = p.MRP ?? 0,
+                TaxPercent = p.TaxPercent ?? 0,
+                PageReference = p.PageReference ?? string.Empty,
+                ImagePath = p.ImagePath ?? string.Empty,
+                CategoryName = p.Category != null ? p.Category.CategoryName ?? string.Empty : string.Empty
             })
             .ToListAsync();
 
@@ -48,7 +48,7 @@ public class PartsController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        await _context.Parts.AddAsync(part);
+        _context.Parts.Add(part);
         await _context.SaveChangesAsync();
 
         return Ok(part);
@@ -66,9 +66,9 @@ public class PartsController : ControllerBase
         part.PartNumber = updated.PartNumber;
         part.Description = updated.Description;
 
-        part.BDP = updated.BDP;
-        part.MRP = updated.MRP;
-        part.TaxPercent = updated.TaxPercent;
+        part.BDP = updated.BDP ?? 0;
+        part.MRP = updated.MRP ?? 0;
+        part.TaxPercent = updated.TaxPercent ?? 0;
 
         part.PageReference = updated.PageReference;
         part.ImagePath = updated.ImagePath;
@@ -79,7 +79,7 @@ public class PartsController : ControllerBase
         return Ok(part);
     }
 
-    // ✅ DELETE PART
+    // ✅ DELETE
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -93,7 +93,7 @@ public class PartsController : ControllerBase
         return Ok(new { message = "Deleted successfully" });
     }
 
-    // ✅ SEARCH PARTS
+    // ✅ SEARCH
     [HttpGet("search")]
     public async Task<IActionResult> Search(string? name, string? partNumber)
     {
@@ -102,44 +102,42 @@ public class PartsController : ControllerBase
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(name))
-            query = query.Where(p => p.PartName!.Contains(name));
+            query = query.Where(p => p.PartName != null && p.PartName.Contains(name.Trim()));
 
         if (!string.IsNullOrWhiteSpace(partNumber))
-            query = query.Where(p => p.PartNumber!.Contains(partNumber));
+            query = query.Where(p => p.PartNumber != null && p.PartNumber.Contains(partNumber.Trim()));
 
         var result = await query
             .Select(p => new PartResponse
             {
                 Id = p.Id,
-                PartNumber = p.PartNumber,
-                PartName = p.PartName,
-                Description = p.Description,
-                BDP = p.BDP,
-                MRP = p.MRP,
-                TaxPercent = p.TaxPercent,
-                PageReference = p.PageReference,
-                ImagePath = p.ImagePath,
-                CategoryName = p.Category != null ? p.Category.CategoryName : null
+                PartNumber = p.PartNumber ?? string.Empty,
+                PartName = p.PartName ?? string.Empty,
+                Description = p.Description ?? string.Empty,
+                BDP = p.BDP ?? 0,
+                MRP = p.MRP ?? 0,
+                TaxPercent = p.TaxPercent ?? 0,
+                PageReference = p.PageReference ?? string.Empty,
+                ImagePath = p.ImagePath ?? string.Empty,
+                CategoryName = p.Category != null ? p.Category.CategoryName ?? string.Empty : string.Empty
             })
             .ToListAsync();
 
         return Ok(result);
     }
 
+    // ✅ IMPORT PARTS
     [HttpPost("import")]
     public async Task<IActionResult> ImportParts(IFormFile file)
     {
         if (file == null || file.Length == 0)
             return BadRequest("No file uploaded.");
 
-        if (!file.FileName.EndsWith(".xlsx"))
-            return BadRequest("Only .xlsx files are supported.");
-
         var partsToInsert = new List<Part>();
 
         using var stream = new MemoryStream();
         await file.CopyToAsync(stream);
-        stream.Position = 0; // 🔥 IMPORTANT
+        stream.Position = 0;
 
         using var package = new ExcelPackage(stream);
         var worksheet = package.Workbook.Worksheets.FirstOrDefault();
@@ -149,7 +147,6 @@ public class PartsController : ControllerBase
 
         var rowCount = worksheet.Dimension.Rows;
 
-        // 🔥 Fetch existing PartNumbers ONCE (performance fix)
         var existingPartNumbers = await _context.Parts
             .Select(p => p.PartNumber)
             .ToListAsync();
@@ -157,7 +154,6 @@ public class PartsController : ControllerBase
         for (int row = 2; row <= rowCount; row++)
         {
             var partNumber = worksheet.Cells[row, 2].Text?.Trim();
-
             if (string.IsNullOrWhiteSpace(partNumber))
                 continue;
 
@@ -171,9 +167,9 @@ public class PartsController : ControllerBase
             var part = new Part
             {
                 PartNumber = partNumber,
-                PartName = worksheet.Cells[row, 3].Text?.Trim(),
-                Description = worksheet.Cells[row, 3].Text?.Trim(),
-                PageReference = worksheet.Cells[row, 4].Text?.Trim(),
+                PartName = worksheet.Cells[row, 3].Text?.Trim() ?? string.Empty,
+                Description = worksheet.Cells[row, 3].Text?.Trim() ?? string.Empty,
+                PageReference = worksheet.Cells[row, 4].Text?.Trim() ?? string.Empty,
                 BDP = bdp,
                 MRP = mrp,
                 TaxPercent = tax,
@@ -184,9 +180,9 @@ public class PartsController : ControllerBase
             partsToInsert.Add(part);
         }
 
-        if (partsToInsert.Count > 0)
+        if (partsToInsert.Any())
         {
-            await _context.Parts.AddRangeAsync(partsToInsert);
+            _context.Parts.AddRange(partsToInsert);
             await _context.SaveChangesAsync();
         }
 
@@ -200,10 +196,7 @@ public class PartsController : ControllerBase
 
         value = value.Replace(",", "").Trim();
 
-        if (decimal.TryParse(value, out var result))
-            return result;
-
-        return 0;
+        return decimal.TryParse(value, out var result) ? result : 0;
     }
 
     [HttpPost("import-assembly")]

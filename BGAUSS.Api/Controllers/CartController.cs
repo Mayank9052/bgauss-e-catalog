@@ -72,20 +72,29 @@ public class CartController : ControllerBase
         if (cart == null)
             return Ok(new CartResponseDto());
 
+        var items = cart.CartItems?.Select(ci =>
+        {
+            decimal price = ci.Part?.Price ?? 0;   // 🔥 FIXED
+            decimal subTotal = ci.Quantity * price;
+
+            return new CartItemDto
+            {
+                CartItemId = ci.Id,
+                PartName = ci.Part?.PartName ?? string.Empty,
+                PartNumber = ci.Part?.PartNumber ?? string.Empty,
+                Price = price,
+                Quantity = ci.Quantity,
+                SubTotal = subTotal
+            };
+        }).ToList();
+
+        decimal totalAmount = items?.Sum(i => i.SubTotal) ?? 0;
+
         var response = new CartResponseDto
         {
             CartId = cart.Id,
-            Items = cart.CartItems?.Select(ci => new CartItemDto
-            {
-                CartItemId = ci.Id,
-                PartName = ci.Part!.PartName,
-                PartNumber = ci.Part.PartNumber,
-                Price = ci.Part.Price,
-                Quantity = ci.Quantity,
-                SubTotal = ci.Quantity * ci.Part.Price
-            }).ToList(),
-            TotalAmount = cart.CartItems!
-                .Sum(ci => ci.Quantity * ci.Part!.Price)
+            Items = items,
+            TotalAmount = totalAmount
         };
 
         return Ok(response);

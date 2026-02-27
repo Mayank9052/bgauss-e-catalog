@@ -4,7 +4,8 @@ using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(args);
 
-ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
+// ✅ EPPlus 7+ License Configuration
+OfficeOpenXml.ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

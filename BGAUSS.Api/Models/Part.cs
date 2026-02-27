@@ -11,12 +11,12 @@ public class Part
     public string? Description { get; set; }
 
     // 🔥 Pricing Structure
-    public decimal BDP { get; set; }
-    public decimal MRP { get; set; }
-    public decimal TaxPercent { get; set; }
+    public decimal? BDP { get; set; }
+    public decimal? MRP { get; set; }
+    public decimal? TaxPercent { get; set; }
 
     // Optional (if you still want to keep)
-    public decimal Price { get; set; }
+    public decimal? Price { get; set; }
 
     public string? PageReference { get; set; }
     public string? ImagePath { get; set; }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
+using BGAUSS.Api.DTOs;
 
 namespace BGAUSS.Api.Controllers;
 
@@ -21,11 +22,25 @@ public class CategoriesController : ControllerBase
         return Ok(await _context.Categories.ToListAsync());
     }
 
-    [HttpPost]
+    /*[HttpPost]
     public async Task<IActionResult> Create(Category category)
     {
         await _context.Categories.AddAsync(category);
         await _context.SaveChangesAsync();
+        return Ok(category);
+    }*/
+
+    [HttpPost]
+    public async Task<IActionResult> Create(CreateCategoryDto dto)
+    {
+        var category = new Category
+        {
+            CategoryName = dto.CategoryName
+        };
+
+        await _context.Categories.AddAsync(category);
+        await _context.SaveChangesAsync();
+
         return Ok(category);
     }
 }

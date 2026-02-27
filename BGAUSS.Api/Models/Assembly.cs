@@ -8,11 +8,11 @@ namespace BGAUSS.Api.Models
 
         [Required]
         [MaxLength(200)]
-        public string AssemblyName { get; set; }
+        public string AssemblyName { get; set; } = string.Empty;
 
         [MaxLength(100)]
-        public string ImageNo { get; set; }
+        public string? ImageNo { get; set; }
 
-        public ICollection<AssemblyPart> AssemblyParts { get; set; }
+        public ICollection<AssemblyPart> AssemblyParts { get; set; } = new List<AssemblyPart>();
     }
 }

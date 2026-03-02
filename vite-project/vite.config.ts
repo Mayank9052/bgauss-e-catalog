@@ -8,7 +8,7 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',   // 👈 MUST MATCH API
+        target: 'https://localhost:7204',   // 👈 match backend port from launchSettings
         changeOrigin: true,
         secure: false
       }

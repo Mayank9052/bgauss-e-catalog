@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using OfficeOpenXml;
+using BGAUSS.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,11 +27,14 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        // match the Vite dev server address
+        policy.WithOrigins("http://localhost:5176", "https://localhost:5176")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
 });
+
+builder.Services.AddScoped<ISearchService, SearchService>();
 
 var app = builder.Build();
 

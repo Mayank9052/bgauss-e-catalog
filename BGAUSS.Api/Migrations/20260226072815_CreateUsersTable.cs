@@ -9,6 +9,7 @@ namespace BGAUSS.Api.Migrations
     public partial class CreateUsersTable : Migration
     {
         /// <inheritdoc />
+        /// <summary>
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(

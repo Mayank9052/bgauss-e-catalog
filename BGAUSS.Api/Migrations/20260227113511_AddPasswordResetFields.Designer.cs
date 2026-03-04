@@ -16,6 +16,8 @@ namespace BGAUSS.Api.Migrations
     partial class AddPasswordResetFields
     {
         /// <inheritdoc />
+        /// <summary>
+        /// This method defines the operations to apply the migration, which in this case involves adding new columns "PasswordResetToken" and "PasswordResetTokenExpiry" to the "Users" table. It specifies how the database schema should be modified when this migration is applied.
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

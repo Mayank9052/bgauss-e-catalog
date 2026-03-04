@@ -16,6 +16,9 @@ namespace BGAUSS.Api.Migrations
     partial class AddOrderTables
     {
         /// <inheritdoc />
+        /// 
+        /// <summary>
+        /// This method builds the target model for the migration, which represents the state of the database schema after applying this migration. It defines the entities, their properties, relationships, and constraints as they should exist after this migration is applied.
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

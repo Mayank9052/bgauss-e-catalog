@@ -16,6 +16,7 @@ namespace BGAUSS.Api.Migrations
     partial class SyncWithExistingDb
     {
         /// <inheritdoc />
+        /// <summary>
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

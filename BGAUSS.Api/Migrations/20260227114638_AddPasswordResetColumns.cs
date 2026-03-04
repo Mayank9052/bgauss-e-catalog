@@ -8,6 +8,9 @@ namespace BGAUSS.Api.Migrations
     public partial class AddPasswordResetColumns : Migration
     {
         /// <inheritdoc />
+        /// <summary>
+        /// This method defines the operations to apply the migration, which in this case involves altering the "PasswordResetToken" column in the "Users" table to change its type and constraints. It specifies how the database schema should be modified when this migration is applied.
+         
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<string>(

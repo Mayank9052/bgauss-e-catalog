@@ -9,6 +9,8 @@ namespace BGAUSS.Api.Migrations
     public partial class AddOrderTables : Migration
     {
         /// <inheritdoc />
+        /// <summary>
+        ///     
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<int>(

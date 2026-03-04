@@ -43,6 +43,7 @@ namespace BGAUSS.Api.Migrations
 
                     b.ToTable("Assemblies");
                 });
+                
 
             modelBuilder.Entity("BGAUSS.Api.Models.AssemblyPart", b =>
                 {

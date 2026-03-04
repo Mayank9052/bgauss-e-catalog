@@ -2,7 +2,12 @@ import "./searchparts.css";
 import logo from "./assets/logo.jpg";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getFilteredParts, getAllParts, Part } from "./services/api";
+import { getFilteredParts, getAllParts } 
+from "./services/api";
+import type { Part } from "./services/api";
+import axios from "axios";
+import { useSearchParams } from "react-router-dom";
+import GlobalSearch from "./components/GlobalSearch";
 
 const SearchParts = () => {
   const location = useLocation();
@@ -10,10 +15,15 @@ const SearchParts = () => {
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [cartCount, setCartCount] = useState(0);
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get("q");
   const searchState = location.state as any || {};
+  const userId = 1;
 
-  // Fetch parts based on search type
+  // ===============================
+  // FETCH PARTS
+  // ===============================
   useEffect(() => {
     const fetchParts = async () => {
       try {
@@ -21,20 +31,13 @@ const SearchParts = () => {
         setError(null);
 
         if (searchState.searchType === "model") {
-          // Search by model, variant, and colour
           const filteredParts = await getFilteredParts(
             searchState.modelId,
             searchState.variantId,
             searchState.colourId
           );
           setParts(filteredParts);
-        } else if (searchState.searchType === "vin") {
-          // TODO: Implement VIN search - fetch parts for specific VIN
-          // For now, fetch all parts as placeholder
-          const allParts = await getAllParts();
-          setParts(allParts);
         } else {
-          // No search parameters, fetch all parts
           const allParts = await getAllParts();
           setParts(allParts);
         }
@@ -47,10 +50,50 @@ const SearchParts = () => {
     };
 
     fetchParts();
-  }, [searchState]);
+  }, [searchState, searchQuery]);
+
+  // ===============================
+  // FETCH CART COUNT
+  // ===============================
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:5176/api/cart/count/${userId}`
+        );
+        setCartCount(response.data.count);
+      } catch (error) {
+        console.error("Failed to fetch cart count:", error);
+      }
+    };
+
+    fetchCartCount();
+  }, []);
 
   const handleBack = () => {
     navigate("/dashboard");
+  };
+
+  // ===============================
+  // ADD TO CART
+  // ===============================
+  const handleAddToCart = async (partId: number) => {
+    try {
+      await axios.post(
+        "http://localhost:5176/api/cart/add",
+        {
+          userId,
+          partId,
+          quantity: 1
+        }
+      );
+
+      setCartCount((prev) => prev + 1);
+    
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Failed to add item ❌");
+    }
   };
 
   return (
@@ -64,48 +107,75 @@ const SearchParts = () => {
         </div>
 
         <div className="nav-right">
-          <button onClick={handleBack} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}>
+          <button className="back-button" onClick={handleBack}>
             Back to Dashboard
           </button>
+
           <span>Contact Us</span>
-          <span>🔍</span>
+          <GlobalSearch />
           <span>👤</span>
-          <span>🛒</span>
+
+          {/* CART ICON */}
+          <div className="cart-icon"
+          onClick={() => navigate("/carts")}>
+            <span className="cart-emoji">🛒</span>
+
+            {cartCount > 0 && (
+              <span className="cart-badge">
+                {cartCount}
+              </span>
+            )}
+          </div>
         </div>
       </nav>
 
-      {/* LOADING STATE */}
+      {/* LOADING */}
       {loading && (
-        <div style={{ padding: "20px", textAlign: "center" }}>
+        <div className="center-message">
           <p>Loading parts...</p>
         </div>
       )}
 
-      {/* ERROR STATE */}
+      {/* ERROR */}
       {error && (
-        <div style={{ padding: "20px", textAlign: "center", color: "red" }}>
+        <div className="center-message error-text">
           <p>{error}</p>
         </div>
       )}
 
-      {/* RESULTS INFO */}
+      {/* RESULTS */}
       {!loading && !error && (
-        <div style={{ padding: "20px", textAlign: "center" }}>
+        <div className="results-header">
           <h2>Found {parts.length} parts</h2>
         </div>
       )}
 
-      {/* GRID */}
+      {/* PRODUCT GRID */}
       <div className="parts-grid">
         {parts.map((part) => (
-          <div key={part.id} className="part-card">
-            <span>{part.partName}</span>
+          <div
+            key={part.id}
+            className="part-card clickable-card"
+            onClick={() => handleAddToCart(part.id)}
+          >
+            <div className="product-image">
+              <img
+                src={part.imagePath ? `http://localhost:5176${part.imagePath}`
+                : "/placeholder.png"
+              }
+                alt={part.partName}
+              />
+            </div>
+
+            <div className="product-name">
+              {part.partName}
+            </div>
           </div>
         ))}
       </div>
 
       {!loading && !error && parts.length === 0 && (
-        <div style={{ padding: "20px", textAlign: "center" }}>
+        <div className="center-message">
           <p>No parts found for the selected criteria.</p>
         </div>
       )}

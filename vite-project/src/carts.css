@@ -1,0 +1,183 @@
+/* ================= NAVBAR ================= */
+
+.epc-navbar {
+  background: #0b3c4d;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 40px;
+  align-items: center;
+}
+
+.epc-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.epc-brand img {
+  height: 40px;
+}
+
+.epc-nav-right {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* ================= LAYOUT ================= */
+
+.epc-container {
+  display: flex;
+  padding: 30px 40px;
+  gap: 30px;
+}
+
+/* LEFT SIDE */
+
+.epc-left {
+  flex: 1;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e3e6ea;
+}
+
+.epc-left img {
+  width: 100%;
+  object-fit: contain;
+}
+
+/* RIGHT SIDE */
+
+.epc-right {
+  flex: 2;
+}
+
+/* TOP BAR */
+
+.table-top-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.table-top-bar select {
+  margin-left: 8px;
+  padding: 4px;
+}
+
+/* PAGINATION */
+
+.pagination-top button {
+  border: 1px solid #ccc;
+  background: white;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.active-page {
+  background: #1976d2;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin: 0 6px;
+}
+
+/* TABLE */
+
+.epc-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid #e3e6ea;
+}
+
+.epc-table thead {
+  background: #1678a2;
+  color: white;
+}
+
+.epc-table th,
+.epc-table td {
+  padding: 10px;
+  border-bottom: 1px solid #e3e6ea;
+  text-align: center;
+  font-size: 13px;
+}
+
+.epc-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+/* QTY INPUT */
+
+.qty-input {
+  width: 60px;
+  padding: 5px;
+  text-align: center;
+}
+
+/* ================= ACTION BAR ================= */
+
+.cart-actions {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.cart-actions button {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.cart-actions button:hover {
+  background: #f2f2f2;
+}
+
+/* REMOVE BUTTON */
+
+.remove-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.remove-btn:hover {
+  background: #b02a37;
+}
+
+.page-btn {
+  border: 1px solid #ccc;
+  background: white;
+  padding: 4px 8px;
+  margin: 0 3px;
+  cursor: pointer;
+}
+
+.page-btn:hover {
+  background: #f2f2f2;
+}
+
+.active-page {
+  background: #1976d2;
+  color: white;
+  border: 1px solid #1976d2;
+}
+
+.epc-left {
+  flex: 1;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e3e6ea;
+  min-height: 500px; /* keep space same as image */
+}

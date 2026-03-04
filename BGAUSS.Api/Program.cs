@@ -55,11 +55,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
-<<<<<<< HEAD
-=======
-
 app.UseStaticFiles();
-
->>>>>>> feature/CartsUI
 app.MapControllers();
 app.Run();

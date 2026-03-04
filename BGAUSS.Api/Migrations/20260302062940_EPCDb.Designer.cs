@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BGAUSS.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260227113511_AddPasswordResetFields")]
-    partial class AddPasswordResetFields
+    [Migration("20260302062940_EPCDb")]
+    partial class EPCDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -272,8 +272,7 @@ namespace BGAUSS.Api.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PasswordResetToken")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("PasswordResetTokenExpiry")
                         .HasColumnType("datetime2");

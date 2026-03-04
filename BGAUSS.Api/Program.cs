@@ -5,6 +5,7 @@ using BGAUSS.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 // EPPlus License
 OfficeOpenXml.ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
 

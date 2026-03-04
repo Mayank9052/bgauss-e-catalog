@@ -39,7 +39,7 @@ namespace BGAUSS.Api.Services
                     {
                         // Numeric or other column → convert to string
                         columnQuery = query.Where(e =>
-                            EF.Property<object>(e, property.Name).ToString().Contains(tempWord));
+                            (EF.Property<object>(e, property.Name) ?? "").ToString().Contains(tempWord));
                     }
 
                     tempQuery = tempQuery == null ? columnQuery : tempQuery.Union(columnQuery);

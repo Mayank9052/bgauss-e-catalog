@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using BGAUSS.Api.DTOs;
+using System.Security.Claims;
 using System.Text;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -10,6 +12,7 @@ namespace BGAUSS.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class CartController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -19,10 +22,18 @@ namespace BGAUSS.Api.Controllers
             _context = context;
         }
 
+        // 🔐 Get logged-in user from JWT
+        private int GetUserId()
+        {
+            return int.Parse(User.FindFirst("UserId")!.Value);
+        }
+
         // ================= ADD TO CART =================
         [HttpPost("add")]
         public async Task<IActionResult> AddToCart(AddToCartRequest request)
         {
+            int userId = GetUserId();
+
             if (request.Quantity <= 0)
                 return BadRequest("Quantity must be greater than 0");
 
@@ -35,11 +46,11 @@ namespace BGAUSS.Api.Controllers
 
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
-                .FirstOrDefaultAsync(c => c.UserId == request.UserId);
+                .FirstOrDefaultAsync(c => c.UserId == userId);
 
             if (cart == null)
             {
-                cart = new Cart { UserId = request.UserId };
+                cart = new Cart { UserId = userId };
                 _context.Carts.Add(cart);
                 await _context.SaveChangesAsync();
             }
@@ -47,54 +58,47 @@ namespace BGAUSS.Api.Controllers
             var existingItem = cart.CartItems.FirstOrDefault(ci => ci.PartId == request.PartId);
 
             if (existingItem != null)
-            {
                 existingItem.Quantity += request.Quantity;
-            }
             else
-            {
                 cart.CartItems.Add(new CartItem
                 {
                     PartId = request.PartId,
                     Quantity = request.Quantity
                 });
-            }
 
             await _context.SaveChangesAsync();
             return Ok("Item added to cart");
         }
 
-        // ================= GET CART =================
-        [HttpGet("{userId}")]
-        public async Task<IActionResult> GetCart(int userId)
+        // ================= GET MY CART =================
+        [HttpGet("my-cart")]
+        public async Task<IActionResult> GetMyCart()
         {
+            int userId = GetUserId();
+
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .ThenInclude(ci => ci.Part)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
 
-            if (cart == null)
-                return Ok(new CartResponseDto());
+            if (cart == null || !cart.CartItems.Any())
+                return Ok(new { Message = "Cart is empty" });
 
-            var items = cart.CartItems.Select(ci =>
+            var items = cart.CartItems.Select(ci => new
             {
-                decimal price = ci.Part?.Price ?? 0;
-
-                return new CartItemDto
-                {
-                    CartItemId = ci.Id,
-                    PartName = ci.Part?.PartName ?? "",
-                    PartNumber = ci.Part?.PartNumber ?? "",
-                    Price = price,
-                    Quantity = ci.Quantity,
-                    SubTotal = price * ci.Quantity
-                };
+                ci.Id,
+                PartName = ci.Part!.PartName,
+                PartNumber = ci.Part.PartNumber,
+                Price = ci.Part.Price,
+                ci.Quantity,
+                SubTotal = ci.Quantity * (ci.Part.Price ?? 0)
             }).ToList();
 
-            return Ok(new CartResponseDto
+            return Ok(new
             {
-                CartId = cart.Id,
+                cart.Id,
                 Items = items,
-                TotalAmount = items.Sum(i => i.SubTotal)
+                Total = items.Sum(i => i.SubTotal)
             });
         }
 
@@ -150,7 +154,7 @@ namespace BGAUSS.Api.Controllers
         }
 
         // ================= REMOVE ITEM =================
-        [HttpDelete("{cartItemId}")]
+        [HttpDelete("remove/{cartItemId}")]
         public async Task<IActionResult> RemoveItem(int cartItemId)
         {
             var item = await _context.CartItems
@@ -162,13 +166,15 @@ namespace BGAUSS.Api.Controllers
             _context.CartItems.Remove(item);
             await _context.SaveChangesAsync();
 
-            return Ok("Removed");
+            return Ok("Item removed");
         }
 
         // ================= EMPTY CART =================
-        [HttpDelete("empty/{userId}")]
-        public async Task<IActionResult> EmptyCart(int userId)
+        [HttpDelete("empty")]
+        public async Task<IActionResult> EmptyCart()
         {
+            int userId = GetUserId();
+
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
@@ -183,69 +189,77 @@ namespace BGAUSS.Api.Controllers
         }
 
         // ================= CHECKOUT =================
-        [HttpPost("checkout/{userId}")]
-        public async Task<IActionResult> Checkout(int userId)
+        [HttpPost("checkout")]
+        public async Task<IActionResult> Checkout()
         {
+            int userId = GetUserId();
+
             using var transaction = await _context.Database.BeginTransactionAsync();
-
-            var cart = await _context.Carts
-                .Include(c => c.CartItems)
-                .ThenInclude(ci => ci.Part)
-                .FirstOrDefaultAsync(c => c.UserId == userId);
-
-            if (cart == null || !cart.CartItems.Any())
-                return BadRequest("Cart is empty");
-
-            var order = new Order
+            try
             {
-                UserId = userId,
-                TotalAmount = 0
-            };
+                var cart = await _context.Carts
+                    .Include(c => c.CartItems)
+                    .ThenInclude(ci => ci.Part)
+                    .FirstOrDefaultAsync(c => c.UserId == userId);
 
-            foreach (var item in cart.CartItems)
-            {
-                var part = item.Part;
-                if (part == null)
-                    return BadRequest("Part not found");
+                if (cart == null || !cart.CartItems.Any())
+                    return BadRequest("Cart is empty");
 
-                if (part.StockQuantity < item.Quantity)
-                    return BadRequest($"Insufficient stock for {part.PartName}");
-
-                decimal price = part.Price ?? 0;
-                decimal subTotal = price * item.Quantity;
-
-                // Deduct stock **only at checkout**
-                part.StockQuantity -= item.Quantity;
-
-                order.OrderItems.Add(new OrderItem
+                var order = new Order
                 {
-                    PartId = part.Id,
-                    Quantity = item.Quantity,
-                    Price = price,
-                    SubTotal = subTotal
+                    UserId = userId,
+                    TotalAmount = 0
+                };
+
+                foreach (var item in cart.CartItems)
+                {
+                    var part = item.Part!;
+                    if (part.StockQuantity < item.Quantity)
+                        throw new InvalidOperationException($"Insufficient stock for {part.PartName}");
+
+                    decimal price = part.Price ?? 0;
+                    decimal subTotal = price * item.Quantity;
+
+                    // Deduct stock
+                    part.StockQuantity -= item.Quantity;
+
+                    order.OrderItems.Add(new OrderItem
+                    {
+                        PartId = part.Id,
+                        Quantity = item.Quantity,
+                        Price = price,
+                        SubTotal = subTotal
+                    });
+
+                    order.TotalAmount += subTotal;
+                }
+
+                _context.Orders.Add(order);
+                _context.CartItems.RemoveRange(cart.CartItems);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    Message = "Order placed successfully",
+                    OrderId = order.Id,
+                    Total = order.TotalAmount
                 });
-
-                order.TotalAmount += subTotal;
             }
-
-            _context.Orders.Add(order);
-            _context.CartItems.RemoveRange(cart.CartItems);
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            return Ok(new
+            catch (Exception ex)
             {
-                Message = "Order placed successfully",
-                OrderId = order.Id,
-                Total = order.TotalAmount
-            });
+                await transaction.RollbackAsync();
+                return BadRequest(new { Message = "Checkout failed", Details = ex.Message });
+            }
         }
 
         // ================= DOWNLOAD CSV =================
-        [HttpGet("download/csv/{userId}")]
-        public async Task<IActionResult> DownloadCsv(int userId)
+        [HttpGet("download/csv")]
+        public async Task<IActionResult> DownloadCsv()
         {
+            int userId = GetUserId();
+
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .ThenInclude(ci => ci.Part)
@@ -276,9 +290,11 @@ namespace BGAUSS.Api.Controllers
         }
 
         // ================= DOWNLOAD PDF =================
-        [HttpGet("download/pdf/{userId}")]
-        public async Task<IActionResult> DownloadPdf(int userId)
+        [HttpGet("download/pdf")]
+        public async Task<IActionResult> DownloadPdf()
         {
+            int userId = GetUserId();
+
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .ThenInclude(ci => ci.Part)
@@ -300,6 +316,8 @@ namespace BGAUSS.Api.Controllers
                             decimal price = item.Part?.Price ?? 0;
                             col.Item().Text($"{item.Part?.PartName} - Qty: {item.Quantity} - ₹{price * item.Quantity}");
                         }
+
+                        col.Item().Text($"Total: ₹{cart.CartItems.Sum(ci => (ci.Part?.Price ?? 0) * ci.Quantity)}");
                     });
                 });
             });

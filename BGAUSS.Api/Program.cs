@@ -58,7 +58,20 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
+<<<<<<< HEAD
 
 app.MapControllers();
 
 app.Run();
+=======
+<<<<<<< HEAD
+app.UseStaticFiles();
+app.MapControllers();
+app.Run();
+=======
+
+app.MapControllers();
+
+app.Run();
+>>>>>>> ba0eeb0 (Fixed)
+>>>>>>> feature/migrations-fix

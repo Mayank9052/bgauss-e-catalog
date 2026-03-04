@@ -19,28 +19,17 @@ namespace BGAUSS.Api.Services
             {
                 var tempWord = word.Trim();
 
+                // Build dynamic OR conditions across all columns
                 IQueryable<T> tempQuery = null;
 
                 foreach (var propName in properties)
                 {
                     var property = typeof(T).GetProperty(propName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-                    if (property == null)
+                    if (property == null || property.PropertyType != typeof(string))
                         continue;
 
-                    IQueryable<T> columnQuery;
-
-                    if (property.PropertyType == typeof(string))
-                    {
-                        // String column → use LIKE
-                        columnQuery = query.Where(e =>
-                            EF.Functions.Like(EF.Property<string>(e, property.Name) ?? "", $"%{tempWord}%"));
-                    }
-                    else
-                    {
-                        // Numeric or other column → convert to string
-                        columnQuery = query.Where(e =>
-                            (EF.Property<object>(e, property.Name) ?? "").ToString().Contains(tempWord));
-                    }
+                    var columnQuery = query.Where(e => EF.Functions.Like(
+                        EF.Property<string>(e, property.Name), $"%{tempWord}%"));
 
                     tempQuery = tempQuery == null ? columnQuery : tempQuery.Union(columnQuery);
                 }

@@ -1,0 +1,28 @@
+.global-search {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0 15px;
+}
+
+.global-search input {
+  border: none;
+  padding: 6px 10px;
+  outline: none;
+  width: 180px;
+  font-size: 13px;
+}
+
+.global-search button {
+  border: none;
+  background: #1976d2;
+  color: white;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.global-search button:hover {
+  background: #125aa3;
+}

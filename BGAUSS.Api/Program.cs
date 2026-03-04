@@ -43,6 +43,8 @@ app.UseCors("ReactPolicy");
 
 app.UseAuthorization();
 
+app.UseStaticFiles();
+
 app.MapControllers();
 
 app.Run();

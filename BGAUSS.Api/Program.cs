@@ -28,14 +28,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// CORS
+// CORS (only localhost)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactPolicy", policy =>
     {
         policy.WithOrigins(
-            "http://localhost:5173",
-            "http://192.168.68.54:5173"
+            "http://localhost:5173"
         )
         .AllowAnyHeader()
         .AllowAnyMethod();
@@ -46,7 +45,7 @@ builder.Services.AddScoped<ISearchService, SearchService>();
 
 var app = builder.Build();
 
-// Enable CORS
+// CORS
 app.UseCors("ReactPolicy");
 
 // Swagger
@@ -57,7 +56,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
 app.UseAuthorization();
+
 app.UseStaticFiles();
+
 app.MapControllers();
+
 app.Run();

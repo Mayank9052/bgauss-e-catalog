@@ -3,6 +3,7 @@ import Login from "./login";
 import Dashboard from "./dashbaord";
 import SearchParts from "./SearchParts";
 import CartPage from "./carts";
+import CheckoutPage from "./checkout";
 
 
 
@@ -14,6 +15,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/parts" element={<SearchParts />} />
         <Route path="/carts" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
       </Routes>
     </BrowserRouter>
   );

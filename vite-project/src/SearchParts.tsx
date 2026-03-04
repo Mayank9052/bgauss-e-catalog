@@ -31,16 +31,28 @@ const SearchParts = () => {
         setError(null);
 
         if (searchState.searchType === "model") {
+
           const filteredParts = await getFilteredParts(
             searchState.modelId,
             searchState.variantId,
             searchState.colourId
           );
+
           setParts(filteredParts);
-        } else {
+
+        } 
+        else if (searchState.searchType === "global") {
+
+          setParts(searchState.results);
+
+        } 
+        else {
+
           const allParts = await getAllParts();
           setParts(allParts);
+
         }
+
       } catch (err) {
         console.error("Failed to fetch parts:", err);
         setError("Failed to load parts. Please try again.");
@@ -77,24 +89,35 @@ const SearchParts = () => {
   // ===============================
   // ADD TO CART
   // ===============================
-  const handleAddToCart = async (partId: number) => {
-    try {
-      await axios.post(
-        "http://localhost:5176/api/cart/add",
-        {
-          userId,
-          partId,
-          quantity: 1
-        }
-      );
+const handleAddToCart = async (partId: number) => {
+  try {
 
-      setCartCount((prev) => prev + 1);
-    
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-      alert("Failed to add item ❌");
+    const response = await axios.post(
+      "http://localhost:5053/api/cart/add",
+      {
+        UserId: userId,
+        PartId: partId,
+        Quantity: 1
+      }
+    );
+
+    console.log("Cart response:", response.data);
+
+    setCartCount((prev) => prev + 1);
+
+  } catch (error: any) {
+
+    console.error("Full Error:", error);
+
+    if (error.response) {
+      console.log("Server error:", error.response.data);
+      alert(error.response.data);
+    } else {
+      alert("Server not reachable");
     }
-  };
+
+  }
+};
 
   return (
     <div className="catalog-wrapper">
@@ -160,9 +183,8 @@ const SearchParts = () => {
           >
             <div className="product-image">
               <img
-                src={part.imagePath ? `http://localhost:5176${part.imagePath}`
-                : "/placeholder.png"
-              }
+                src={part.imagePath ? `http://localhost:5053${part.imagePath}`
+                : "/placeholder.png"}
                 alt={part.partName}
               />
             </div>

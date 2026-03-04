@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import logo from "./assets/logo.jpg";
 import "./dashbaord.css";
-import GlobalSearch from "./components/GlobalSearch";
 import TableSelect from "./components/TableSelect";
 import type {
   VehicleModel,
@@ -127,7 +126,6 @@ const Dashboard = () => {
         <div className="nav-actions">
           <button className="nav-link active">Home</button>
           <button className="nav-link">Contact</button>
-          <GlobalSearch />
           <span className="nav-icon">🛒</span>
           <button className="logout-btn" onClick={handleLogout}>
             Logout

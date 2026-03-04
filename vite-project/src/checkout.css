@@ -1,0 +1,178 @@
+/* ================= WRAPPER ================= */
+
+.checkout-wrapper{
+  background:#f4f6f8;
+  min-height:100vh;
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+
+/* ================= NAVBAR ================= */
+
+.checkout-navbar{
+  background:#0b3c4d;
+  color:white;
+  padding:14px 40px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.brand img{
+  height:40px;
+}
+
+.nav-links{
+  display:flex;
+  gap:28px;
+  cursor:pointer;
+  font-size:15px;
+}
+
+
+/* ================= CONTAINER ================= */
+
+.checkout-container{
+  width:1200px;
+  margin:auto;
+  padding:40px 0;
+}
+
+.checkout-container h2{
+  margin-bottom:25px;
+  font-size:36px;
+}
+
+
+/* ================= TABLE ================= */
+
+.checkout-table{
+  width:100%;
+  border-collapse:collapse;
+  background:white;
+  margin-bottom:20px;
+}
+
+
+/* ================= TABLE HEADER ================= */
+
+.checkout-table thead{
+  background:#1f7a9e;
+  color:white;
+}
+
+.checkout-table th{
+  padding:16px;
+  font-size:16px;
+  font-weight:600;
+  text-align:center;
+}
+
+
+/* ================= TABLE BODY ================= */
+
+.checkout-table td{
+  padding:20px;
+  text-align:center;
+  border-bottom:1px solid #e6e6e6;
+  vertical-align:middle;
+}
+
+
+/* ================= REMOVE BUTTON ================= */
+
+.remove-btn{
+  border:none;
+  background:none;
+  font-size:20px;
+  cursor:pointer;
+}
+
+
+/* ================= PRODUCT IMAGE ================= */
+
+.product-img{
+  width:70px;
+  height:70px;
+  object-fit:contain;
+  display:block;
+  margin:auto;
+}
+
+
+/* ================= QUANTITY BOX ================= */
+
+.qty-box{
+  width:60px;
+  padding:6px;
+  text-align:center;
+  border:1px solid #ccc;
+  border-radius:4px;
+}
+
+
+/* ================= BUTTON SECTION ================= */
+
+.checkout-actions{
+  margin-top:15px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
+}
+
+
+/* ================= BUTTON ================= */
+
+.btn{
+  background:#1f7a9e;
+  color:white;
+  border:none;
+  padding:10px 18px;
+  border-radius:4px;
+  cursor:pointer;
+  font-size:14px;
+}
+
+.btn:hover{
+  background:#166a84;
+}
+
+.empty-btn{
+  background:#1f7a9e;
+  color:white;
+  border:none;
+  padding:10px 18px;
+  border-radius:4px;
+  cursor:pointer;
+}
+
+
+/* ================= TOTAL ================= */
+
+.total-box{
+  margin-left:auto;
+  font-size:16px;
+  font-weight:600;
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:1200px){
+
+.checkout-container{
+  width:95%;
+}
+
+.checkout-actions{
+  flex-wrap:wrap;
+}
+
+}

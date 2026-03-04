@@ -23,15 +23,10 @@ const EpcCartPage = () => {
 
   const fetchCart = async () => {
     const response = await axios.get(
-      `http://localhost:5176/api/cart/${userId}`
+      `http://localhost:5053/api/cart/${userId}`
     );
     const cartItems = response.data.items || [];
     setItems(cartItems);
-
-    // 🚀 If cart empty → redirect
-    if (cartItems.length === 0) {
-      
-    }
   };
 
   useEffect(() => {
@@ -44,7 +39,7 @@ const EpcCartPage = () => {
     if (qty < 1) return;
 
     await axios.put(
-      `http://localhost:5176/api/cart/update/${id}?quantity=${qty}`
+      `http://localhost:5053/api/cart/update/${id}?quantity=${qty}`
     );
 
     fetchCart();
@@ -54,7 +49,7 @@ const EpcCartPage = () => {
 
   const removeItem = async (id: number) => {
     await axios.delete(
-      `http://localhost:5176/api/cart/${id}`
+      `http://localhost:5053/api/cart/${id}`
     );
     fetchCart();
   };
@@ -64,7 +59,7 @@ const EpcCartPage = () => {
   const removeSelected = async () => {
     for (const id of selectedItems) {
       await axios.delete(
-        `http://localhost:5176/api/cart/${id}`
+        `http://localhost:5053/api/cart/${id}`
       );
     }
 
@@ -77,7 +72,7 @@ const EpcCartPage = () => {
   const clearCart = async () => {
     for (const item of items) {
       await axios.delete(
-        `http://localhost:5176/api/cart/${item.cartItemId}`
+        `http://localhost:5053/api/cart/${item.cartItemId}`
       );
     }
 
@@ -129,10 +124,8 @@ const EpcCartPage = () => {
 
       <div className="epc-container">
 
-        {/* LEFT BLOCK EMPTY */}
         <div className="epc-left"></div>
 
-        {/* RIGHT TABLE BLOCK */}
         <div className="epc-right">
 
           {/* ACTION BUTTONS */}
@@ -270,6 +263,17 @@ const EpcCartPage = () => {
               ))}
             </tbody>
           </table>
+
+          {/* CHECKOUT BUTTON */}
+          <div className="checkout-container">
+            <button
+              className="checkout-btn"
+              disabled={!items.length}
+              onClick={() => navigate("/checkout")}
+            >
+              Proceed to Checkout
+            </button>
+          </div>
 
         </div>
       </div>

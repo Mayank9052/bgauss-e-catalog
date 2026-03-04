@@ -2,24 +2,29 @@ using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using OfficeOpenXml;
 using BGAUSS.Api.Services;
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+// QuestPDF License
+QuestPDF.Settings.License = LicenseType.Community;
+
 // EPPlus License
-OfficeOpenXml.ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
+ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
 
 // Controllers
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
-        options.JsonSerializerOptions.ReferenceHandler = 
-            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
+    {
+        options.JsonSerializerOptions.ReferenceHandler =
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// DB
+// Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -28,10 +33,12 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactPolicy", policy =>
     {
-        // match the Vite dev server address
-        policy.WithOrigins("http://localhost:5176", "https://localhost:5176")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy.WithOrigins(
+            "http://localhost:5173",
+            "http://192.168.68.54:5173"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod();
     });
 });
 
@@ -39,27 +46,19 @@ builder.Services.AddScoped<ISearchService, SearchService>();
 
 var app = builder.Build();
 
-// Enable CORS first (before other middleware)
+// Enable CORS
 app.UseCors("ReactPolicy");
 
-// Swagger configuration
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.RoutePrefix = "swagger"; // Swagger at /swagger
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "BGAUSS API v1");
-    });
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
-<<<<<<< HEAD
-=======
 
-app.UseStaticFiles();
-
->>>>>>> feature/CartsUI
 app.MapControllers();
+
 app.Run();

@@ -32,6 +32,7 @@ public class ApplicationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // Vehicle & Cart configurations (existing)
         modelBuilder.Entity<Vehicle>()
             .HasIndex(v => v.VIN)
             .IsUnique();
@@ -52,9 +53,33 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(ap => ap.PartId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // 🔥 Prevent duplicate part inside same assembly
         modelBuilder.Entity<AssemblyPart>()
             .HasIndex(ap => new { ap.AssemblyId, ap.PartId })
             .IsUnique();
+
+        // ⚡ Decimal precision configuration
+        modelBuilder.Entity<Order>()
+            .Property(o => o.TotalAmount)
+            .HasColumnType("decimal(18,2)");
+
+        modelBuilder.Entity<OrderItem>()
+            .Property(oi => oi.Price)
+            .HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<OrderItem>()
+            .Property(oi => oi.SubTotal)
+            .HasColumnType("decimal(18,2)");
+
+        modelBuilder.Entity<Part>()
+            .Property(p => p.Price)
+            .HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<Part>()
+            .Property(p => p.MRP)
+            .HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<Part>()
+            .Property(p => p.BDP)
+            .HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<Part>()
+            .Property(p => p.TaxPercent)
+            .HasColumnType("decimal(5,2)");
     }
 }

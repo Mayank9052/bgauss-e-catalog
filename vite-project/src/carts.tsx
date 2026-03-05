@@ -9,6 +9,7 @@ interface CartItem {
   cartItemId: number;
   partName: string;
   partNumber: string;
+  imagePath?: string | null;
   quantity: number;
 }
 
@@ -18,16 +19,55 @@ const EpcCartPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedPreviewItemId, setSelectedPreviewItemId] = useState<number | null>(null);
 
-  const userId = 1;
   const navigate = useNavigate();
+  const fallbackImage = "/vite.svg";
+
+  const resolvePartImage = (item: Pick<CartItem, "imagePath" | "partNumber">) => {
+    const baseUrl = "http://localhost:5053";
+
+    if (item.imagePath && item.imagePath.trim().length > 0) {
+      if (item.imagePath.startsWith("http://") || item.imagePath.startsWith("https://")) {
+        return item.imagePath;
+      }
+
+      const normalized = item.imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
+      const fromImagesFolder = normalized.startsWith("images/")
+        ? normalized
+        : `images/${normalized}`;
+
+      return `${baseUrl}/${fromImagesFolder}`;
+    }
+
+    return `${baseUrl}/images/${item.partNumber}.jpg`;
+  };
+
+  /* ================= FETCH CART ================= */
 
   const fetchCart = async () => {
-    const response = await axios.get(
-      `http://localhost:5053/api/cart/${userId}`
-    );
-    setItems(response.data.items || []);
+    try {
+      const response = await axios.get("/cart/my-cart");
+
+      const normalizedItems: CartItem[] = (response.data.items || []).map((item: any) => ({
+        cartItemId: item.cartItemId ?? item.id,
+        partName: item.partName,
+        partNumber: item.partNumber,
+        imagePath: item.imagePath ?? null,
+        quantity: item.quantity
+      }));
+
+      setItems(normalizedItems);
+      setSelectedPreviewItemId((prev) => {
+        if (!normalizedItems.length) return null;
+        if (prev && normalizedItems.some((item) => item.cartItemId === prev)) {
+          return prev;
+        }
+        return normalizedItems[0].cartItemId;
+      });
+    } catch (error) {
+      console.error("Failed to fetch cart", error);
+    }
   };
 
   useEffect(() => {
@@ -37,50 +77,67 @@ const EpcCartPage = () => {
   /* ================= UPDATE QUANTITY ================= */
 
   const updateQuantity = async (id: number, qty: number) => {
-    if (qty < 1) return;
+    try {
+      if (qty < 1) return;
 
-    await axios.put(
-      `http://localhost:5053/api/cart/update/${id}?quantity=${qty}`
-    );
+      if (!id) return;
 
-    fetchCart();
+      await axios.put(`/cart/update/${id}?quantity=${qty}`);
+
+      fetchCart();
+    } catch (error) {
+      console.error("Failed to update quantity", error);
+    }
   };
 
   /* ================= REMOVE SINGLE ================= */
 
   const removeItem = async (id: number) => {
-    await axios.delete(`http://localhost:5053/api/cart/${id}`);
-    fetchCart();
+    try {
+      if (!id) return;
+
+      await axios.delete(`/cart/remove/${id}`);
+
+      fetchCart();
+    } catch (error) {
+      console.error("Failed to remove item", error);
+    }
   };
 
   /* ================= REMOVE SELECTED ================= */
 
   const removeSelected = async () => {
+    try {
+      for (const id of selectedItems) {
 
-    for (const id of selectedItems) {
-      await axios.delete(`http://localhost:5053/api/cart/${id}`);
+        if (!id) continue;
+        await axios.delete(`/cart/remove/${id}`);
+
+      }
+
+      setSelectedItems([]);
+      fetchCart();
+    } catch (error) {
+      console.error("Failed to remove selected items", error);
     }
-
-    setSelectedItems([]);
-    fetchCart();
   };
 
   /* ================= CLEAR CART ================= */
 
   const clearCart = async () => {
+    try {
+      await axios.delete("/cart/empty");
 
-    for (const item of items) {
-      await axios.delete(
-        `http://localhost:5053/api/cart/${item.cartItemId}`
-      );
+      fetchCart();
+    } catch (error) {
+      console.error("Failed to clear cart", error);
     }
-
-    fetchCart();
   };
 
   /* ================= SELECT LOGIC ================= */
 
   const toggleSelect = (id: number) => {
+
     setSelectedItems((prev) =>
       prev.includes(id)
         ? prev.filter((x) => x !== id)
@@ -89,10 +146,15 @@ const EpcCartPage = () => {
   };
 
   const selectAll = (checked: boolean) => {
+
     if (checked) {
+
       setSelectedItems(items.map((i) => i.cartItemId));
+
     } else {
+
       setSelectedItems([]);
+
     }
   };
 
@@ -104,24 +166,11 @@ const EpcCartPage = () => {
   const currentItems = items.slice(indexOfFirst, indexOfLast);
 
   const totalPages = Math.ceil(items.length / rowsPerPage);
-
-  /* ================= ADD TO CART ================= */
-
-  const addToCart = async (partNumber: string) => {
-
-    await axios.post(
-      `http://localhost:5053/api/cart/add`,
-      {
-        userId: userId,
-        partNumber: partNumber,
-        quantity: 1
-      }
-    );
-
-    fetchCart();
-  };
+  const selectedPreviewItem = items.find((item) => item.cartItemId === selectedPreviewItemId) || null;
+  const selectedImage = selectedPreviewItem ? resolvePartImage(selectedPreviewItem) : null;
 
   return (
+
     <>
       {/* NAVBAR */}
 
@@ -151,7 +200,14 @@ const EpcCartPage = () => {
         <div className="epc-left">
 
           {selectedImage ? (
-            <img src={selectedImage} alt="Part" />
+            <img
+              src={selectedImage}
+              alt="Part"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = fallbackImage;
+              }}
+            />
           ) : (
             <div className="image-placeholder">
               Select a part to preview
@@ -189,13 +245,16 @@ const EpcCartPage = () => {
           <div className="table-top-bar">
 
             <div>
+
               Select Rows:
 
               <select
                 value={rowsPerPage}
                 onChange={(e) => {
+
                   setRowsPerPage(Number(e.target.value));
                   setCurrentPage(1);
+
                 }}
               >
                 <option value={5}>5</option>
@@ -263,7 +322,7 @@ const EpcCartPage = () => {
                 <th>Reqd Qty</th>
                 <th>Ordered Qty</th>
                 <th>Action</th>
-                <th>Add</th>
+
               </tr>
 
             </thead>
@@ -274,9 +333,7 @@ const EpcCartPage = () => {
 
                 <tr
                   key={item.cartItemId}
-                  onClick={() =>
-                    setSelectedImage(`/images/${item.partNumber}.jpg`)
-                  }
+                  onClick={() => setSelectedPreviewItemId(item.cartItemId)}
                 >
 
                   <td>
@@ -321,25 +378,13 @@ const EpcCartPage = () => {
                     <button
                       className="remove-btn"
                       onClick={(e) => {
+
                         e.stopPropagation();
                         removeItem(item.cartItemId);
+
                       }}
                     >
                       🗑
-                    </button>
-
-                  </td>
-
-                  <td>
-
-                    <button
-                      className="add-cart-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addToCart(item.partNumber);
-                      }}
-                    >
-                      Add
                     </button>
 
                   </td>

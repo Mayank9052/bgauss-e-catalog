@@ -1,32 +1,75 @@
 import "./searchparts.css";
 import logo from "./assets/logo.jpg";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { getFilteredParts, getAllParts } 
-from "./services/api";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { getFilteredParts, getAllParts } from "./services/api";
 import type { Part } from "./services/api";
 import axios from "axios";
-import { useSearchParams } from "react-router-dom";
 import GlobalSearch from "./components/GlobalSearch";
 
+const readStoredSearchState = () => {
+  try {
+    const raw = sessionStorage.getItem("partsSearchState");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 const SearchParts = () => {
+
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
-  const [searchParams] = useSearchParams();
-  const searchQuery = searchParams.get("q");
-  const searchState = location.state as any || {};
-  const userId = 1;
+  const fallbackImage = "/vite.svg";
 
-  // ===============================
-  // FETCH PARTS
-  // ===============================
+  const searchQuery = searchParams.get("q");
+  const searchState = useMemo(() => {
+    const routeState = location.state as any;
+    const storedState = readStoredSearchState();
+
+    return routeState && Object.keys(routeState).length > 0
+      ? routeState
+      : (storedState || {});
+  }, [location.state]);
+
+const {
+  searchType,
+  modelId,
+  variantId,
+  colourId,
+  results
+} = searchState;
+
   useEffect(() => {
+    if (!searchType) return;
+
+    sessionStorage.setItem("partsSearchState", JSON.stringify(searchState));
+
+    if (
+      searchType === "model" &&
+      typeof modelId === "number" &&
+      typeof variantId === "number" &&
+      typeof colourId === "number"
+    ) {
+      localStorage.setItem(
+        "selectedVehicle",
+        JSON.stringify({ modelId, variantId, colourId })
+      );
+    }
+  }, [searchType, modelId, variantId, colourId, results]);
+
+  useEffect(() => {
+
     const fetchParts = async () => {
+
       try {
+
         setLoading(true);
         setError(null);
 
@@ -40,13 +83,11 @@ const SearchParts = () => {
 
           setParts(filteredParts);
 
-        } 
-        else if (searchState.searchType === "global") {
+        } else if (searchState.searchType === "global") {
 
           setParts(searchState.results);
 
-        } 
-        else {
+        } else {
 
           const allParts = await getAllParts();
           setParts(allParts);
@@ -54,156 +95,175 @@ const SearchParts = () => {
         }
 
       } catch (err) {
-        console.error("Failed to fetch parts:", err);
-        setError("Failed to load parts. Please try again.");
+
+        console.error(err);
+        setError("Failed to load parts.");
+
       } finally {
+
         setLoading(false);
+
       }
+
     };
 
     fetchParts();
-  }, [searchState, searchQuery]);
 
-  // ===============================
-  // FETCH CART COUNT
-  // ===============================
+  }, [searchType, modelId, variantId, colourId, results, searchQuery]);
+
   useEffect(() => {
-    const fetchCartCount = async () => {
+
+    const fetchCart = async () => {
+
       try {
-        const response = await axios.get(
-          `http://localhost:5176/api/cart/count/${userId}`
-        );
-        setCartCount(response.data.count);
+
+        const response = await axios.get("/cart/my-cart");
+
+        if (response.data?.items) {
+          setCartCount(response.data.items.length);
+        }
+
       } catch (error) {
-        console.error("Failed to fetch cart count:", error);
+
+        console.error("Cart load failed", error);
+
       }
+
     };
 
-    fetchCartCount();
+    fetchCart();
+
   }, []);
 
-  const handleBack = () => {
-    navigate("/dashboard");
-  };
+  const handleAddToCart = async (partId: number) => {
 
-  // ===============================
-  // ADD TO CART
-  // ===============================
-const handleAddToCart = async (partId: number) => {
-  try {
+    try {
 
-    const response = await axios.post(
-      "http://localhost:5053/api/cart/add",
-      {
-        UserId: userId,
+      await axios.post("/cart/add", {
         PartId: partId,
         Quantity: 1
+      });
+
+      setCartCount(prev => prev + 1);
+
+    } catch (error: any) {
+
+      if (error.response?.status === 401) {
+
+        alert("Please login again.");
+        localStorage.removeItem("token");
+        navigate("/");
+
+      } else {
+
+        alert("Failed to add item");
+
       }
-    );
 
-    console.log("Cart response:", response.data);
-
-    setCartCount((prev) => prev + 1);
-
-  } catch (error: any) {
-
-    console.error("Full Error:", error);
-
-    if (error.response) {
-      console.log("Server error:", error.response.data);
-      alert(error.response.data);
-    } else {
-      alert("Server not reachable");
     }
 
-  }
-};
+  };
+
+  const resolvePartImage = (part: Pick<Part, "imagePath" | "partNumber">) => {
+    const baseUrl = "http://localhost:5053";
+    const imagePath = part.imagePath;
+
+    if (imagePath && imagePath.trim().length > 0) {
+      if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+        return imagePath;
+      }
+
+      const normalized = imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
+      const fromImagesFolder = normalized.startsWith("images/")
+        ? normalized
+        : `images/${normalized}`;
+
+      return `${baseUrl}/${fromImagesFolder}`;
+    }
+
+    return `${baseUrl}/images/${part.partNumber}.jpg`;
+  };
 
   return (
+
     <div className="catalog-wrapper">
 
-      {/* NAVBAR */}
       <nav className="catalog-navbar">
+
         <div className="brand">
-          <img src={logo} alt="Logo" className="nav-logo" />
+          <img src={logo} alt="Logo" className="nav-logo"/>
           <span>Electronic Parts Catalog</span>
         </div>
 
         <div className="nav-right">
-          <button className="back-button" onClick={handleBack}>
+
+          <button
+            className="back-button"
+            onClick={() => navigate("/dashboard")}
+          >
             Back to Dashboard
           </button>
 
-          <span>Contact Us</span>
-          <GlobalSearch />
-          <span>👤</span>
+          <GlobalSearch/>
 
-          {/* CART ICON */}
-          <div className="cart-icon"
-          onClick={() => navigate("/carts")}>
-            <span className="cart-emoji">🛒</span>
+          <div
+            className="cart-icon"
+            onClick={() => navigate("/carts")}
+          >
 
-            {cartCount > 0 && (
-              <span className="cart-badge">
-                {cartCount}
-              </span>
-            )}
+            🛒
+
+            {cartCount > 0 &&
+              <span className="cart-badge">{cartCount}</span>
+            }
+
           </div>
+
         </div>
+
       </nav>
 
-      {/* LOADING */}
-      {loading && (
-        <div className="center-message">
-          <p>Loading parts...</p>
-        </div>
-      )}
-
-      {/* ERROR */}
-      {error && (
-        <div className="center-message error-text">
-          <p>{error}</p>
-        </div>
-      )}
-
-      {/* RESULTS */}
-      {!loading && !error && (
+      {!loading && !error &&
         <div className="results-header">
           <h2>Found {parts.length} parts</h2>
         </div>
-      )}
+      }
 
-      {/* PRODUCT GRID */}
       <div className="parts-grid">
-        {parts.map((part) => (
+
+        {parts.map(part => (
+
           <div
             key={part.id}
-            className="part-card clickable-card"
+            className="part-card"
             onClick={() => handleAddToCart(part.id)}
           >
+
             <div className="product-image">
               <img
-                src={part.imagePath ? `http://localhost:5053${part.imagePath}`
-                : "/placeholder.png"}
-                alt={part.partName}
+                src={resolvePartImage(part)}
+                alt={part.partName || "Part image"}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = fallbackImage;
+                }}
               />
             </div>
 
             <div className="product-name">
               {part.partName}
             </div>
+
           </div>
+
         ))}
+
       </div>
 
-      {!loading && !error && parts.length === 0 && (
-        <div className="center-message">
-          <p>No parts found for the selected criteria.</p>
-        </div>
-      )}
-
     </div>
+
   );
+
 };
 
 export default SearchParts;

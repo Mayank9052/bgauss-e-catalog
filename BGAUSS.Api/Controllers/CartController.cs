@@ -22,10 +22,24 @@ namespace BGAUSS.Api.Controllers
             _context = context;
         }
 
-        // 🔐 Get logged-in user from JWT
+        // // 🔐 Get logged-in user from JWT
+        // private int GetUserId()
+        // {
+        //     return int.Parse(User.FindFirst("UserId")!.Value);
+
+            
+        // }
+
         private int GetUserId()
         {
-            return int.Parse(User.FindFirst("UserId")!.Value);
+            var claim = User.FindFirst("UserId")??
+                        User.FindFirst(ClaimTypes.NameIdentifier) ??
+                        User.FindFirst("sub");
+
+            if (claim == null)
+                throw new UnauthorizedAccessException("UserId claim missing in token");
+
+            return int.Parse(claim.Value);
         }
 
         // ================= ADD TO CART =================
@@ -38,6 +52,7 @@ namespace BGAUSS.Api.Controllers
                 return BadRequest("Quantity must be greater than 0");
 
             var part = await _context.Parts.FindAsync(request.PartId);
+            
             if (part == null)
                 return NotFound("Part not found");
 
@@ -82,13 +97,14 @@ namespace BGAUSS.Api.Controllers
                 .FirstOrDefaultAsync(c => c.UserId == userId);
 
             if (cart == null || !cart.CartItems.Any())
-                return Ok(new { Message = "Cart is empty" });
+                return Ok(new {  items = new List<object>() });
 
             var items = cart.CartItems.Select(ci => new
             {
                 ci.Id,
                 PartName = ci.Part!.PartName,
                 PartNumber = ci.Part.PartNumber,
+                ImagePath = ci.Part.ImagePath,
                 Price = ci.Part.Price,
                 ci.Quantity,
                 SubTotal = ci.Quantity * (ci.Part.Price ?? 0)
@@ -96,9 +112,12 @@ namespace BGAUSS.Api.Controllers
 
             return Ok(new
             {
-                cart.Id,
-                Items = items,
-                Total = items.Sum(i => i.SubTotal)
+                // cart.Id,
+                // Items = items,
+                // Total = items.Sum(i => i.SubTotal)
+
+                items,
+                total = items.Sum(i => i.SubTotal)
             });
         }
 

@@ -5,9 +5,10 @@ import logo from "./assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
 
 interface CartItem {
-  cartItemId: number;
+  id: number;
   partName: string;
   partNumber: string;
+  imagePath?: string | null;
   price: number;
   quantity: number;
   subTotal: number;
@@ -16,173 +17,341 @@ interface CartItem {
 const CheckoutPage = () => {
 
   const [items, setItems] = useState<CartItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const [quantities, setQuantities] = useState<Record<number, number>>({});
 
   const navigate = useNavigate();
-  const userId = 1;
+  const fallbackImage = "/vite.svg";
+
+  const resolvePartImage = (item: Pick<CartItem, "imagePath" | "partNumber">) => {
+    const baseUrl = "http://localhost:5053";
+
+    if (item.imagePath && item.imagePath.trim().length > 0) {
+      if (item.imagePath.startsWith("http://") || item.imagePath.startsWith("https://")) {
+        return item.imagePath;
+      }
+
+      const normalized = item.imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
+      const fromImagesFolder = normalized.startsWith("images/")
+        ? normalized
+        : `images/${normalized}`;
+
+      return `${baseUrl}/${fromImagesFolder}`;
+    }
+
+    return `${baseUrl}/images/${item.partNumber}.jpg`;
+  };
+
+  /* ================= FETCH CART ================= */
 
   const fetchCart = async () => {
-    const res = await axios.get(
-      `http://localhost:5053/api/cart/${userId}`
-    );
 
-    setItems(res.data.items || []);
-    setTotal(res.data.totalAmount || 0);
+    const res = await axios.get("/cart/my-cart");
+
+    const cartItems: CartItem[] = res.data.items || [];
+
+    setItems(cartItems);
+
+    setQuantities(
+      Object.fromEntries(
+        cartItems.map((item) => [item.id, item.quantity])
+      )
+    );
   };
 
   useEffect(() => {
     fetchCart();
   }, []);
 
-  const updateQuantity = (id: number, value: number) => {
+  /* ================= UPDATE QUANTITY ================= */
 
-    setItems(prev =>
-      prev.map(item =>
-        item.cartItemId === id
-          ? { ...item, quantity: value, subTotal: item.price * value }
-          : item
-      )
-    );
+  const updateQuantityDraft = (id: number, value: number) => {
 
+    if (value < 1) return;
+
+    setQuantities((prev) => ({
+      ...prev,
+      [id]: value
+    }));
   };
 
-  const removeItem = (id: number) => {
+  /* ================= REMOVE ITEM ================= */
 
-    setItems(prev =>
-      prev.filter(item => item.cartItemId !== id)
-    );
+  const removeItemDraft = async (id: number) => {
 
+    try {
+
+      await axios.delete(`/cart/remove/${id}`);
+
+      await fetchCart();
+
+    } catch (error) {
+
+      console.error("Failed to remove checkout item", error);
+
+    }
+  };
+
+  /* ================= CLEAR CART ================= */
+
+  const clearCheckoutItems = async () => {
+
+    try {
+
+      await axios.delete("/cart/empty");
+
+      setItems([]);
+
+      setQuantities({});
+
+    } catch (error) {
+
+      console.error("Failed to clear checkout items", error);
+
+    }
+  };
+
+  /* ================= TOTAL SUM ================= */
+
+  const totalSum = items.reduce(
+    (sum, item) =>
+      sum + item.price * (quantities[item.id] ?? item.quantity),
+    0
+  );
+
+  /* ================= SHOP MORE ================= */
+
+  const handleShopMore = () => {
+    const storedSearchState = sessionStorage.getItem("partsSearchState");
+
+    if (storedSearchState) {
+      try {
+        navigate("/parts", {
+          replace: true,
+          state: JSON.parse(storedSearchState)
+        });
+        return;
+      } catch (error) {
+        console.error("Invalid saved parts search state", error);
+      }
+    }
+
+    const vehicle = localStorage.getItem("selectedVehicle");
+
+    if (!vehicle) {
+
+      navigate("/parts");
+
+      return;
+
+    }
+
+    const { modelId, variantId, colourId } = JSON.parse(vehicle);
+
+    navigate("/parts", {
+      replace: true,
+      state: {
+        searchType: "model",
+        modelId,
+        variantId,
+        colourId
+      }
+    });
   };
 
   return (
 
-    <div className="checkout-wrapper">
+    <div className="checkout-page">
 
-      {/* NAVBAR */}
+      {/* ================= NAVBAR ================= */}
 
-      <nav className="checkout-navbar">
+      <nav className="checkout-topbar">
 
-        <div className="brand">
-          <img src={logo} alt="logo" />
+        <div className="checkout-topbar-left">
+
+          <img src={logo} alt="BGAUSS Logo" className="checkout-logo" />
+
           <span>Electronic Parts Catalog</span>
+
         </div>
 
-        <div className="nav-links">
-          <span onClick={() => navigate("/dashboard")}>Home</span>
+        <div className="checkout-topbar-right">
+
+          <span onClick={() => navigate("/dashboard")}>
+            Home
+          </span>
+
           <span>Contact Us</span>
-          <span>🔍</span>
-          <span>👤</span>
-          <span>🛒</span>
+
+          <span className="checkout-icon">
+            🔍
+          </span>
+
+          <span className="checkout-icon">
+            👤
+          </span>
+
+          <span className="checkout-cart">
+
+            🛒
+
+            <span className="checkout-cart-badge">
+              {items.length}
+            </span>
+
+          </span>
+
         </div>
 
       </nav>
 
-      <div className="checkout-container">
+      {/* ================= CONTENT ================= */}
 
-        <h2>Cart</h2>
+      <main className="checkout-content">
 
-        {/* TABLE */}
+        <h1>Cart</h1>
 
-        <table className="checkout-table">
+        {/* ================= TABLE ================= */}
+
+        <table className="checkout-cart-table">
 
           <thead>
+
             <tr>
+
               <th></th>
               <th>Product Image</th>
               <th>Product Name</th>
               <th>Price</th>
               <th>Quantity</th>
               <th>Subtotal</th>
+
             </tr>
+
           </thead>
 
           <tbody>
 
-            {items.map(item => (
+            {items.map((item) => {
 
-              <tr key={item.cartItemId}>
+              const qty =
+                quantities[item.id] ?? item.quantity;
 
-                <td>
-                  <button
-                    className="remove-btn"
-                    onClick={() => removeItem(item.cartItemId)}
-                  >
-                    ×
-                  </button>
-                </td>
+              return (
 
-                <td>
-                  <img
-                    src="/placeholder.png"
-                    className="product-img"
-                    alt="product"
-                  />
-                </td>
+                <tr key={item.id}>
 
-                <td>{item.partNumber}</td>
+                  <td>
 
-                <td>₹{item.price}</td>
+                    <button
+                      className="checkout-remove-btn"
+                      onClick={() =>
+                        removeItemDraft(item.id)
+                      }
+                    >
+                      x
+                    </button>
 
-                <td>
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    min={1}
-                    className="qty-box"
-                    onChange={(e) =>
-                      updateQuantity(
-                        item.cartItemId,
-                        Number(e.target.value)
-                      )
-                    }
-                  />
-                </td>
+                  </td>
 
-                <td>₹{item.subTotal}</td>
+                  <td>
 
-              </tr>
+                    <img
+                      src={resolvePartImage(item)}
+                      className="checkout-product-img"
+                      alt="product"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = fallbackImage;
+                      }}
+                    />
 
-            ))}
+                  </td>
+
+                  <td>{item.partNumber}</td>
+
+                  <td>
+                    Rs{item.price.toFixed(2)}
+                  </td>
+
+                  <td>
+
+                    <input
+                      type="number"
+                      value={qty}
+                      min={1}
+                      className="checkout-qty-input"
+                      onChange={(e) =>
+                        updateQuantityDraft(
+                          item.id,
+                          Number(e.target.value)
+                        )
+                      }
+                    />
+
+                  </td>
+
+                  <td>
+                    Rs{(item.price * qty).toFixed(2)}
+                  </td>
+
+                </tr>
+
+              );
+
+            })}
 
           </tbody>
 
         </table>
 
-        {/* ACTION BUTTONS */}
+        {/* ================= FOOTER ================= */}
 
-        <div className="checkout-actions">
+        <div className="checkout-footer">
 
-          <button className="empty-btn">Empty Cart</button>
+          <div className="checkout-footer-buttons">
 
-          <button className="btn">Update Cart</button>
+            <button
+              className="checkout-page-btn"
+              onClick={clearCheckoutItems}
+            >
+              Empty Cart
+            </button>
 
-          <button
-            className="btn"
-            onClick={() => navigate("/parts")}
-          >
-            Shop More
-          </button>
+            <button className="checkout-page-btn"
+                    onClick={handleShopMore}
+                    >
+              Update Cart
+            </button>
 
-          <button className="btn">
-            Download Cart as PDF
-          </button>
+            <button
+              className="checkout-page-btn"
+              onClick={handleShopMore}
+            >
+              Shop More
+            </button>
 
-          <button className="btn">
-            Download Cart Data as CSV
-          </button>
+            <button className="checkout-page-btn">
+              Download Cart as PDF
+            </button>
 
-          <div className="total-box">
-            Total Sum: ₹{total}
+            <button className="checkout-page-btn">
+              Download Cart Data as CSV
+            </button>
+
+          </div>
+
+          <div className="checkout-total">
+
+            Total Sum: Rs{totalSum.toFixed(2)}
+
           </div>
 
         </div>
 
-      </div>
+      </main>
 
     </div>
-
   );
-
 };
 
 export default CheckoutPage;

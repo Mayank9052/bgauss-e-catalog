@@ -40,54 +40,52 @@
 
 /* ================= GRID ================= */
 
+/* ================= GRID ================= */
+
 .parts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  padding: 20px 40px;
+  gap: 14px;
+  padding: 15px 30px;
 }
-
-
 
 /* ================= CARD ================= */
 
 .part-card {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 10px;
-  border: 1px solid #e3e6ea;
-
-  width: 150px;
-  height: 120px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid #e5e5e5;
 
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
 
-  text-align: center;
-  cursor: pointer;
+  height: 130px;
 
-  transition: 0.2s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .part-card:hover {
-  box-shadow: 0 5px 12px rgba(0,0,0,0.08);
-  transform: translateY(-2px);
-} 
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
 
 /* ================= IMAGE ================= */
 
 .product-image {
-  height: 70px;
+  height: 50px;
+  width: 100%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
+  align-items: center;
 }
 
 .product-image img {
-  max-height: 65px;
+  max-height: 45px;
   max-width: 100%;
   object-fit: contain;
 }
@@ -95,15 +93,16 @@
 /* ================= TEXT ================= */
 
 .product-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  color: #222;
-  line-height: 1.4;
+  color: #333;
+  margin-top: 4px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   display: -webkit-box;
-  -webkit-line-clamp: 3; /* limit text lines */
   -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 /* ================= CART ================= */

@@ -34,7 +34,7 @@ namespace BGAUSS.Api.Controllers
 
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-#pragma warning disable CS8601 // Possible null reference assignment.
+
             var user = new User
             {
                 Username = request.Username,
@@ -44,7 +44,7 @@ namespace BGAUSS.Api.Controllers
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-#pragma warning restore CS8601 // Possible null reference assignment.
+
 
             await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
@@ -100,6 +100,8 @@ namespace BGAUSS.Api.Controllers
 
             var claims = new[]
             {
+                new Claim("UserId", user.Id.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.Role, user.Role ?? "User")
             };

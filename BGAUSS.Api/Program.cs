@@ -27,17 +27,24 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ================= JWT AUTH =================
-var key = Encoding.UTF8.GetBytes("THIS_IS_MY_SECRET_KEY_123456");
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+string jwtKey = jwtSettings["Key"] ?? throw new InvalidOperationException("JwtSettings:Key is missing");
+string jwtIssuer = jwtSettings["Issuer"] ?? "BGAUSS.Api";
+string jwtAudience = jwtSettings["Audience"] ?? "BGAUSS.Client";
+var key = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
+        options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(key)
         };
     });
@@ -103,6 +110,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("ReactPolicy");
 app.UseHttpsRedirection();
 
 app.UseAuthentication();   // MUST come before Authorization

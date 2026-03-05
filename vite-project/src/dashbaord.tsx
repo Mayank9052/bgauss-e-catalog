@@ -89,7 +89,12 @@ const Dashboard = () => {
     }
 
     setVinError("");
-    navigate("/parts", { state: { searchType: "vin", vin } });
+
+    const vinSearchState = { searchType: "vin", vin };
+    sessionStorage.setItem("partsSearchState", JSON.stringify(vinSearchState));
+    localStorage.removeItem("selectedVehicle");
+
+    navigate("/parts", { state: vinSearchState });
   };
 
   // ================= MODEL SEARCH =================
@@ -100,14 +105,25 @@ const Dashboard = () => {
     }
 
     setModelError("");
-    navigate("/parts", {
-      state: {
-        searchType: "model",
-        modelId: parseInt(model),
-        variantId: parseInt(variant),
-        colourId: parseInt(colour),
-      },
-    });
+
+    const modelSearchState = {
+      searchType: "model",
+      modelId: parseInt(model),
+      variantId: parseInt(variant),
+      colourId: parseInt(colour),
+    };
+
+    sessionStorage.setItem("partsSearchState", JSON.stringify(modelSearchState));
+    localStorage.setItem(
+      "selectedVehicle",
+      JSON.stringify({
+        modelId: modelSearchState.modelId,
+        variantId: modelSearchState.variantId,
+        colourId: modelSearchState.colourId
+      })
+    );
+
+    navigate("/parts", { state: modelSearchState });
   };
 
   return (

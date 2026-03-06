@@ -97,16 +97,15 @@ flex-direction:column;
 align-items:center;
 gap:8px;
 position:relative;
-min-height:140px;
+min-height:150px;
 }
 
-
-/* CHECKBOX POSITION */
+/* CHECKBOX */
 
 .part-select{
-position:topleft;
+position:absolute;
 top:8px;
-right:8px;
+left:8px;
 }
 
 /* IMAGE */
@@ -132,6 +131,13 @@ text-align:center;
 font-weight:500;
 }
 
+/* STOCK */
+
+.stock-text{
+font-size:11px;
+color:#666;
+}
+
 /* QUANTITY */
 
 .qty-control{
@@ -147,21 +153,10 @@ border:none;
 background:#0b3c4d;
 color:white;
 cursor:pointer;
+border-radius:4px;
 }
 
-/* SUB PARTS */
-
-.subparts{
-margin-top:6px;
-width:100%;
-border-top:1px solid #eee;
-padding-top:6px;
-}
-
-.subpart-row{
-display:flex;
-align-items:center;
-gap:6px;
-font-size:12px;
-color:#444;
+.qty-control button:disabled{
+background:#999;
+cursor:not-allowed;
 }

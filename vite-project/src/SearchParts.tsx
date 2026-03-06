@@ -157,45 +157,35 @@ const SearchParts = () => {
 
   const changeQty = (id: number, delta: number) => {
 
+    const part =
+      parts.find(p => p.id === id) ||
+      parts.flatMap(p => p.subParts ?? []).find(sp => sp.id === id);
+
+    if (!part) return;
+
     setQuantities(prev => {
 
-      const newQty = Math.max(1, (prev[id] || 1) + delta);
+      const currentQty = prev[id] || 1;
+      const newQty = currentQty + delta;
 
-      return { ...prev, [id]: newQty };
+      if (newQty < 1) return prev;
+
+      if (newQty > part.stockQuantity) {
+
+        alert(`⚠ Stock limit reached\n\n${part.partName}\nAvailable: ${part.stockQuantity}`);
+
+        return prev;
+
+      }
+
+      return {
+        ...prev,
+        [id]: newQty
+      };
 
     });
 
   };
-
-  /* ================= ADD TO CART ================= */
-
-  const addSelectedToCart = async () => {
-
-    try {
-
-      for (const partId of selectedParts) {
-        
-        const qty = quantities[partId] ?? 1;
-        
-        await axios.post("/cart/add", {
-          PartId: partId,
-          Quantity: qty
-        });
-
-      }
-
-      setCartCount(prev => prev + selectedParts.length);
-
-      alert("Items added to cart");
-
-    } catch {
-
-      alert("Failed to add items");
-
-    }
-
-  };
-
   /* ================= CHECKOUT ================= */
 
   const checkoutSelected = async () => {
@@ -204,9 +194,24 @@ const SearchParts = () => {
 
       for (const partId of selectedParts) {
 
+        const qty = quantities[partId] ?? 1;
+
+        const part = parts.find(p => p.id === partId)
+          || parts.flatMap(p => p.subParts ?? []).find(sp => sp.id === partId);
+
+        if (!part) continue;
+
+        if (qty > part.stockQuantity) {
+
+          alert(`${part.partName} only has ${part.stockQuantity} items available`);
+
+          return;
+
+        }
+
         await axios.post("/cart/add", {
           PartId: partId,
-          Quantity: quantities[partId]
+          Quantity: qty
         });
 
       }
@@ -281,13 +286,6 @@ const SearchParts = () => {
 
         <button
           disabled={!selectedParts.length}
-          onClick={addSelectedToCart}
-        >
-          Add Selected to Cart
-        </button>
-
-        <button
-          disabled={!selectedParts.length}
           onClick={checkoutSelected}
         >
           Checkout Selected
@@ -302,12 +300,13 @@ const SearchParts = () => {
         {parts.map(part => (
 
           <div key={part.id} className="part-card">
-            <div className="part-select">            
+
+            <div className="part-select">
               <input
-              type="checkbox"
-              checked={selectedParts.includes(part.id)}
-              onChange={() => toggleSelect(part)}
-            />
+                type="checkbox"
+                checked={selectedParts.includes(part.id)}
+                onChange={() => toggleSelect(part)}
+              />
             </div>
 
             <div className="product-image">
@@ -325,41 +324,24 @@ const SearchParts = () => {
               {part.partName}
             </div>
 
+            <div className="stock-text">
+              Stock: {part.stockQuantity}
+            </div>
+
             <div className="qty-control">
 
               <button onClick={() => changeQty(part.id, -1)}>-</button>
 
               <span>{quantities[part.id]}</span>
 
-              <button onClick={() => changeQty(part.id, 1)}>+</button>
+              <button
+                onClick={() => changeQty(part.id, 1)}
+                disabled={quantities[part.id] >= part.stockQuantity}
+              >
+                +
+              </button>
 
             </div>
-
-            {/* SUB PARTS */}
-
-            {part.subParts && part.subParts.length > 0 && (
-
-              <div className="subparts">
-
-                {part.subParts.map(sub => (
-
-                  <div key={sub.id} className="subpart-row">
-
-                    <input
-                      type="checkbox"
-                      checked={selectedParts.includes(sub.id)}
-                      onChange={() => toggleSelect(sub)}
-                    />
-
-                    <span>{sub.partName}</span>
-
-                  </div>
-
-                ))}
-
-              </div>
-
-            )}
 
           </div>
 

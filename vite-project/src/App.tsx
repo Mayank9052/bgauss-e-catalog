@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Login from "./login";
 import Dashboard from "./dashbaord";
 import SearchParts from "./SearchParts";
-import CartPage from "./carts";
+;
 import CheckoutPage from "./checkout";
 import AdminUsers from "./admin";
 
@@ -26,7 +26,6 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/parts" element={<SearchParts />} />
-        <Route path="/carts" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/admin/users" element={<AdminUsers />} />
       </Routes>

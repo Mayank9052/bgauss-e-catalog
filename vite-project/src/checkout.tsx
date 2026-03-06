@@ -3,7 +3,8 @@ import axios from "axios";
 import "./checkout.css";
 import logo from "./assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
-
+import { jwtDecode } from "jwt-decode";
+ 
 interface CartItem {
   id: number;
   partName: string;
@@ -13,19 +14,19 @@ interface CartItem {
   quantity: number;
   subTotal: number;
 }
-
+ 
 const CheckoutPage = () => {
-
+ 
   const [items, setItems] = useState<CartItem[]>([]);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
-
+ 
   const navigate = useNavigate();
   const fallbackImage = "/vite.svg";
-
+ 
   const resolvePartImage = (item: Pick<CartItem, "imagePath">) => {
-
-  const baseUrl = "http://localhost:5053";
-
+ 
+    const baseUrl = "http://localhost:5053";
+ 
     if (!item.imagePath) return "";
 
     if (
@@ -34,355 +35,331 @@ const CheckoutPage = () => {
     ) {
       return item.imagePath;
     }
-
+ 
     const normalized = item.imagePath
       .replace(/\\/g, "/")
       .replace(/^\/+/, "");
-
+ 
     return `${baseUrl}/${normalized}`;
   };
-
+ 
   /* ================= FETCH CART ================= */
-
+ 
   const fetchCart = async () => {
-
+ 
     const res = await axios.get("/cart/my-cart");
-
+ 
     const cartItems: CartItem[] = res.data.items || [];
-
+ 
     setItems(cartItems);
-
+ 
     setQuantities(
       Object.fromEntries(
         cartItems.map((item) => [item.id, item.quantity])
       )
     );
   };
-
+ 
   useEffect(() => {
     fetchCart();
   }, []);
-
+ 
   /* ================= UPDATE QUANTITY ================= */
-
+ 
   const updateQuantityDraft = (id: number, value: number) => {
-
+ 
     if (value < 1) return;
-
+ 
     setQuantities((prev) => ({
       ...prev,
       [id]: value
     }));
+ 
   };
-
+ 
   /* ================= REMOVE ITEM ================= */
-
+ 
   const removeItemDraft = async (id: number) => {
-
-    try {
-
-      await axios.delete(`/cart/remove/${id}`);
-
-      await fetchCart();
-
-    } catch (error) {
-
-      console.error("Failed to remove checkout item", error);
-
-    }
+ 
+    await axios.delete(`/cart/remove/${id}`);
+ 
+    fetchCart();
+ 
   };
-
+ 
   /* ================= CLEAR CART ================= */
-
+ 
   const clearCheckoutItems = async () => {
-
-    try {
-
-      await axios.delete("/cart/empty");
-
-      setItems([]);
-
-      setQuantities({});
-
-    } catch (error) {
-
-      console.error("Failed to clear checkout items", error);
-
-    }
+ 
+    await axios.delete("/cart/empty");
+ 
+    setItems([]);
+ 
+    setQuantities({});
+ 
   };
-
+ 
   /* ================= TOTAL SUM ================= */
-
+ 
   const totalSum = items.reduce(
     (sum, item) =>
       sum + item.price * (quantities[item.id] ?? item.quantity),
     0
   );
-
-  /* ================= DOWNLOAD PDF ================= */
-
-    const downloadPdf = async () => {
-
-      const res = await axios.get("http://localhost:5053/api/cart/download/pdf");
-
-      const fileUrl = `http://localhost:5053${res.data.path}`;
-
-      window.open(fileUrl, "_blank");
-    };
-
-/* ================= DOWNLOAD CSV ================= */
-
-    const downloadCsv = async () => {
-      try {
-
-        const res = await axios.get("/cart/download/csv");
-
-        const fileUrl = `http://localhost:5053${res.data.path}`;
-
-        window.open(fileUrl, "_blank");
-
-      } catch (error) {
-
-        console.error("CSV download failed", error);
-
-      }
-    };
-
+ 
   /* ================= SHOP MORE ================= */
-
+ 
   const handleShopMore = () => {
+ 
     const storedSearchState = sessionStorage.getItem("partsSearchState");
-
+ 
     if (storedSearchState) {
-      try {
-        navigate("/parts", {
-          replace: true,
-          state: JSON.parse(storedSearchState)
-        });
-        return;
-      } catch (error) {
-        console.error("Invalid saved parts search state", error);
-      }
-    }
-
-    const vehicle = localStorage.getItem("selectedVehicle");
-
-    if (!vehicle) {
-
-      navigate("/parts");
-
+      navigate("/parts", {
+        replace: true,
+        state: JSON.parse(storedSearchState)
+      });
       return;
-
     }
-
-    const { modelId, variantId, colourId } = JSON.parse(vehicle);
-
-    navigate("/parts", {
-      replace: true,
-      state: {
-        searchType: "model",
-        modelId,
-        variantId,
-        colourId
-      }
-    });
+ 
+    navigate("/parts");
+ 
   };
-
+ 
+  /* ================= DOWNLOAD CSV ================= */
+ 
+  const downloadCSV = async () => {
+ 
+    const res = await axios.get("/cart/download/csv");
+ 
+    const fileUrl = `http://localhost:5053${res.data.path}`;
+ 
+    const link = document.createElement("a");
+ 
+    link.href = fileUrl;
+ 
+    document.body.appendChild(link);
+ 
+    link.click();
+ 
+    document.body.removeChild(link);
+ 
+  };
+ 
+  /* ================= DOWNLOAD PDF ================= */
+ 
+  const downloadPDF = async () => {
+ 
+    const res = await axios.get("/cart/download/pdf");
+ 
+    const fileUrl = `http://localhost:5053${res.data.path}`;
+ 
+    const link = document.createElement("a");
+ 
+    link.href = fileUrl;
+ 
+    document.body.appendChild(link);
+ 
+    link.click();
+ 
+    document.body.removeChild(link);
+ 
+  };
+ 
+  const handleProfileClick = () => {
+ 
+    const token = localStorage.getItem("token");
+ 
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+ 
+    const decoded: any = jwtDecode(token);
+ 
+    const role =
+      decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+      decoded.role;
+ 
+    if (role === "Admin") {
+      navigate("/admin/users");
+    } else {
+      navigate("/dashboard");
+    }
+ 
+  };
+ 
   return (
-
+ 
     <div className="checkout-page">
-
+ 
       {/* ================= NAVBAR ================= */}
-
+ 
       <nav className="checkout-topbar">
-
+ 
         <div className="checkout-topbar-left">
-
-          <img src={logo} alt="BGAUSS Logo" className="checkout-logo" />
-
+ 
+          <img src={logo} alt="Logo" className="checkout-logo" />
+ 
           <span>Electronic Parts Catalog</span>
-
+ 
         </div>
-
+ 
         <div className="checkout-topbar-right">
-
-          <span onClick={() => navigate("/dashboard")}>
-            Home
-          </span>
-
+ 
+          <span onClick={() => navigate("/dashboard")}>Home</span>
+ 
           <span>Contact Us</span>
-
-          <span className="checkout-icon">
-            🔍
-          </span>
-
-          <span className="checkout-icon">
-            👤
-          </span>
-
+ 
+          <span className="checkout-icon">🔍</span>
+ 
+          <span className="checkout-icon" onClick={handleProfileClick}>👤</span>
+ 
           <span className="checkout-cart">
-
             🛒
-
-            <span className="checkout-cart-badge">
-              {items.length}
-            </span>
-
+            <span className="checkout-cart-badge">{items.length}</span>
           </span>
-
+ 
         </div>
-
+ 
       </nav>
-
-      {/* ================= CONTENT ================= */}
-
+ 
+      {/* CONTENT */}
+ 
       <main className="checkout-content">
-
+ 
         <h1>Cart</h1>
 
         {/* ================= TABLE ================= */}
+ 
+        <div className="checkout-table-wrap">
+ 
 
-        <table className="checkout-cart-table">
-
-          <thead>
-
-            <tr>
-
-              <th></th>
-              <th>Product Image</th>
-              <th>Product Name</th>
-              <th>Price</th>
-              <th>Quantity</th>
-              <th>Subtotal</th>
-
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            {items.map((item) => {
-
-              const qty =
-                quantities[item.id] ?? item.quantity;
-
-              return (
-
-                <tr key={item.id}>
-
-                  <td>
-
-                    <button
-                      className="checkout-remove-btn"
-                      onClick={() =>
-                        removeItemDraft(item.id)
-                      }
-                    >
-                      x
-                    </button>
-
-                  </td>
-
-                  <td>
-
-                    {item.imagePath && (
-                      <img
-                        src={resolvePartImage(item)}
-                        className="checkout-product-img"
-                        alt="product"
+          <table className="checkout-cart-table">
+ 
+            <thead>
+ 
+              <tr>
+                <th></th>
+                <th>Product Image</th>
+                <th>Product Name</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Subtotal</th>
+              </tr>
+ 
+            </thead>
+ 
+            <tbody>
+ 
+              {items.map((item) => {
+ 
+                const qty = quantities[item.id] ?? item.quantity;
+ 
+                return (
+ 
+                  <tr key={item.id}>
+ 
+                    <td>
+                      <button
+                        className="checkout-remove-btn"
+                        onClick={() => removeItemDraft(item.id)}
+                      >
+                        ×
+                      </button>
+                    </td>
+ 
+                    <td>
+                      {item.imagePath && (
+                        <img
+                          src={resolvePartImage(item)}
+                          className="checkout-product-img"
+                        />
+                      )}
+                    </td>
+ 
+                    <td>{item.partNumber}</td>
+ 
+                    <td>₹ {item.price.toFixed(2)}</td>
+ 
+                    <td>
+ 
+                      <input
+                        type="number"
+                        value={qty}
+                        min={1}
+                        className="checkout-qty-input"
+                        onChange={(e) =>
+                          updateQuantityDraft(
+                            item.id,
+                            Number(e.target.value)
+                          )
+                        }
                       />
-                    )}
-
-                  </td>
-
-                  <td>{item.partNumber}</td>
-
-                  <td>
-                    Rs{item.price.toFixed(2)}
-                  </td>
-
-                  <td>
-
-                    <input
-                      type="number"
-                      value={qty}
-                      min={1}
-                      className="checkout-qty-input"
-                      onChange={(e) =>
-                        updateQuantityDraft(
-                          item.id,
-                          Number(e.target.value)
-                        )
-                      }
-                    />
-
-                  </td>
-
-                  <td>
-                    Rs{(item.price * qty).toFixed(2)}
-                  </td>
-
-                </tr>
-
-              );
-
-            })}
-
-          </tbody>
-
-        </table>
-
-        {/* ================= FOOTER ================= */}
-
+ 
+                    </td>
+ 
+                    <td>₹ {(item.price * qty).toFixed(2)}</td>
+ 
+                  </tr>
+ 
+                );
+ 
+              })}
+ 
+            </tbody>
+ 
+          </table>
+ 
+        </div>
+ 
+        {/* FOOTER */}
+ 
         <div className="checkout-footer">
-
+ 
           <div className="checkout-footer-buttons">
-
-            <button
-              className="checkout-page-btn"
-              onClick={clearCheckoutItems}
-            >
+ 
+            <button className="checkout-page-btn" onClick={clearCheckoutItems}>
               Empty Cart
             </button>
-
-            <button className="checkout-page-btn"
-                    onClick={handleShopMore}
-                    >
-              Update Cart
-            </button>
-
-            <button
-              className="checkout-page-btn"
-              onClick={handleShopMore}
-            >
+ 
+            <button className="checkout-page-btn" onClick={handleShopMore}>
               Shop More
             </button>
-
-            <button className="checkout-page-btn" onClick={downloadPdf}>
-            Download Cart as PDF
+ 
+            <button className="checkout-page-btn" onClick={downloadPDF}>
+              Download Cart as PDF
             </button>
-
-            <button
-              className="checkout-page-btn"
-              onClick={downloadCsv}
-            >
+ 
+            <button className="checkout-page-btn" onClick={downloadCSV}>
               Download Cart Data as CSV
             </button>
-
+ 
           </div>
-
-          <div className="checkout-total">
-
-            Total Sum: Rs{totalSum.toFixed(2)}
-
+ 
+          <div className="checkout-summary">
+ 
+            <div className="summary-row">
+              <span>Items</span>
+              <span>{items.length}</span>
+            </div>
+ 
+            <div className="summary-row">
+              <span>Total Amount</span>
+              <span className="summary-total">
+                ₹ {totalSum.toFixed(2)}
+              </span>
+            </div>
+ 
           </div>
-
+ 
         </div>
-
+ 
       </main>
-
+ 
     </div>
+ 
   );
+ 
 };
-
+ 
 export default CheckoutPage;

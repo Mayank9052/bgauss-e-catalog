@@ -25,44 +25,30 @@ const SearchParts = () => {
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [cartCount, setCartCount] = useState(0);
+
+  const [selectedParts, setSelectedParts] = useState<number[]>([]);
+  const [quantities, setQuantities] = useState<Record<number, number>>({});
+
   const fallbackImage = "/vite.svg";
 
   const searchQuery = searchParams.get("q");
+
   const searchState = useMemo(() => {
+
     const routeState = location.state as any;
     const storedState = readStoredSearchState();
 
     return routeState && Object.keys(routeState).length > 0
       ? routeState
       : (storedState || {});
+
   }, [location.state]);
 
-const {
-  searchType,
-  modelId,
-  variantId,
-  colourId,
-  results
-} = searchState;
+  const { searchType, modelId, variantId, colourId, results } = searchState;
 
-  useEffect(() => {
-    if (!searchType) return;
-
-    sessionStorage.setItem("partsSearchState", JSON.stringify(searchState));
-
-    if (
-      searchType === "model" &&
-      typeof modelId === "number" &&
-      typeof variantId === "number" &&
-      typeof colourId === "number"
-    ) {
-      localStorage.setItem(
-        "selectedVehicle",
-        JSON.stringify({ modelId, variantId, colourId })
-      );
-    }
-  }, [searchType, modelId, variantId, colourId, results]);
+  /* ================= FETCH PARTS ================= */
 
   useEffect(() => {
 
@@ -71,33 +57,26 @@ const {
       try {
 
         setLoading(true);
-        setError(null);
 
-        if (searchState.searchType === "model") {
+        if (searchType === "model") {
 
-          const filteredParts = await getFilteredParts(
-            searchState.modelId,
-            searchState.variantId,
-            searchState.colourId
-          );
+          const filtered = await getFilteredParts(modelId, variantId, colourId);
+          setParts(filtered);
 
-          setParts(filteredParts);
+        } else if (searchType === "global") {
 
-        } else if (searchState.searchType === "global") {
-
-          setParts(searchState.results);
+          setParts(results);
 
         } else {
 
-          const allParts = await getAllParts();
-          setParts(allParts);
+          const all = await getAllParts();
+          setParts(all);
 
         }
 
-      } catch (err) {
+      } catch {
 
-        console.error(err);
-        setError("Failed to load parts.");
+        setError("Failed to load parts");
 
       } finally {
 
@@ -111,23 +90,33 @@ const {
 
   }, [searchType, modelId, variantId, colourId, results, searchQuery]);
 
+  /* ================= INIT QUANTITY ================= */
+
+  useEffect(() => {
+
+    const qty: Record<number, number> = {};
+
+    parts.forEach(p => qty[p.id] = 1);
+
+    setQuantities(qty);
+
+  }, [parts]);
+
+  /* ================= CART COUNT ================= */
+
   useEffect(() => {
 
     const fetchCart = async () => {
 
       try {
 
-        const response = await axios.get("/cart/my-cart");
+        const res = await axios.get("/cart/my-cart");
 
-        if (response.data?.items) {
-          setCartCount(response.data.items.length);
+        if (res.data?.items) {
+          setCartCount(res.data.items.length);
         }
 
-      } catch (error) {
-
-        console.error("Cart load failed", error);
-
-      }
+      } catch {}
 
     };
 
@@ -135,58 +124,103 @@ const {
 
   }, []);
 
-  const handleAddToCart = async (partId: number) => {
+  /* ================= SELECT PART ================= */
+
+  const toggleSelect = (id: number) => {
+
+    setSelectedParts(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
+    );
+
+  };
+
+  /* ================= QUANTITY ================= */
+
+  const changeQty = (id: number, delta: number) => {
+
+    setQuantities(prev => {
+
+      const newQty = Math.max(1, (prev[id] || 1) + delta);
+
+      return { ...prev, [id]: newQty };
+
+    });
+
+  };
+
+  /* ================= ADD TO CART ================= */
+
+  const addSelectedToCart = async () => {
 
     try {
 
-      await axios.post("/cart/add", {
-        PartId: partId,
-        Quantity: 1
-      });
+      for (const partId of selectedParts) {
 
-      setCartCount(prev => prev + 1);
-
-    } catch (error: any) {
-
-      if (error.response?.status === 401) {
-
-        alert("Please login again.");
-        localStorage.removeItem("token");
-        navigate("/");
-
-      } else {
-
-        alert("Failed to add item");
+        await axios.post("/cart/add", {
+          PartId: partId,
+          Quantity: quantities[partId]
+        });
 
       }
+
+      setCartCount(prev => prev + selectedParts.length);
+
+      alert("Items added to cart");
+
+    } catch {
+
+      alert("Failed to add items");
 
     }
 
   };
 
-    const resolvePartImage = (part: Pick<Part, "imagePath">) => {
+  /* ================= CHECKOUT ================= */
+
+  const checkoutSelected = async () => {
+
+    try {
+
+      for (const partId of selectedParts) {
+
+        await axios.post("/cart/add", {
+          PartId: partId,
+          Quantity: quantities[partId]
+        });
+
+      }
+
+      navigate("/checkout");
+
+    } catch {
+
+      alert("Checkout failed");
+
+    }
+
+  };
+
+  /* ================= IMAGE ================= */
+
+  const resolvePartImage = (part: Pick<Part, "imagePath">) => {
 
     const baseUrl = "http://localhost:5053";
 
     if (!part.imagePath) return "";
 
-    if (
-      part.imagePath.startsWith("http://") ||
-      part.imagePath.startsWith("https://")
-    ) {
-      return part.imagePath;
-    }
-
-    const normalized = part.imagePath
-      .replace(/\\/g, "/")
-      .replace(/^\/+/, "");
+    const normalized = part.imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
 
     return `${baseUrl}/${normalized}`;
+
   };
 
   return (
 
     <div className="catalog-wrapper">
+
+      {/* NAVBAR */}
 
       <nav className="catalog-navbar">
 
@@ -206,45 +240,55 @@ const {
 
           <GlobalSearch/>
 
-          <div
-            className="cart-icon"
-            onClick={() => navigate("/carts")}
-          >
-
+          <div className="cart-icon" onClick={() => navigate('/checkout')}>
             🛒
-
-            {cartCount > 0 &&
-              <span className="cart-badge">{cartCount}</span>
-            }
-
+            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
           </div>
 
         </div>
 
       </nav>
 
-      {!loading && !error &&
-        <div className="results-header">
-          <h2>Found {parts.length} parts</h2>
-        </div>
-      }
+      {/* ACTION BUTTONS */}
+
+      <div className="parts-actions">
+
+        <button
+          disabled={!selectedParts.length}
+          onClick={addSelectedToCart}
+        >
+          Add Selected to Cart
+        </button>
+
+        <button
+          disabled={!selectedParts.length}
+          onClick={checkoutSelected}
+        >
+          Checkout Selected
+        </button>
+
+      </div>
+
+      {/* PARTS GRID */}
 
       <div className="parts-grid">
 
         {parts.map(part => (
 
-          <div
-            key={part.id}
-            className="part-card"
-            onClick={() => handleAddToCart(part.id)}
-          >
+          <div key={part.id} className="part-card">
+
+            <input
+              type="checkbox"
+              checked={selectedParts.includes(part.id)}
+              onChange={() => toggleSelect(part.id)}
+            />
 
             <div className="product-image">
 
               {part.imagePath && (
                 <img
                   src={resolvePartImage(part)}
-                  alt={part.partName || "Part image"}
+                  alt={part.partName}
                 />
               )}
 
@@ -252,6 +296,18 @@ const {
 
             <div className="product-name">
               {part.partName}
+            </div>
+
+            {/* QUANTITY */}
+
+            <div className="qty-control">
+
+              <button onClick={() => changeQty(part.id, -1)}>-</button>
+
+              <span>{quantities[part.id]}</span>
+
+              <button onClick={() => changeQty(part.id, 1)}>+</button>
+
             </div>
 
           </div>

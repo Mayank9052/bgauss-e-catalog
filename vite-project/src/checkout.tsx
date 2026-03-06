@@ -23,23 +23,24 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const fallbackImage = "/vite.svg";
 
-  const resolvePartImage = (item: Pick<CartItem, "imagePath" | "partNumber">) => {
-    const baseUrl = "http://localhost:5053";
+  const resolvePartImage = (item: Pick<CartItem, "imagePath">) => {
 
-    if (item.imagePath && item.imagePath.trim().length > 0) {
-      if (item.imagePath.startsWith("http://") || item.imagePath.startsWith("https://")) {
-        return item.imagePath;
-      }
+  const baseUrl = "http://localhost:5053";
 
-      const normalized = item.imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
-      const fromImagesFolder = normalized.startsWith("images/")
-        ? normalized
-        : `images/${normalized}`;
+    if (!item.imagePath) return "";
 
-      return `${baseUrl}/${fromImagesFolder}`;
+    if (
+      item.imagePath.startsWith("http://") ||
+      item.imagePath.startsWith("https://")
+    ) {
+      return item.imagePath;
     }
 
-    return `${baseUrl}/images/${item.partNumber}.jpg`;
+    const normalized = item.imagePath
+      .replace(/\\/g, "/")
+      .replace(/^\/+/, "");
+
+    return `${baseUrl}/${normalized}`;
   };
 
   /* ================= FETCH CART ================= */
@@ -358,15 +359,13 @@ const handleProfileClick = () => {
 
                   <td>
 
-                    <img
-                      src={resolvePartImage(item)}
-                      className="checkout-product-img"
-                      alt="product"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = fallbackImage;
-                      }}
-                    />
+                    {item.imagePath && (
+                      <img
+                        src={resolvePartImage(item)}
+                        className="checkout-product-img"
+                        alt="product"
+                      />
+                    )}
 
                   </td>
 

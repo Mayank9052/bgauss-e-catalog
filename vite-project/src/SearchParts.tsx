@@ -23,27 +23,18 @@ const SearchParts = () => {
   const [searchParams] = useSearchParams();
 
   const [parts, setParts] = useState<Part[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [cartCount, setCartCount] = useState(0);
-
   const [selectedParts, setSelectedParts] = useState<number[]>([]);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
-
-  const fallbackImage = "/vite.svg";
+  const [cartCount, setCartCount] = useState(0);
 
   const searchQuery = searchParams.get("q");
 
   const searchState = useMemo(() => {
-
     const routeState = location.state as any;
     const storedState = readStoredSearchState();
-
     return routeState && Object.keys(routeState).length > 0
       ? routeState
       : (storedState || {});
-
   }, [location.state]);
 
   const { searchType, modelId, variantId, colourId, results } = searchState;
@@ -55,8 +46,6 @@ const SearchParts = () => {
     const fetchParts = async () => {
 
       try {
-
-        setLoading(true);
 
         if (searchType === "model") {
 
@@ -76,11 +65,7 @@ const SearchParts = () => {
 
       } catch {
 
-        setError("Failed to load parts");
-
-      } finally {
-
-        setLoading(false);
+        alert("Failed to load parts");
 
       }
 
@@ -96,7 +81,15 @@ const SearchParts = () => {
 
     const qty: Record<number, number> = {};
 
-    parts.forEach(p => qty[p.id] = 1);
+    parts.forEach(p => {
+
+      qty[p.id] = 1;
+
+      p.subParts?.forEach(sp => {
+        qty[sp.id] = 1;
+      });
+
+    });
 
     setQuantities(qty);
 
@@ -126,13 +119,37 @@ const SearchParts = () => {
 
   /* ================= SELECT PART ================= */
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (part: any) => {
 
-    setSelectedParts(prev =>
-      prev.includes(id)
-        ? prev.filter(x => x !== id)
-        : [...prev, id]
-    );
+    setSelectedParts(prev => {
+
+      let updated = [...prev];
+
+      const isSelected = updated.includes(part.id);
+
+      if (isSelected) {
+
+        updated = updated.filter(id => id !== part.id);
+
+        part.subParts?.forEach((sp: any) => {
+          updated = updated.filter(id => id !== sp.id);
+        });
+
+      } else {
+
+        updated.push(part.id);
+
+        part.subParts?.forEach((sp: any) => {
+          if (!updated.includes(sp.id)) {
+            updated.push(sp.id);
+          }
+        });
+
+      }
+
+      return updated;
+
+    });
 
   };
 
@@ -157,10 +174,12 @@ const SearchParts = () => {
     try {
 
       for (const partId of selectedParts) {
-
+        
+        const qty = quantities[partId] ?? 1;
+        
         await axios.post("/cart/add", {
           PartId: partId,
-          Quantity: quantities[partId]
+          Quantity: qty
         });
 
       }
@@ -210,7 +229,9 @@ const SearchParts = () => {
 
     if (!part.imagePath) return "";
 
-    const normalized = part.imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
+    const normalized = part.imagePath
+      .replace(/\\/g, "/")
+      .replace(/^\/+/, "");
 
     return `${baseUrl}/${normalized}`;
 
@@ -240,9 +261,14 @@ const SearchParts = () => {
 
           <GlobalSearch/>
 
-          <div className="cart-icon" onClick={() => navigate('/checkout')}>
+          <div
+            className="cart-icon"
+            onClick={() => navigate('/checkout')}
+          >
             🛒
-            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+            {cartCount > 0 &&
+              <span className="cart-badge">{cartCount}</span>
+            }
           </div>
 
         </div>
@@ -276,12 +302,13 @@ const SearchParts = () => {
         {parts.map(part => (
 
           <div key={part.id} className="part-card">
-
-            <input
+            <div className="part-select">            
+              <input
               type="checkbox"
               checked={selectedParts.includes(part.id)}
-              onChange={() => toggleSelect(part.id)}
+              onChange={() => toggleSelect(part)}
             />
+            </div>
 
             <div className="product-image">
 
@@ -298,8 +325,6 @@ const SearchParts = () => {
               {part.partName}
             </div>
 
-            {/* QUANTITY */}
-
             <div className="qty-control">
 
               <button onClick={() => changeQty(part.id, -1)}>-</button>
@@ -309,6 +334,32 @@ const SearchParts = () => {
               <button onClick={() => changeQty(part.id, 1)}>+</button>
 
             </div>
+
+            {/* SUB PARTS */}
+
+            {part.subParts && part.subParts.length > 0 && (
+
+              <div className="subparts">
+
+                {part.subParts.map(sub => (
+
+                  <div key={sub.id} className="subpart-row">
+
+                    <input
+                      type="checkbox"
+                      checked={selectedParts.includes(sub.id)}
+                      onChange={() => toggleSelect(sub)}
+                    />
+
+                    <span>{sub.partName}</span>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            )}
 
           </div>
 

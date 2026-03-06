@@ -21,26 +21,19 @@ const CheckoutPage = () => {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
   const navigate = useNavigate();
-  const fallbackImage = "/vite.svg";
 
   const resolvePartImage = (item: Pick<CartItem, "imagePath">) => {
 
-  const baseUrl = "http://localhost:5053";
+    const baseUrl = "http://localhost:5053";
 
     if (!item.imagePath) return "";
-
-    if (
-      item.imagePath.startsWith("http://") ||
-      item.imagePath.startsWith("https://")
-    ) {
-      return item.imagePath;
-    }
 
     const normalized = item.imagePath
       .replace(/\\/g, "/")
       .replace(/^\/+/, "");
 
     return `${baseUrl}/${normalized}`;
+
   };
 
   /* ================= FETCH CART ================= */
@@ -58,6 +51,7 @@ const CheckoutPage = () => {
         cartItems.map((item) => [item.id, item.quantity])
       )
     );
+
   };
 
   useEffect(() => {
@@ -74,42 +68,29 @@ const CheckoutPage = () => {
       ...prev,
       [id]: value
     }));
+
   };
 
   /* ================= REMOVE ITEM ================= */
 
   const removeItemDraft = async (id: number) => {
 
-    try {
+    await axios.delete(`/cart/remove/${id}`);
 
-      await axios.delete(`/cart/remove/${id}`);
+    fetchCart();
 
-      await fetchCart();
-
-    } catch (error) {
-
-      console.error("Failed to remove checkout item", error);
-
-    }
   };
 
   /* ================= CLEAR CART ================= */
 
   const clearCheckoutItems = async () => {
 
-    try {
+    await axios.delete("/cart/empty");
 
-      await axios.delete("/cart/empty");
+    setItems([]);
 
-      setItems([]);
+    setQuantities({});
 
-      setQuantities({});
-
-    } catch (error) {
-
-      console.error("Failed to clear checkout items", error);
-
-    }
   };
 
   /* ================= TOTAL SUM ================= */
@@ -123,47 +104,24 @@ const CheckoutPage = () => {
   /* ================= SHOP MORE ================= */
 
   const handleShopMore = () => {
+
     const storedSearchState = sessionStorage.getItem("partsSearchState");
 
     if (storedSearchState) {
-      try {
-        navigate("/parts", {
-          replace: true,
-          state: JSON.parse(storedSearchState)
-        });
-        return;
-      } catch (error) {
-        console.error("Invalid saved parts search state", error);
-      }
-    }
-
-    const vehicle = localStorage.getItem("selectedVehicle");
-
-    if (!vehicle) {
-
-      navigate("/parts");
-
+      navigate("/parts", {
+        replace: true,
+        state: JSON.parse(storedSearchState)
+      });
       return;
-
     }
 
-    const { modelId, variantId, colourId } = JSON.parse(vehicle);
+    navigate("/parts");
 
-    navigate("/parts", {
-      replace: true,
-      state: {
-        searchType: "model",
-        modelId,
-        variantId,
-        colourId
-      }
-    });
   };
-/* ================= DOWNLOAD CSV ================= */
 
-const downloadCSV = async () => {
+  /* ================= DOWNLOAD CSV ================= */
 
-  try {
+  const downloadCSV = async () => {
 
     const res = await axios.get("/cart/download/csv");
 
@@ -172,27 +130,18 @@ const downloadCSV = async () => {
     const link = document.createElement("a");
 
     link.href = fileUrl;
-    link.download = "";
 
     document.body.appendChild(link);
+
     link.click();
 
     document.body.removeChild(link);
 
-  } catch (error) {
+  };
 
-    console.error("CSV download failed", error);
+  /* ================= DOWNLOAD PDF ================= */
 
-  }
-
-};
-
-
-/* ================= DOWNLOAD PDF ================= */
-
-const downloadPDF = async () => {
-
-  try {
+  const downloadPDF = async () => {
 
     const res = await axios.get("/cart/download/pdf");
 
@@ -201,31 +150,23 @@ const downloadPDF = async () => {
     const link = document.createElement("a");
 
     link.href = fileUrl;
-    link.download = "";
 
     document.body.appendChild(link);
+
     link.click();
 
     document.body.removeChild(link);
 
-  } catch (error) {
+  };
 
-    console.error("PDF download failed", error);
+  const handleProfileClick = () => {
 
-  }
+    const token = localStorage.getItem("token");
 
-};
-
-const handleProfileClick = () => {
-
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    navigate("/login");
-    return;
-  }
-
-  try {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
     const decoded: any = jwtDecode(token);
 
@@ -234,34 +175,24 @@ const handleProfileClick = () => {
       decoded.role;
 
     if (role === "Admin") {
-
       navigate("/admin/users");
-
     } else {
-
       navigate("/dashboard");
-
     }
 
-  } catch (error) {
+  };
 
-    console.error("Invalid token", error);
-    navigate("/login");
-
-  }
-
-};
   return (
 
     <div className="checkout-page">
 
-      {/* ================= NAVBAR ================= */}
+      {/* NAVBAR */}
 
       <nav className="checkout-topbar">
 
         <div className="checkout-topbar-left">
 
-          <img src={logo} alt="BGAUSS Logo" className="checkout-logo" />
+          <img src={logo} alt="Logo" className="checkout-logo" />
 
           <span>Electronic Parts Catalog</span>
 
@@ -269,167 +200,120 @@ const handleProfileClick = () => {
 
         <div className="checkout-topbar-right">
 
-          <span onClick={() => navigate("/dashboard")}>
-            Home
-          </span>
+          <span onClick={() => navigate("/dashboard")}>Home</span>
 
           <span>Contact Us</span>
 
-          <span className="checkout-icon">
-            🔍
-          </span>
+          <span className="checkout-icon">🔍</span>
 
-          <span className="checkout-icon" onClick={handleProfileClick}
-                style={{ cursor: "pointer" }}>
-            👤
-          </span>
+          <span className="checkout-icon" onClick={handleProfileClick}>👤</span>
 
           <span className="checkout-cart">
-
             🛒
-
-            <span className="checkout-cart-badge">
-              {items.length}
-            </span>
-
+            <span className="checkout-cart-badge">{items.length}</span>
           </span>
 
         </div>
 
       </nav>
 
-      {/* ================= CONTENT ================= */}
+      {/* CONTENT */}
 
       <main className="checkout-content">
 
         <h1>Cart</h1>
 
-        {/* ================= TABLE ================= */}
-
         <div className="checkout-table-wrap">
-        <table className="checkout-cart-table">
 
-          <colgroup>
-            <col className="col-remove" />
-            <col className="col-image" />
-            <col className="col-name" />
-            <col className="col-price" />
-            <col className="col-qty" />
-            <col className="col-subtotal" />
-          </colgroup>
+          <table className="checkout-cart-table">
 
-          <thead>
+            <thead>
 
-            <tr>
+              <tr>
+                <th></th>
+                <th>Product Image</th>
+                <th>Product Name</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Subtotal</th>
+              </tr>
 
-              <th></th>
-              <th>Product Image</th>
-              <th>Product Name</th>
-              <th>Price</th>
-              <th>Quantity</th>
-              <th>Subtotal</th>
+            </thead>
 
-            </tr>
+            <tbody>
 
-          </thead>
+              {items.map((item) => {
 
-          <tbody>
+                const qty = quantities[item.id] ?? item.quantity;
 
-            {items.map((item) => {
+                return (
 
-              const qty =
-                quantities[item.id] ?? item.quantity;
+                  <tr key={item.id}>
 
-              return (
+                    <td>
+                      <button
+                        className="checkout-remove-btn"
+                        onClick={() => removeItemDraft(item.id)}
+                      >
+                        ×
+                      </button>
+                    </td>
 
-                <tr key={item.id}>
+                    <td>
+                      {item.imagePath && (
+                        <img
+                          src={resolvePartImage(item)}
+                          className="checkout-product-img"
+                        />
+                      )}
+                    </td>
 
-                  <td>
+                    <td>{item.partNumber}</td>
 
-                    <button
-                      className="checkout-remove-btn"
-                      onClick={() =>
-                        removeItemDraft(item.id)
-                      }
-                    >
-                      x
-                    </button>
+                    <td>₹ {item.price.toFixed(2)}</td>
 
-                  </td>
+                    <td>
 
-                  <td>
-
-                    {item.imagePath && (
-                      <img
-                        src={resolvePartImage(item)}
-                        className="checkout-product-img"
-                        alt="product"
+                      <input
+                        type="number"
+                        value={qty}
+                        min={1}
+                        className="checkout-qty-input"
+                        onChange={(e) =>
+                          updateQuantityDraft(
+                            item.id,
+                            Number(e.target.value)
+                          )
+                        }
                       />
-                    )}
 
-                  </td>
+                    </td>
 
-                  <td>{item.partNumber}</td>
+                    <td>₹ {(item.price * qty).toFixed(2)}</td>
 
-                  <td>
-                    Rs{item.price.toFixed(2)}
-                  </td>
+                  </tr>
 
-                  <td>
+                );
 
-                    <input
-                      type="number"
-                      value={qty}
-                      min={1}
-                      className="checkout-qty-input"
-                      onChange={(e) =>
-                        updateQuantityDraft(
-                          item.id,
-                          Number(e.target.value)
-                        )
-                      }
-                    />
+              })}
 
-                  </td>
+            </tbody>
 
-                  <td>
-                    Rs {(item.price * qty).toFixed(2)}
-                  </td>
+          </table>
 
-                </tr>
-
-              );
-
-            })}
-
-          </tbody>
-
-        </table>
         </div>
 
-        {/* ================= FOOTER ================= */}
+        {/* FOOTER */}
 
         <div className="checkout-footer">
 
           <div className="checkout-footer-buttons">
 
-            <button
-              className="checkout-page-btn"
-              onClick={clearCheckoutItems}
-            >
+            <button className="checkout-page-btn" onClick={clearCheckoutItems}>
               Empty Cart
             </button>
 
-            <button className="checkout-page-btn"
-                    onClick={handleShopMore}
-                    >
-              Update Cart
-            </button>
-
-            <button
-              className="checkout-page-btn"
-              onClick={handleShopMore}
-            >
+            <button className="checkout-page-btn" onClick={handleShopMore}>
               Shop More
             </button>
 
@@ -443,9 +327,19 @@ const handleProfileClick = () => {
 
           </div>
 
-          <div className="checkout-total">
+          <div className="checkout-summary">
 
-            Total Sum: Rs {totalSum.toFixed(2)}
+            <div className="summary-row">
+              <span>Items</span>
+              <span>{items.length}</span>
+            </div>
+
+            <div className="summary-row">
+              <span>Total Amount</span>
+              <span className="summary-total">
+                ₹ {totalSum.toFixed(2)}
+              </span>
+            </div>
 
           </div>
 
@@ -454,7 +348,9 @@ const handleProfileClick = () => {
       </main>
 
     </div>
+
   );
+
 };
 
 export default CheckoutPage;

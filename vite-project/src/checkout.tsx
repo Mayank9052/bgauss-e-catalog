@@ -119,6 +119,35 @@ const CheckoutPage = () => {
     0
   );
 
+  /* ================= DOWNLOAD PDF ================= */
+
+    const downloadPdf = async () => {
+
+      const res = await axios.get("http://localhost:5053/api/cart/download/pdf");
+
+      const fileUrl = `http://localhost:5053${res.data.path}`;
+
+      window.open(fileUrl, "_blank");
+    };
+
+/* ================= DOWNLOAD CSV ================= */
+
+    const downloadCsv = async () => {
+      try {
+
+        const res = await axios.get("/cart/download/csv");
+
+        const fileUrl = `http://localhost:5053${res.data.path}`;
+
+        window.open(fileUrl, "_blank");
+
+      } catch (error) {
+
+        console.error("CSV download failed", error);
+
+      }
+    };
+
   /* ================= SHOP MORE ================= */
 
   const handleShopMore = () => {
@@ -329,11 +358,14 @@ const CheckoutPage = () => {
               Shop More
             </button>
 
-            <button className="checkout-page-btn">
-              Download Cart as PDF
+            <button className="checkout-page-btn" onClick={downloadPdf}>
+            Download Cart as PDF
             </button>
 
-            <button className="checkout-page-btn">
+            <button
+              className="checkout-page-btn"
+              onClick={downloadCsv}
+            >
               Download Cart Data as CSV
             </button>
 

@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
+using QuestPDF.Helpers;
 
 namespace BGAUSS.Api.Controllers
 {
@@ -278,34 +279,52 @@ namespace BGAUSS.Api.Controllers
         public async Task<IActionResult> DownloadCsv()
         {
             int userId = GetUserId();
-
+        
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .ThenInclude(ci => ci.Part)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
-
-            if (cart == null)
-                return NotFound();
-
+        
+            if (cart == null || !cart.CartItems.Any())
+                return NotFound("Cart empty");
+        
             var sb = new StringBuilder();
-            sb.AppendLine("PartName,PartNumber,Price,Quantity,SubTotal");
-
+        
+            sb.AppendLine("Product Name,Part Number,Price,Quantity,Subtotal");
+        
+            decimal total = 0;
+        
             foreach (var item in cart.CartItems)
             {
                 decimal price = item.Part?.Price ?? 0;
-                sb.AppendLine($"{item.Part?.PartName},{item.Part?.PartNumber},{price},{item.Quantity},{price * item.Quantity}");
+                decimal subtotal = price * item.Quantity;
+        
+                total += subtotal;
+        
+                sb.AppendLine($"{item.Part?.PartName},{item.Part?.PartNumber},{price},{item.Quantity},{subtotal}");
             }
-
+        
+            // Add empty line
+            sb.AppendLine("");
+        
+            // Add total row
+            sb.AppendLine($",,,,Total Sum,{total}");
+        
             var fileName = $"Cart_{userId}_{DateTime.Now:yyyyMMddHHmmss}.csv";
+        
             var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "downloads");
+        
             if (!Directory.Exists(folderPath))
                 Directory.CreateDirectory(folderPath);
-
+        
             var filePath = Path.Combine(folderPath, fileName);
+        
             await System.IO.File.WriteAllTextAsync(filePath, sb.ToString());
-
-            var relativePath = $"/downloads/{fileName}";
-            return Ok(new { Message = "CSV generated", Path = relativePath });
+        
+            return Ok(new
+            {
+                path = $"/downloads/{fileName}"
+            });
         }
 
         // ================= DOWNLOAD PDF =================
@@ -319,38 +338,133 @@ namespace BGAUSS.Api.Controllers
                 .ThenInclude(ci => ci.Part)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
 
-            if (cart == null)
-                return NotFound();
+            if (cart == null || !cart.CartItems.Any())
+                return NotFound("Cart is empty");
+
+            var items = cart.CartItems.Select(ci => new
+            {
+                ProductName = ci.Part!.PartName,
+                PartNumber = ci.Part.PartNumber,
+                Price = ci.Part.Price ?? 0,
+                Quantity = ci.Quantity,
+                SubTotal = (ci.Part.Price ?? 0) * ci.Quantity
+            }).ToList();
+
+            decimal total = items.Sum(x => x.SubTotal);
 
             var document = Document.Create(container =>
             {
                 container.Page(page =>
                 {
+                    page.Margin(30);
+
+                    /* ================= HEADER ================= */
+
+                    page.Header().Row(row =>
+                    {
+                        row.RelativeItem().Column(col =>
+                        {
+                            col.Item().Text("BGAUSS")
+                                .FontSize(24)
+                                .Bold();
+
+                            col.Item().Text("Electronic Parts Catalog")
+                                .FontSize(14);
+                        });
+
+                        row.ConstantItem(200).AlignRight().Column(col =>
+                        {
+                            col.Item().Text($"Date: {DateTime.Now:dd MMM yyyy}");
+                            col.Item().Text($"User ID: {userId}");
+                        });
+                    });
+
+                    /* ================= TITLE ================= */
+
                     page.Content().Column(col =>
                     {
-                        col.Item().Text("Cart Summary").FontSize(20);
+                        col.Item().PaddingVertical(15).Text("Cart Items")
+                            .FontSize(20)
+                            .Bold()
+                            .AlignCenter();
 
-                        foreach (var item in cart.CartItems)
+                        /* ================= TABLE ================= */
+
+                        col.Item().Table(table =>
                         {
-                            decimal price = item.Part?.Price ?? 0;
-                            col.Item().Text($"{item.Part?.PartName} - Qty: {item.Quantity} - ₹{price * item.Quantity}");
-                        }
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn(3);
+                                columns.RelativeColumn(2);
+                                columns.RelativeColumn(1);
+                                columns.RelativeColumn(1);
+                                columns.RelativeColumn(1);
+                            });
 
-                        col.Item().Text($"Total: ₹{cart.CartItems.Sum(ci => (ci.Part?.Price ?? 0) * ci.Quantity)}");
+                            /* TABLE HEADER */
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Border(1).Padding(5).Text("Product").Bold();
+                                header.Cell().Border(1).Padding(5).Text("Part Number").Bold();
+                                header.Cell().Border(1).Padding(5).AlignRight().Text("Price").Bold();
+                                header.Cell().Border(1).Padding(5).AlignCenter().Text("Qty").Bold();
+                                header.Cell().Border(1).Padding(5).AlignRight().Text("Subtotal").Bold();
+                            });
+
+                            /* TABLE ROWS */
+
+                            foreach (var item in items)
+                            {
+                                table.Cell().Border(1).Padding(5).Text(item.ProductName);
+
+                                table.Cell().Border(1).Padding(5).Text(item.PartNumber);
+
+                                table.Cell().Border(1).Padding(5)
+                                    .AlignRight()
+                                    .Text($"₹ {item.Price}");
+
+                                table.Cell().Border(1).Padding(5)
+                                    .AlignCenter()
+                                    .Text(item.Quantity.ToString());
+
+                                table.Cell().Border(1).Padding(5)
+                                    .AlignRight()
+                                    .Text($"₹ {item.SubTotal}");
+                            }
+                        });
+
+                        /* ================= TOTAL ================= */
+
+                        col.Item().AlignRight().PaddingTop(10).Text($"Total: ₹ {total}")
+                            .FontSize(16)
+                            .Bold();
                     });
+
+                    /* ================= FOOTER ================= */
+
+                    page.Footer()
+                        .AlignCenter()
+                        .Text("Generated from BGAUSS Electronic Parts Catalog")
+                        .FontSize(10);
                 });
             });
 
             var fileName = $"Cart_{userId}_{DateTime.Now:yyyyMMddHHmmss}.pdf";
+
             var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "downloads");
+
             if (!Directory.Exists(folderPath))
                 Directory.CreateDirectory(folderPath);
 
             var filePath = Path.Combine(folderPath, fileName);
+
             await System.IO.File.WriteAllBytesAsync(filePath, document.GeneratePdf());
 
-            var relativePath = $"/downloads/{fileName}";
-            return Ok(new { Message = "PDF generated", Path = relativePath });
+            return Ok(new
+            {
+                path = $"/downloads/{fileName}"
+            });
         }
     }
 }

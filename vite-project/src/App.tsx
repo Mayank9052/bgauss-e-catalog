@@ -5,6 +5,7 @@ import Dashboard from "./dashbaord";
 import SearchParts from "./SearchParts";
 import CartPage from "./carts";
 import CheckoutPage from "./checkout";
+import AdminUsers from "./admin";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -22,10 +23,12 @@ function App() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/parts" element={<SearchParts />} />
         <Route path="/carts" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
       </Routes>
     </BrowserRouter>
   );

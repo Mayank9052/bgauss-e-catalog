@@ -164,24 +164,24 @@ const {
 
   };
 
-  const resolvePartImage = (part: Pick<Part, "imagePath" | "partNumber">) => {
+    const resolvePartImage = (part: Pick<Part, "imagePath">) => {
+
     const baseUrl = "http://localhost:5053";
-    const imagePath = part.imagePath;
 
-    if (imagePath && imagePath.trim().length > 0) {
-      if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-        return imagePath;
-      }
+    if (!part.imagePath) return "";
 
-      const normalized = imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
-      const fromImagesFolder = normalized.startsWith("images/")
-        ? normalized
-        : `images/${normalized}`;
-
-      return `${baseUrl}/${fromImagesFolder}`;
+    if (
+      part.imagePath.startsWith("http://") ||
+      part.imagePath.startsWith("https://")
+    ) {
+      return part.imagePath;
     }
 
-    return `${baseUrl}/images/${part.partNumber}.jpg`;
+    const normalized = part.imagePath
+      .replace(/\\/g, "/")
+      .replace(/^\/+/, "");
+
+    return `${baseUrl}/${normalized}`;
   };
 
   return (
@@ -240,14 +240,14 @@ const {
           >
 
             <div className="product-image">
-              <img
-                src={resolvePartImage(part)}
-                alt={part.partName || "Part image"}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = fallbackImage;
-                }}
-              />
+
+              {part.imagePath && (
+                <img
+                  src={resolvePartImage(part)}
+                  alt={part.partName || "Part image"}
+                />
+              )}
+
             </div>
 
             <div className="product-name">

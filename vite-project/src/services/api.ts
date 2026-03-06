@@ -27,6 +27,7 @@ export interface Part {
   price: number;
   imagePath: string;
   categoryName: string;
+  subParts?: Part[];
 }
 
 export async function login(

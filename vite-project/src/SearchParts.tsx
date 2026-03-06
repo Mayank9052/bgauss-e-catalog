@@ -186,45 +186,52 @@ const SearchParts = () => {
     });
 
   };
+
   /* ================= CHECKOUT ================= */
 
-  const checkoutSelected = async () => {
+const checkoutSelected = async () => {
 
-    try {
+  try {
 
-      for (const partId of selectedParts) {
+    if (selectedParts.length === 0) {
+      alert("Please select at least one item");
+      return;
+    }
 
-        const qty = quantities[partId] ?? 1;
+    for (const partId of selectedParts) {
 
-        const part = parts.find(p => p.id === partId)
-          || parts.flatMap(p => p.subParts ?? []).find(sp => sp.id === partId);
+      const qty = quantities[partId] ?? 1;
 
-        if (!part) continue;
+      const part =
+        parts.find(p => p.id === partId) ||
+        parts.flatMap(p => p.subParts ?? []).find(sp => sp.id === partId);
 
-        if (qty > part.stockQuantity) {
+      if (!part) continue;
 
-          alert(`${part.partName} only has ${part.stockQuantity} items available`);
-
-          return;
-
-        }
-
-        await axios.post("/cart/add", {
-          PartId: partId,
-          Quantity: qty
-        });
-
+      if (qty > part.stockQuantity) {
+        alert(`${part.partName} only has ${part.stockQuantity} items available`);
+        return;
       }
 
-      navigate("/checkout");
-
-    } catch {
-
-      alert("Checkout failed");
+      await axios.post("/cart/add", {
+        PartId: partId,
+        Quantity: qty
+      });
 
     }
 
-  };
+    navigate("/checkout");
+
+  } catch (error) {
+
+    console.error(error);
+    alert("Failed to proceed to checkout");
+
+  }
+
+};
+
+
 
   /* ================= IMAGE ================= */
 

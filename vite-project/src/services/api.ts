@@ -27,6 +27,7 @@ export interface Part {
   price: number;
   imagePath: string;
   categoryName: string;
+  stockQuantity: number;
   subParts?: Part[];
 }
 

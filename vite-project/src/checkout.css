@@ -90,6 +90,12 @@
   border-collapse: collapse;
   background: #ffffff;
   border: 1px solid #d4d4d4;
+  table-layout: fixed;
+}
+
+.checkout-table-wrap {
+  width: 100%;
+  overflow-x: auto;
 }
 
 .checkout-cart-table thead {
@@ -102,6 +108,7 @@
   font-weight: 600;
   padding: 18px 12px;
   text-align: center;
+  vertical-align: middle;
 }
 
 .checkout-cart-table td {
@@ -109,6 +116,43 @@
   border-top: 1px solid #dfdfdf;
   text-align: center;
   font-size: 14px;
+  vertical-align: middle;
+}
+
+.checkout-cart-table .col-remove {
+  width: 7%;
+}
+
+.checkout-cart-table .col-image {
+  width: 17%;
+}
+
+.checkout-cart-table .col-name {
+  width: 28%;
+}
+
+.checkout-cart-table .col-price {
+  width: 16%;
+}
+
+.checkout-cart-table .col-qty {
+  width: 14%;
+}
+
+.checkout-cart-table .col-subtotal {
+  width: 18%;
+}
+
+.checkout-cart-table th:nth-child(3),
+.checkout-cart-table td:nth-child(3) {
+  text-align: left;
+}
+
+.checkout-cart-table th:nth-child(4),
+.checkout-cart-table td:nth-child(4),
+.checkout-cart-table th:nth-child(6),
+.checkout-cart-table td:nth-child(6) {
+  text-align: right;
 }
 
 .checkout-remove-btn {
@@ -242,8 +286,7 @@
   }
 
   .checkout-cart-table {
-    display: block;
-    overflow-x: auto;
+    min-width: 780px;
   }
 
   .checkout-footer {

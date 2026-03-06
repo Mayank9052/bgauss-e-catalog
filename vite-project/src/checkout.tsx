@@ -3,6 +3,7 @@ import axios from "axios";
 import "./checkout.css";
 import logo from "./assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 interface CartItem {
   id: number;
@@ -157,7 +158,98 @@ const CheckoutPage = () => {
       }
     });
   };
+/* ================= DOWNLOAD CSV ================= */
 
+const downloadCSV = async () => {
+
+  try {
+
+    const res = await axios.get("/cart/download/csv");
+
+    const fileUrl = `http://localhost:5053${res.data.path}`;
+
+    const link = document.createElement("a");
+
+    link.href = fileUrl;
+    link.download = "";
+
+    document.body.appendChild(link);
+    link.click();
+
+    document.body.removeChild(link);
+
+  } catch (error) {
+
+    console.error("CSV download failed", error);
+
+  }
+
+};
+
+
+/* ================= DOWNLOAD PDF ================= */
+
+const downloadPDF = async () => {
+
+  try {
+
+    const res = await axios.get("/cart/download/pdf");
+
+    const fileUrl = `http://localhost:5053${res.data.path}`;
+
+    const link = document.createElement("a");
+
+    link.href = fileUrl;
+    link.download = "";
+
+    document.body.appendChild(link);
+    link.click();
+
+    document.body.removeChild(link);
+
+  } catch (error) {
+
+    console.error("PDF download failed", error);
+
+  }
+
+};
+
+const handleProfileClick = () => {
+
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    navigate("/login");
+    return;
+  }
+
+  try {
+
+    const decoded: any = jwtDecode(token);
+
+    const role =
+      decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+      decoded.role;
+
+    if (role === "Admin") {
+
+      navigate("/admin/users");
+
+    } else {
+
+      navigate("/dashboard");
+
+    }
+
+  } catch (error) {
+
+    console.error("Invalid token", error);
+    navigate("/login");
+
+  }
+
+};
   return (
 
     <div className="checkout-page">
@@ -186,7 +278,8 @@ const CheckoutPage = () => {
             🔍
           </span>
 
-          <span className="checkout-icon">
+          <span className="checkout-icon" onClick={handleProfileClick}
+                style={{ cursor: "pointer" }}>
             👤
           </span>
 
@@ -212,7 +305,17 @@ const CheckoutPage = () => {
 
         {/* ================= TABLE ================= */}
 
+        <div className="checkout-table-wrap">
         <table className="checkout-cart-table">
+
+          <colgroup>
+            <col className="col-remove" />
+            <col className="col-image" />
+            <col className="col-name" />
+            <col className="col-price" />
+            <col className="col-qty" />
+            <col className="col-subtotal" />
+          </colgroup>
 
           <thead>
 
@@ -291,7 +394,7 @@ const CheckoutPage = () => {
                   </td>
 
                   <td>
-                    Rs{(item.price * qty).toFixed(2)}
+                    Rs {(item.price * qty).toFixed(2)}
                   </td>
 
                 </tr>
@@ -303,6 +406,7 @@ const CheckoutPage = () => {
           </tbody>
 
         </table>
+        </div>
 
         {/* ================= FOOTER ================= */}
 
@@ -330,11 +434,11 @@ const CheckoutPage = () => {
               Shop More
             </button>
 
-            <button className="checkout-page-btn">
+            <button className="checkout-page-btn" onClick={downloadPDF}>
               Download Cart as PDF
             </button>
 
-            <button className="checkout-page-btn">
+            <button className="checkout-page-btn" onClick={downloadCSV}>
               Download Cart Data as CSV
             </button>
 
@@ -342,7 +446,7 @@ const CheckoutPage = () => {
 
           <div className="checkout-total">
 
-            Total Sum: Rs{totalSum.toFixed(2)}
+            Total Sum: Rs {totalSum.toFixed(2)}
 
           </div>
 

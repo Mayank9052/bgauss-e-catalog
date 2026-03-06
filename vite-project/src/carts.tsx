@@ -58,13 +58,17 @@ const EpcCartPage = () => {
       }));
 
       setItems(normalizedItems);
+
       setSelectedPreviewItemId((prev) => {
         if (!normalizedItems.length) return null;
-        if (prev && normalizedItems.some((item) => item.cartItemId === prev)) {
+
+        if (prev && normalizedItems.some((i) => i.cartItemId === prev)) {
           return prev;
         }
+
         return normalizedItems[0].cartItemId;
       });
+
     } catch (error) {
       console.error("Failed to fetch cart", error);
     }
@@ -77,64 +81,89 @@ const EpcCartPage = () => {
   /* ================= UPDATE QUANTITY ================= */
 
   const updateQuantity = async (id: number, qty: number) => {
-    try {
-      if (qty < 1) return;
 
+    try {
+
+      if (qty < 1) return;
       if (!id) return;
 
       await axios.put(`/cart/update/${id}?quantity=${qty}`);
 
       fetchCart();
+
     } catch (error) {
+
       console.error("Failed to update quantity", error);
+
     }
+
   };
 
   /* ================= REMOVE SINGLE ================= */
 
   const removeItem = async (id: number) => {
+
     try {
+
       if (!id) return;
 
       await axios.delete(`/cart/remove/${id}`);
 
       fetchCart();
+
     } catch (error) {
+
       console.error("Failed to remove item", error);
+
     }
+
   };
 
   /* ================= REMOVE SELECTED ================= */
 
   const removeSelected = async () => {
+
     try {
+
       for (const id of selectedItems) {
 
         if (!id) continue;
+
         await axios.delete(`/cart/remove/${id}`);
 
       }
 
       setSelectedItems([]);
+
       fetchCart();
+
     } catch (error) {
+
       console.error("Failed to remove selected items", error);
+
     }
+
   };
 
   /* ================= CLEAR CART ================= */
 
   const clearCart = async () => {
+
     try {
+
       await axios.delete("/cart/empty");
 
       fetchCart();
+
     } catch (error) {
+
       console.error("Failed to clear cart", error);
+
     }
+
   };
 
-  /* ================= SELECT LOGIC ================= */
+  /* ================= SELECT ================= */
 
   const toggleSelect = (id: number) => {
 
@@ -143,6 +172,7 @@ const EpcCartPage = () => {
         ? prev.filter((x) => x !== id)
         : [...prev, id]
     );
+
   };
 
   const selectAll = (checked: boolean) => {
@@ -156,6 +186,7 @@ const EpcCartPage = () => {
       setSelectedItems([]);
 
     }
+
   };
 
   /* ================= PAGINATION ================= */
@@ -166,12 +197,11 @@ const EpcCartPage = () => {
   const currentItems = items.slice(indexOfFirst, indexOfLast);
 
   const totalPages = Math.ceil(items.length / rowsPerPage);
-  const selectedPreviewItem = items.find((item) => item.cartItemId === selectedPreviewItemId) || null;
-  const selectedImage = selectedPreviewItem ? resolvePartImage(selectedPreviewItem) : null;
 
   return (
 
     <>
+
       {/* NAVBAR */}
 
       <nav className="epc-navbar">
@@ -191,56 +221,73 @@ const EpcCartPage = () => {
 
       </nav>
 
-      {/* MAIN LAYOUT */}
+
+      {/* MAIN */}
 
       <div className="epc-container">
 
-        {/* LEFT IMAGE PANEL */}
+        {/* LEFT IMAGE GRID */}
 
         <div className="epc-left">
 
-          {selectedImage ? (
-            <img
-              src={selectedImage}
-              alt="Part"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = fallbackImage;
-              }}
-            />
-          ) : (
-            <div className="image-placeholder">
-              Select a part to preview
-            </div>
-          )}
+          <div className="epc-image-grid">
+
+            {items.map((item, index) => {
+
+              const image = resolvePartImage(item);
+
+              return (
+
+                <div
+                  key={item.cartItemId}
+                  className={
+                    selectedPreviewItemId === item.cartItemId
+                      ? "grid-part active-node"
+                      : "grid-part"
+                  }
+                  onClick={() => setSelectedPreviewItemId(item.cartItemId)}
+                >
+
+                  <div className="part-number">
+                    {index + 1}
+                  </div>
+
+                  <img
+                    src={image}
+                    alt={item.partName}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = fallbackImage;
+                    }}
+                  />
+
+                </div>
+
+              );
+
+            })}
+
+          </div>
 
         </div>
 
-        {/* RIGHT CONTENT */}
+
+        {/* RIGHT PANEL */}
 
         <div className="epc-right">
 
-          {/* ACTION BUTTONS */}
-
           <div className="cart-actions">
 
-            <button
-              onClick={removeSelected}
-              disabled={!selectedItems.length}
-            >
+            <button onClick={removeSelected} disabled={!selectedItems.length}>
               Remove Selected
             </button>
 
-            <button
-              onClick={clearCart}
-              disabled={!items.length}
-            >
+            <button onClick={clearCart} disabled={!items.length}>
               Clear Cart
             </button>
 
           </div>
 
-          {/* TABLE TOP BAR */}
 
           <div className="table-top-bar">
 
@@ -251,10 +298,8 @@ const EpcCartPage = () => {
               <select
                 value={rowsPerPage}
                 onChange={(e) => {
-
                   setRowsPerPage(Number(e.target.value));
                   setCurrentPage(1);
-
                 }}
               >
                 <option value={5}>5</option>
@@ -264,24 +309,16 @@ const EpcCartPage = () => {
 
             </div>
 
+
             <div className="pagination-top">
 
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => p - 1)}
-              >
-                ←
-              </button>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>←</button>
 
               {Array.from({ length: totalPages }, (_, i) => (
 
                 <button
                   key={i}
-                  className={
-                    currentPage === i + 1
-                      ? "page-btn active-page"
-                      : "page-btn"
-                  }
+                  className={currentPage === i + 1 ? "page-btn active-page" : "page-btn"}
                   onClick={() => setCurrentPage(i + 1)}
                 >
                   {i + 1}
@@ -289,30 +326,36 @@ const EpcCartPage = () => {
 
               ))}
 
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => p + 1)}
-              >
-                →
-              </button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>→</button>
 
             </div>
 
           </div>
 
+
           {/* TABLE */}
 
+          <div className="epc-table-wrap">
           <table className="epc-table">
+
+            <colgroup>
+              <col className="col-select" />
+              <col className="col-item" />
+              <col className="col-part" />
+              <col className="col-desc" />
+              <col className="col-reqd" />
+              <col className="col-ordered" />
+              <col className="col-action" />
+            </colgroup>
 
             <thead>
 
               <tr>
+
                 <th>
                   <input
                     type="checkbox"
-                    onChange={(e) =>
-                      selectAll(e.target.checked)
-                    }
+                    onChange={(e) => selectAll(e.target.checked)}
                   />
                 </th>
 
@@ -327,23 +370,19 @@ const EpcCartPage = () => {
 
             </thead>
 
+
             <tbody>
 
               {currentItems.map((item, index) => (
 
-                <tr
-                  key={item.cartItemId}
-                  onClick={() => setSelectedPreviewItemId(item.cartItemId)}
-                >
+                <tr key={item.cartItemId}>
 
                   <td>
 
                     <input
                       type="checkbox"
                       checked={selectedItems.includes(item.cartItemId)}
-                      onChange={() =>
-                        toggleSelect(item.cartItemId)
-                      }
+                      onChange={() => toggleSelect(item.cartItemId)}
                     />
 
                   </td>
@@ -364,10 +403,7 @@ const EpcCartPage = () => {
                       min={1}
                       className="qty-input"
                       onChange={(e) =>
-                        updateQuantity(
-                          item.cartItemId,
-                          Number(e.target.value)
-                        )
+                        updateQuantity(item.cartItemId, Number(e.target.value))
                       }
                     />
 
@@ -378,10 +414,8 @@ const EpcCartPage = () => {
                     <button
                       className="remove-btn"
                       onClick={(e) => {
-
                         e.stopPropagation();
                         removeItem(item.cartItemId);
-
                       }}
                     >
                       🗑
@@ -396,8 +430,8 @@ const EpcCartPage = () => {
             </tbody>
 
           </table>
+          </div>
 
-          {/* CHECKOUT BUTTON */}
 
           <div className="checkout-container">
 
@@ -417,6 +451,7 @@ const EpcCartPage = () => {
 
     </>
   );
+
 };
 
 export default EpcCartPage;

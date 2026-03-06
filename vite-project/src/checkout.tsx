@@ -13,6 +13,7 @@ interface CartItem {
   price: number;
   quantity: number;
   subTotal: number;
+  stockQuantity: number;
 }
  
 const CheckoutPage = () => {
@@ -21,7 +22,6 @@ const CheckoutPage = () => {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
  
   const navigate = useNavigate();
-  const fallbackImage = "/vite.svg";
  
   const resolvePartImage = (item: Pick<CartItem, "imagePath">) => {
  
@@ -67,15 +67,27 @@ const CheckoutPage = () => {
   /* ================= UPDATE QUANTITY ================= */
  
   const updateQuantityDraft = (id: number, value: number) => {
- 
-    if (value < 1) return;
- 
-    setQuantities((prev) => ({
-      ...prev,
-      [id]: value
-    }));
- 
-  };
+
+  const item = items.find(i => i.id === id);
+
+  if (!item) return;
+
+  if (value < 1) return;
+
+  if (value > item.stockQuantity) {
+
+    alert(`Only ${item.stockQuantity} items available for ${item.partName}`);
+
+    return;
+
+  }
+
+  setQuantities((prev) => ({
+    ...prev,
+    [id]: value
+  }));
+
+};
  
   /* ================= REMOVE ITEM ================= */
  
@@ -188,6 +200,25 @@ const CheckoutPage = () => {
  
   };
  
+  const placeOrder = async () => {
+
+  try {
+
+    const res = await axios.post("/cart/checkout");
+
+    alert("Order placed successfully");
+
+    console.log(res.data);
+
+    fetchCart();
+
+  } catch (error: any) {
+
+    alert(error.response?.data?.message || "Checkout failed");
+
+  }
+
+};
   return (
  
     <div className="checkout-page">
@@ -287,6 +318,7 @@ const CheckoutPage = () => {
                         type="number"
                         value={qty}
                         min={1}
+                        max={item.stockQuantity}
                         className="checkout-qty-input"
                         onChange={(e) =>
                           updateQuantityDraft(
@@ -295,7 +327,11 @@ const CheckoutPage = () => {
                           )
                         }
                       />
- 
+                      {qty >= item.stockQuantity && (
+                          <div className="stock-warning">
+                              Max stock reached
+                          </div>
+                      )}
                     </td>
  
                     <td>₹ {(item.price * qty).toFixed(2)}</td>
@@ -332,6 +368,10 @@ const CheckoutPage = () => {
  
             <button className="checkout-page-btn" onClick={downloadCSV}>
               Download Cart Data as CSV
+            </button>
+
+            <button className="checkout-page-btn" onClick={placeOrder}>
+            Place Order
             </button>
  
           </div>

@@ -1,83 +1,49 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { commonSearch } from "../services/serachapi";
+import { useState, useEffect } from "react";
+import type { Part } from "../services/api";
 
-const GlobalSearch = () => {
+interface Props {
+  parts: Part[];
+  setFilteredParts: (parts: Part[]) => void;
+}
+
+const GlobalSearch = ({ parts, setFilteredParts }: Props) => {
 
   const [query, setQuery] = useState("");
-  const [entity, setEntity] = useState("parts");
 
-  const navigate = useNavigate();
+  useEffect(() => {
 
-  const handleSearch = async () => {
-
-    if (!query.trim()) return;
-
-    try {
-
-      const results = await commonSearch(entity, query);
-
-      // 🚀 CHECK RESULTS
-      if (!results || results.length === 0) {
-        alert("No products available ❌");
-        return;
-      }
-
-      navigate("/parts", {
-        state: {
-          searchType: "global",
-          results
-        }
-      });
-
-      setQuery("");
-
-    } catch (err) {
-
-      console.error("Search failed", err);
-      alert("Search failed ❌");
-
+    if (!query.trim()) {
+      setFilteredParts(parts);
+      return;
     }
-  };
 
-  // ✅ ENTER KEY SEARCH
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  };
+    const q = query.toLowerCase();
+
+    const filtered = parts.filter(p =>
+      p.partName?.toLowerCase().includes(q) ||
+      p.partNumber?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q)
+    );
+
+    setFilteredParts(filtered);
+
+  }, [query, parts, setFilteredParts]);
 
   return (
 
     <div className="global-search" style={{ display: "flex", gap: "6px" }}>
 
-      <select
-        value={entity}
-        onChange={(e) => setEntity(e.target.value)}
-      >
-        <option value="parts">Parts</option>
-        <option value="assemblies">Assemblies</option>
-        <option value="categories">Categories</option>
-        <option value="vehiclemodels">Models</option>
-        <option value="vehiclevariants">Variants</option>
-        <option value="vehiclecolours">Colours</option>
-      </select>
-
       <input
         type="text"
-        placeholder="Search..."
+        placeholder="Search parts..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={handleKeyDown}
       />
-
-      <button onClick={handleSearch}>
-        🔍
-      </button>
 
     </div>
 
   );
+
 };
 
 export default GlobalSearch;

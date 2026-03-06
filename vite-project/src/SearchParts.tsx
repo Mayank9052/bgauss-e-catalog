@@ -23,6 +23,7 @@ const SearchParts = () => {
   const [searchParams] = useSearchParams();
 
   const [parts, setParts] = useState<Part[]>([]);
+  const [filteredParts, setFilteredParts] = useState<Part[]>([]);
   const [selectedParts, setSelectedParts] = useState<number[]>([]);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [cartCount, setCartCount] = useState(0);
@@ -51,15 +52,18 @@ const SearchParts = () => {
 
           const filtered = await getFilteredParts(modelId, variantId, colourId);
           setParts(filtered);
+          setFilteredParts(filtered);
 
         } else if (searchType === "global") {
 
           setParts(results);
+          setFilteredParts(results);
 
         } else {
 
           const all = await getAllParts();
           setParts(all);
+          setFilteredParts(all);
 
         }
 
@@ -116,6 +120,10 @@ const SearchParts = () => {
     fetchCart();
 
   }, []);
+
+  useEffect(() => {
+    setFilteredParts(parts);
+  }, [parts]);
 
   /* ================= SELECT PART ================= */
 
@@ -186,52 +194,52 @@ const SearchParts = () => {
     });
 
   };
-
+  
   /* ================= CHECKOUT ================= */
 
-const checkoutSelected = async () => {
+  const checkoutSelected = async () => {
 
-  try {
-
+    try {
+      
     if (selectedParts.length === 0) {
       alert("Please select at least one item");
       return;
     }
 
-    for (const partId of selectedParts) {
+      for (const partId of selectedParts) {
 
-      const qty = quantities[partId] ?? 1;
+        const qty = quantities[partId] ?? 1;
 
-      const part =
+         const part =
         parts.find(p => p.id === partId) ||
         parts.flatMap(p => p.subParts ?? []).find(sp => sp.id === partId);
 
       if (!part) continue;
 
-      if (qty > part.stockQuantity) {
-        alert(`${part.partName} only has ${part.stockQuantity} items available`);
-        return;
+        if (qty > part.stockQuantity) {
+          alert(`${part.partName} only has ${part.stockQuantity} items available`);
+          return;
+        }
+
+        await axios.post("/cart/add", {
+          PartId: partId,
+          Quantity: qty
+        });
+
       }
 
-      await axios.post("/cart/add", {
-        PartId: partId,
-        Quantity: qty
-      });
+      navigate("/checkout");
 
-    }
-
-    navigate("/checkout");
-
-  } catch (error) {
+    } catch (error) {
 
     console.error(error);
     alert("Failed to proceed to checkout");
 
-  }
+    }
 
-};
+  };
 
-
+  
 
   /* ================= IMAGE ================= */
 
@@ -268,10 +276,10 @@ const checkoutSelected = async () => {
             className="back-button"
             onClick={() => navigate("/dashboard")}
           >
-            Back to Dashboard
+            ← Back to Dashboard
           </button>
 
-          <GlobalSearch/>
+          <GlobalSearch parts={parts} setFilteredParts={setFilteredParts} />
 
           <div
             className="cart-icon"
@@ -304,7 +312,7 @@ const checkoutSelected = async () => {
 
       <div className="parts-grid">
 
-        {parts.map(part => (
+        {filteredParts.map(part => (
 
           <div key={part.id} className="part-card">
 

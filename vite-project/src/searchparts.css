@@ -160,3 +160,44 @@ border-radius:4px;
 background:#999;
 cursor:not-allowed;
 }
+
+.global-search {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin: 0 15px;
+  height: 34px;
+}
+
+.global-search input {
+  border: none;
+  outline: none;
+  width: 220px;
+  font-size: 13px;
+  background: transparent;
+  color: #333;
+}
+
+.global-search input::placeholder {
+  color: #888;
+}
+
+.global-search:focus-within {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25,118,210,0.15);
+}
+
+.global-search {
+  position: relative;
+  padding-left: 28px;
+}
+
+.global-search::before {
+  content: "🔍";
+  position: absolute;
+  left: 8px;
+  font-size: 12px;
+}

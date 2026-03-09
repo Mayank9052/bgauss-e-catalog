@@ -1,7 +1,7 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
+﻿import { useLocation, useNavigate } from "react-router-dom";
 import logo from "./assets/logo.jpg";
 import "./checkout.css";
+import AccountMenu from "./components/AccountMenu";
 
 interface OrderSummaryItem {
   id: number;
@@ -26,35 +26,14 @@ const OrderDetails = () => {
   const rawOrder = location.state?.order;
   const order: OrderSummary | null = rawOrder
     ? {
-      orderId: rawOrder.orderId ?? rawOrder.OrderId ?? null,
-      totalAmount: Number(
-        rawOrder.totalAmount ?? rawOrder.total ?? rawOrder.Total ?? 0
-      ),
-      items: Array.isArray(rawOrder.items) ? rawOrder.items : [],
-      message: rawOrder.message ?? rawOrder.Message
-    }
+        orderId: rawOrder.orderId ?? rawOrder.OrderId ?? null,
+        totalAmount: Number(
+          rawOrder.totalAmount ?? rawOrder.total ?? rawOrder.Total ?? 0
+        ),
+        items: Array.isArray(rawOrder.items) ? rawOrder.items : [],
+        message: rawOrder.message ?? rawOrder.Message
+      }
     : null;
-
-  const handleProfileClick = () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    const decoded: any = jwtDecode(token);
-
-    const role =
-      decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
-      decoded.role;
-
-    if (role === "Admin") {
-      navigate("/admin/users");
-    } else {
-      navigate("/dashboard");
-    }
-  };
 
   if (!order) {
     return (
@@ -77,9 +56,7 @@ const OrderDetails = () => {
           <span onClick={() => navigate("/dashboard")}>Home</span>
           <span>Contact Us</span>
           <span className="checkout-icon">🔍</span>
-          <span className="checkout-icon" onClick={handleProfileClick}>
-            👤
-          </span>
+          <AccountMenu />
           <span className="checkout-cart">🛒</span>
         </div>
       </nav>

@@ -6,6 +6,7 @@ import { getFilteredParts, getAllParts } from "./services/api";
 import type { Part } from "./services/api";
 import axios from "axios";
 import GlobalSearch from "./components/GlobalSearch";
+import AccountMenu from "./components/AccountMenu";
 
 const readStoredSearchState = () => {
   try {
@@ -290,6 +291,8 @@ const SearchParts = () => {
               <span className="cart-badge">{cartCount}</span>
             }
           </div>
+
+          <AccountMenu />
 
         </div>
 

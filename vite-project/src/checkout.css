@@ -38,6 +38,54 @@ align-items:center;
 cursor:pointer;
 }
 
+.checkout-profile-wrap{
+position:relative;
+}
+
+.checkout-profile-btn{
+border:none;
+background:transparent;
+padding:0;
+font:inherit;
+}
+
+.checkout-profile-card{
+position:absolute;
+top:30px;
+right:0;
+width:220px;
+border:1px solid #d6dce2;
+border-radius:8px;
+background:#ffffff;
+color:#1e2b35;
+box-shadow:0 10px 24px rgba(0,0,0,0.18);
+padding:12px;
+z-index:20;
+}
+
+.checkout-profile-card h4{
+margin:0 0 10px;
+font-size:14px;
+color:#0e5f82;
+}
+
+.checkout-profile-row{
+display:flex;
+justify-content:space-between;
+gap:8px;
+padding:4px 0;
+font-size:12px;
+}
+
+.checkout-profile-row span{
+color:#5a6978;
+}
+
+.checkout-profile-row strong{
+color:#1f2b36;
+font-weight:600;
+}
+
 .checkout-cart{
 position:relative;
 }

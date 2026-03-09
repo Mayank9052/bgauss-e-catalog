@@ -3,7 +3,7 @@ import axios from "axios";
 import "./checkout.css";
 import logo from "./assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
+import AccountMenu from "./components/AccountMenu";
 
 interface CartItem {
   id: number;
@@ -186,29 +186,6 @@ const CheckoutPage = () => {
 
   };
 
-  const handleProfileClick = () => {
-
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    const decoded: any = jwtDecode(token);
-
-    const role =
-      decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
-      decoded.role;
-
-    if (role === "Admin") {
-      navigate("/admin/users");
-    } else {
-      navigate("/dashboard");
-    }
-
-  };
-
   /* ================= PLACE ORDER ================= */
 
   const placeOrder = async () => {
@@ -323,7 +300,7 @@ const CheckoutPage = () => {
 
           <span className="checkout-icon">🔍</span>
 
-          <span className="checkout-icon" onClick={handleProfileClick}>👤</span>
+          <AccountMenu />
 
           <span className="checkout-cart">
             🛒

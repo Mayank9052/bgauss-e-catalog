@@ -5,6 +5,12 @@ const ROLE_CLAIM =
 
 export type AppRole = "Admin" | "User";
 
+export interface AuthProfile {
+  username: string;
+  role: AppRole | string;
+  userId: string;
+}
+
 type JwtClaims = Record<string, unknown> & {
   role?: unknown;
 };
@@ -44,6 +50,39 @@ export const getRoleFromToken = (): AppRole | null => {
     const decoded = jwtDecode<JwtClaims>(token);
     const role = decoded[ROLE_CLAIM] ?? decoded.role;
     return normalizeRole(role);
+  } catch {
+    return null;
+  }
+};
+
+export const getProfileFromToken = (): AuthProfile | null => {
+  const token = getToken();
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const decoded = jwtDecode<JwtClaims>(token);
+
+    const username =
+      decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] ??
+      decoded.name ??
+      "User";
+
+    const rawRole = decoded[ROLE_CLAIM] ?? decoded.role;
+    const normalizedRole = normalizeRole(rawRole);
+
+    const userId =
+      decoded.UserId ??
+      decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] ??
+      "-";
+
+    return {
+      username: String(username),
+      role: normalizedRole ?? String(rawRole ?? "-"),
+      userId: String(userId)
+    };
   } catch {
     return null;
   }

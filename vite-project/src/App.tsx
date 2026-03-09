@@ -6,7 +6,7 @@ import SearchParts from "./SearchParts";
 import CheckoutPage from "./checkout";
 import AdminUsers from "./admin";
 import OrderDetails from "./order_details";
-import { ProtectedRoute, PublicOnlyRoute } from "./components/RouteGuard";
+import { ProtectedRoute } from "./components/RouteGuard";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -25,19 +25,11 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={
-            <PublicOnlyRoute>
-              <Login />
-            </PublicOnlyRoute>
-          }
+          element={<Login />}
         />
         <Route
           path="/login"
-          element={
-            <PublicOnlyRoute>
-              <Login />
-            </PublicOnlyRoute>
-          }
+          element={<Login />}
         />
         <Route
           path="/dashboard"

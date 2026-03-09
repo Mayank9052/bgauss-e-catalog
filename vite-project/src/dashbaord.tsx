@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import logo from "./assets/logo.jpg";
 import "./dashbaord.css";
 import TableSelect from "./components/TableSelect";
+import AccountMenu from "./components/AccountMenu";
 import type {
   VehicleModel,
   VehicleVariant,
@@ -71,11 +72,6 @@ const Dashboard = () => {
     }
   }, [model]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/");
-  };
-
   // ================= VIN SEARCH =================
   const handleVinSearch = () => {
     if (!vin.trim()) {
@@ -143,9 +139,7 @@ const Dashboard = () => {
           <button className="nav-link active">Home</button>
           <button className="nav-link">Contact</button>
           <span className="nav-icon">🛒</span>
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
+          <AccountMenu />
         </div>
       </nav>
 

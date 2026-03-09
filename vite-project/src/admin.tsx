@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
 import "./admin.css";
 import logo from "./assets/logo.jpg";
+import { getRoleFromToken } from "./auth";
+import AccountMenu from "./components/AccountMenu";
 
 interface User {
   id: number;
@@ -26,22 +27,6 @@ const AdminUsers = () => {
   const handleUnauthorized = () => {
     localStorage.removeItem("token");
     navigate("/", { replace: true });
-  };
-
-  const getRoleFromToken = () => {
-    const token = localStorage.getItem("token");
-    if (!token) return null;
-
-    try {
-      const decoded: any = jwtDecode(token);
-      return (
-        decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
-        decoded.role ||
-        null
-      );
-    } catch {
-      return null;
-    }
   };
 
   const isAuthError = (error: unknown) =>
@@ -154,11 +139,7 @@ const AdminUsers = () => {
 
           <div className="admin-navbar-right">
             <span className="admin-panel-text">Admin Panel</span>
-            <button className="admin-profile-btn" aria-label="Admin profile">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.3 0-6 1.8-6 4v1h12v-1c0-2.2-2.7-4-6-4Z" />
-              </svg>
-            </button>
+            <AccountMenu />
           </div>
         </div>
 

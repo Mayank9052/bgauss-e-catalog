@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Login from "./login";
 import Dashboard from "./dashbaord";
 import SearchParts from "./SearchParts";
 import CheckoutPage from "./checkout";
 import AdminUsers from "./admin";
 import OrderDetails from "./order_details";
+import { ProtectedRoute, PublicOnlyRoute } from "./components/RouteGuard";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -22,13 +23,63 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/parts" element={<SearchParts />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/order_details" element={<OrderDetails />} />
+        <Route
+          path="/"
+          element={
+            <PublicOnlyRoute>
+              <Login />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <Login />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["Admin", "User"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/parts"
+          element={
+            <ProtectedRoute allowedRoles={["Admin", "User"]}>
+              <SearchParts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <ProtectedRoute allowedRoles={["Admin", "User"]}>
+              <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/order_details"
+          element={
+            <ProtectedRoute allowedRoles={["Admin", "User"]}>
+              <OrderDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );

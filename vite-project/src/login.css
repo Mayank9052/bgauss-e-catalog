@@ -48,6 +48,45 @@
   font-weight: 600;
 }
 
+/* LOGIN ROLE */
+.login-role {
+  margin-bottom: 20px;
+}
+
+.login-role p {
+  margin: 0 0 10px;
+  color: #f0f4ff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.role-options {
+  display: flex;
+  gap: 10px;
+}
+
+.role-btn {
+  flex: 1;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  color: #f4f6ff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.role-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.role-btn.active {
+  border-color: #52b6ff;
+  background: linear-gradient(45deg, #00c6ff, #0072ff);
+}
+
 /* INPUT */
 .form-group {
   margin-bottom: 25px;

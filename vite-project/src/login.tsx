@@ -1,20 +1,45 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./login.css";
 import { login } from "./services/api";
 import logo from "./assets/logo.jpg";
 import ev from "./assets/ev.png";
+import { getDefaultPathForRole, getRoleFromToken, type AppRole } from "./auth";
 
 const Login = () => {
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedRole, setSelectedRole] = useState<AppRole>("User");
   const [error, setError] = useState("");
 
   const handleLogin = async () => {
     try {
       setError("");
+
+      if (!username.trim() || !password.trim()) {
+        setError("Username and password are required");
+        return;
+      }
+
       const data = await login(username, password);
       localStorage.setItem("token", data.token);
-      window.location.href = "/dashboard";
+
+      const role = getRoleFromToken();
+
+      if (!role) {
+        localStorage.removeItem("token");
+        setError("Unable to identify account role");
+        return;
+      }
+
+      if (role !== selectedRole) {
+        localStorage.removeItem("token");
+        setError(`Selected ${selectedRole} login, but this account is ${role}`);
+        return;
+      }
+
+      navigate(getDefaultPathForRole(role), { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -35,10 +60,30 @@ const Login = () => {
             <h2>BGAUSS Auto India Pvt Ltd</h2>
           </div>
 
+          <div className="login-role">
+            <p>Login As</p>
+            <div className="role-options">
+              <button
+                type="button"
+                className={selectedRole === "User" ? "role-btn active" : "role-btn"}
+                onClick={() => setSelectedRole("User")}
+              >
+                User
+              </button>
+              <button
+                type="button"
+                className={selectedRole === "Admin" ? "role-btn active" : "role-btn"}
+                onClick={() => setSelectedRole("Admin")}
+              >
+                Admin
+              </button>
+            </div>
+          </div>
+
           <div className="form-group">
             <input
               type="text"
-              placeholder="User"
+              placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />

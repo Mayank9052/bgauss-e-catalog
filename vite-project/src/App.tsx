@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Login from "./login";
 import Dashboard from "./dashbaord";
 import SearchParts from "./SearchParts";
-;
 import CheckoutPage from "./checkout";
 import AdminUsers from "./admin";
+import OrderDetails from "./order_details";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -28,6 +28,7 @@ function App() {
         <Route path="/parts" element={<SearchParts />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/order_details" element={<OrderDetails />} />
       </Routes>
     </BrowserRouter>
   );

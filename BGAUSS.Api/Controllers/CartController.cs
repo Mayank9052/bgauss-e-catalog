@@ -108,7 +108,8 @@ namespace BGAUSS.Api.Controllers
                 ImagePath = ci.Part.ImagePath,
                 Price = ci.Part.Price,
                 ci.Quantity,
-                SubTotal = ci.Quantity * (ci.Part.Price ?? 0)
+                SubTotal = ci.Quantity * (ci.Part.Price ?? 0),
+                StockQuantity = ci.Part.StockQuantity
             }).ToList();
 
             return Ok(new
@@ -126,11 +127,14 @@ namespace BGAUSS.Api.Controllers
         [HttpPut("update/{cartItemId}")]
         public async Task<IActionResult> UpdateQuantity(int cartItemId, int quantity)
         {
+            int userId = GetUserId();
+
             var item = await _context.CartItems
                 .Include(c => c.Part)
+                .Include(c => c.Cart)
                 .FirstOrDefaultAsync(x => x.Id == cartItemId);
 
-            if (item == null)
+            if (item == null || item.Cart == null || item.Cart.UserId != userId)
                 return NotFound();
 
             if (quantity <= 0)
@@ -139,6 +143,12 @@ namespace BGAUSS.Api.Controllers
             }
             else
             {
+                if (item.Part == null)
+                    return BadRequest("Part not found");
+
+                if (quantity > item.Part.StockQuantity)
+                    return BadRequest($"Only {item.Part.StockQuantity} items available for {item.Part.PartName}");
+
                 item.Quantity = quantity;
             }
 
@@ -231,6 +241,8 @@ namespace BGAUSS.Api.Controllers
                     TotalAmount = 0
                 };
 
+                var orderSummaryItems = new List<object>();
+
                 foreach (var item in cart.CartItems)
                 {
                     var part = item.Part!;
@@ -251,6 +263,16 @@ namespace BGAUSS.Api.Controllers
                         SubTotal = subTotal
                     });
 
+                    orderSummaryItems.Add(new
+                    {
+                        item.Id,
+                        PartName = part.PartName,
+                        PartNumber = part.PartNumber,
+                        Price = price,
+                        item.Quantity,
+                        SubTotal = subTotal
+                    });
+
                     order.TotalAmount += subTotal;
                 }
 
@@ -264,7 +286,9 @@ namespace BGAUSS.Api.Controllers
                 {
                     Message = "Order placed successfully",
                     OrderId = order.Id,
-                    Total = order.TotalAmount
+                    Total = order.TotalAmount,
+                    TotalAmount = order.TotalAmount,
+                    Items = orderSummaryItems
                 });
             }
             catch (Exception ex)

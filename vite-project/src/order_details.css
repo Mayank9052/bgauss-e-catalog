@@ -1,0 +1,128 @@
+/* ================= PAGE ================= */
+
+.order-page {
+  background: #f4f6f8;
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ================= NAVBAR ================= */
+
+.order-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0b3c4d;
+  padding: 14px 40px;
+  color: white;
+}
+
+.order-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.order-logo {
+  height: 40px;
+}
+
+.order-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-size: 15px;
+}
+
+.order-topbar-right span {
+  cursor: pointer;
+}
+
+.order-icon {
+  font-size: 18px;
+}
+
+/* ================= CONTENT ================= */
+
+.order-content {
+  max-width: 1100px;
+  margin: auto;
+  padding: 40px 20px;
+}
+
+.order-content h1 {
+  margin-bottom: 30px;
+}
+
+/* ================= TABLE ================= */
+
+.order-table-wrap {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0px 2px 8px rgba(0,0,0,0.08);
+}
+
+.order-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.order-table thead {
+  background: #f1f3f5;
+}
+
+.order-table th,
+.order-table td {
+  padding: 12px;
+  text-align: left;
+}
+
+.order-table th {
+  font-weight: 600;
+}
+
+.order-table tbody tr {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+/* ================= SUMMARY ================= */
+
+.order-summary {
+  width: 350px;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 30px;
+  box-shadow: 0px 2px 8px rgba(0,0,0,0.08);
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.summary-total {
+  font-weight: bold;
+  font-size: 18px;
+}
+
+/* ================= BUTTON ================= */
+
+.order-btn {
+  margin-top: 20px;
+  padding: 10px 18px;
+  border: none;
+  background: #0b3c4d;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.order-btn:hover {
+  background: #09556c;
+}

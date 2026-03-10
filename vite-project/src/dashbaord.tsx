@@ -16,6 +16,7 @@ import {
 } from "./services/api";
 
 const Dashboard = () => {
+
   const navigate = useNavigate();
 
   const [vin, setVin] = useState("");
@@ -26,78 +27,102 @@ const Dashboard = () => {
   const [vinError, setVinError] = useState("");
   const [modelError, setModelError] = useState("");
 
-  // API data states
   const [models, setModels] = useState<VehicleModel[]>([]);
   const [variants, setVariants] = useState<VehicleVariant[]>([]);
   const [colours, setColours] = useState<VehicleColour[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch models and colours on component mount
   useEffect(() => {
+
     const fetchData = async () => {
       try {
+
         const [modelsData, coloursData] = await Promise.all([
           getVehicleModels(),
-          getVehicleColours(),
+          getVehicleColours()
         ]);
+
         setModels(modelsData);
         setColours(coloursData);
         setLoading(false);
+
       } catch (error) {
+
         console.error("Failed to fetch data:", error);
         setLoading(false);
+
       }
     };
 
     fetchData();
+
   }, []);
 
-  // Fetch variants when model changes
   useEffect(() => {
+
     if (model) {
+
       const fetchVariants = async () => {
+
         try {
+
           const modelId = parseInt(model);
           const variantsData = await getVehicleVariants(modelId);
+
           setVariants(variantsData);
-          setVariant(""); // Reset variant when model changes
+          setVariant("");
+
         } catch (error) {
+
           console.error("Failed to fetch variants:", error);
+
         }
       };
 
       fetchVariants();
+
     } else {
+
       setVariants([]);
+
     }
+
   }, [model]);
 
-  // ================= VIN SEARCH =================
   const handleVinSearch = () => {
+
     if (!vin.trim()) {
+
       setVinError("VIN number is required");
       return;
+
     }
 
     if (vin.trim().length !== 17) {
+
       setVinError("VIN must be exactly 17 characters");
       return;
+
     }
 
     setVinError("");
 
     const vinSearchState = { searchType: "vin", vin };
+
     sessionStorage.setItem("partsSearchState", JSON.stringify(vinSearchState));
     localStorage.removeItem("selectedVehicle");
 
-    navigate("/parts", { state: vinSearchState });
+    navigate("/V_Priview", { state: vinSearchState });
+
   };
 
-  // ================= MODEL SEARCH =================
   const handleModelSearch = () => {
+
     if (!model || !variant || !colour) {
+
       setModelError("All fields are required");
       return;
+
     }
 
     setModelError("");
@@ -106,10 +131,11 @@ const Dashboard = () => {
       searchType: "model",
       modelId: parseInt(model),
       variantId: parseInt(variant),
-      colourId: parseInt(colour),
+      colourId: parseInt(colour)
     };
 
     sessionStorage.setItem("partsSearchState", JSON.stringify(modelSearchState));
+
     localStorage.setItem(
       "selectedVehicle",
       JSON.stringify({
@@ -119,38 +145,50 @@ const Dashboard = () => {
       })
     );
 
-    navigate("/parts", { state: modelSearchState });
+    navigate("/V_Priview", { state: modelSearchState });
+
   };
 
   return (
+
     <div className="epc-wrapper">
 
-      {/* ================= NAVBAR ================= */}
       <nav className="epc-navbar">
+
         <div className="brand">
+
           <img src={logo} alt="BGAUSS Logo" className="nav-logo" />
+
           <div className="brand-text">
+
             <span className="logo-text">BGAUSS</span>
             <span className="sub-title">Electronic Parts Catalog</span>
+
           </div>
+
         </div>
 
         <div className="nav-actions">
+
           <button className="nav-link active">Home</button>
           <button className="nav-link">Contact</button>
+
           <span className="nav-icon">🛒</span>
+
           <AccountMenu />
+
         </div>
+
       </nav>
 
-      {/* ================= CONTENT ================= */}
       <div className="dashboard-content">
 
-        {/* ================= VIN CARD ================= */}
         <div className="modern-card">
+
           <h3>Search with VIN</h3>
 
           <div className="floating-input">
+
             <input
               type="text"
               placeholder=" "
@@ -161,7 +199,9 @@ const Dashboard = () => {
                 setVinError("");
               }}
             />
+
             <label>Enter 17 Digit VIN</label>
+
           </div>
 
           {vinError && <p className="error-text">{vinError}</p>}
@@ -169,23 +209,29 @@ const Dashboard = () => {
           <button className="primary-btn" onClick={handleVinSearch}>
             Search
           </button>
+
         </div>
 
-        {/* ================= MODEL CARD ================= */}
         <div className="modern-card">
+
           <h3>Search by Model & Colour</h3>
 
           {loading ? (
+
             <p>Loading options...</p>
+
           ) : (
+
             <>
+
               <div className="floating-input">
+
                 <TableSelect
                   label="Vehicle Model"
                   columns={["Model Name"]}
                   options={models.map((m) => ({
                     id: m.id,
-                    modelName: m.modelName,
+                    modelName: m.modelName
                   }))}
                   value={model}
                   onChange={(id) => {
@@ -194,15 +240,17 @@ const Dashboard = () => {
                   }}
                   displayColumn="modelName"
                 />
+
               </div>
 
               <div className="floating-input">
+
                 <TableSelect
                   label="Vehicle Variant"
                   columns={["Variant Name"]}
                   options={variants.map((v) => ({
                     id: v.id,
-                    variantName: v.variantName,
+                    variantName: v.variantName
                   }))}
                   value={variant}
                   onChange={(id) => {
@@ -212,15 +260,17 @@ const Dashboard = () => {
                   displayColumn="variantName"
                   disabled={!model}
                 />
+
               </div>
 
               <div className="floating-input">
+
                 <TableSelect
                   label="Vehicle Colour"
                   columns={["Colour Name"]}
                   options={colours.map((c) => ({
                     id: c.id,
-                    colourName: c.colourName,
+                    colourName: c.colourName
                   }))}
                   value={colour}
                   onChange={(id) => {
@@ -229,11 +279,13 @@ const Dashboard = () => {
                   }}
                   displayColumn="colourName"
                 />
+
               </div>
 
               {modelError && <p className="error-text">{modelError}</p>}
 
               <div className="btn-row">
+
                 <button className="primary-btn" onClick={handleModelSearch}>
                   Search
                 </button>
@@ -249,13 +301,19 @@ const Dashboard = () => {
                 >
                   Reset
                 </button>
+
               </div>
+
             </>
+
           )}
+
         </div>
 
       </div>
+
     </div>
+
   );
 };
 

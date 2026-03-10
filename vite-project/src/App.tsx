@@ -6,6 +6,7 @@ import SearchParts from "./SearchParts";
 import CheckoutPage from "./checkout";
 import AdminUsers from "./admin";
 import OrderDetails from "./order_details";
+import VehiclePreview from "./V_preview";
 import { ProtectedRoute } from "./components/RouteGuard";
 
 function ScrollToTop() {
@@ -39,6 +40,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/V_Priview"
+          element={
+          <ProtectedRoute allowedRoles={["Admin", "User"]}>
+        <VehiclePreview />
+      </ProtectedRoute>
+      }
+      />
         <Route
           path="/parts"
           element={

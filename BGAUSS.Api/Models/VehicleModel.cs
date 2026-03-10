@@ -9,6 +9,8 @@ public partial class VehicleModel
 
     public string ModelName { get; set; } = null!;
 
+    public virtual ICollection<Assembly> Assemblies { get; set; } = new List<Assembly>();
+
     public virtual ICollection<ModelPart> ModelParts { get; set; } = new List<ModelPart>();
 
     public virtual ICollection<VehicleColour> VehicleColours { get; set; } = new List<VehicleColour>();

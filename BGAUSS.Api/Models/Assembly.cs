@@ -11,7 +11,11 @@ public partial class Assembly
 
     public string? ImagePath { get; set; }
 
+    public int? ModelId { get; set; }
+
     public virtual ICollection<AssemblyPart> AssemblyParts { get; set; } = new List<AssemblyPart>();
+
+    public virtual VehicleModel? Model { get; set; }
 
     public virtual ICollection<Part> Parts { get; set; } = new List<Part>();
 }

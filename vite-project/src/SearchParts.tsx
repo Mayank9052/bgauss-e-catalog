@@ -39,7 +39,7 @@ const SearchParts = () => {
       : (storedState || {});
   }, [location.state]);
 
-  const { searchType, modelId, variantId, colourId, results } = searchState;
+  const { searchType, modelId, variantId, colourId, assemblyId, results } = searchState;
 
   /* ================= FETCH PARTS ================= */
 
@@ -52,8 +52,11 @@ const SearchParts = () => {
         if (searchType === "model") {
 
           const filtered = await getFilteredParts(modelId, variantId, colourId);
-          setParts(filtered);
-          setFilteredParts(filtered);
+          const assemblyFiltered = assemblyId
+            ? filtered.filter((part) => part.assemblyId === assemblyId)
+            : filtered;
+          setParts(assemblyFiltered);
+          setFilteredParts(assemblyFiltered);
 
         } else if (searchType === "global") {
 
@@ -78,7 +81,7 @@ const SearchParts = () => {
 
     fetchParts();
 
-  }, [searchType, modelId, variantId, colourId, results, searchQuery]);
+  }, [searchType, modelId, variantId, colourId, assemblyId, results, searchQuery]);
 
   /* ================= INIT QUANTITY ================= */
 

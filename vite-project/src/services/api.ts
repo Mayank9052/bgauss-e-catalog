@@ -17,6 +17,9 @@ export interface VehicleVariant {
 export interface VehicleColour {
   id: number;
   colourName: string;
+  modelId?: number | null;
+  variantId?: number | null;
+  imagePath?: string | null;
 }
 
 export interface VehicleImage {
@@ -24,6 +27,15 @@ export interface VehicleImage {
   modelName?: string;
   variantName?: string;
   colourName?: string;
+  modelId?: number;
+  variantId?: number;
+  colourId?: number;
+}
+
+export interface Assembly {
+  id: number;
+  assemblyName: string;
+  imagePath?: string | null;
 }
 
 export interface Part {
@@ -35,6 +47,7 @@ export interface Part {
   imagePath: string;
   categoryName: string;
   stockQuantity: number;
+  assemblyId?: number | null;
   subParts?: Part[];
 }
 
@@ -109,6 +122,23 @@ export async function getFilteredParts(
   return response.json();
 }
 
+export async function getVehicleAssemblies(
+  modelId: number,
+  variantId: number,
+  colourId?: number
+): Promise<Assembly[]> {
+
+  const url = `/api/modelparts/assemblies?modelId=${modelId}&variantId=${variantId}${
+    colourId ? `&colourId=${colourId}` : ""
+  }`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) throw new Error("Failed to fetch vehicle assemblies");
+
+  return response.json();
+}
+
 export async function getAllParts(): Promise<Part[]> {
 
   const response = await fetch("/api/parts");
@@ -118,20 +148,37 @@ export async function getAllParts(): Promise<Part[]> {
   return response.json();
 }
 
+// ===== VEHICLE IMAGE BY MODEL =====
 export async function getVehicleImage(
   modelId: number,
   variantId: number,
   colourId: number
 ): Promise<VehicleImage> {
+  return {
+    imagePath: `/api/vehiclecolours/image?modelId=${modelId}&variantId=${variantId}&colourId=${colourId}`,
+    modelId,
+    variantId,
+    colourId
+  };
+}
 
-  const response = await fetch(
-    `/api/vehicle/image?modelId=${modelId}&variantId=${variantId}&colourId=${colourId}`
-  );
 
-  if (!response.ok)
-    throw new Error("Failed to fetch vehicle image");
-
-  return response.json();
+// ===== VEHICLE IMAGE BY VIN =====
+interface VehicleByVinResponse {
+  vehicle?: {
+    modelId?: number | null;
+    variantId?: number | null;
+    colourId?: number | null;
+    model?: {
+      modelName?: string | null;
+    } | null;
+    variant?: {
+      variantName?: string | null;
+    } | null;
+    colour?: {
+      colourName?: string | null;
+    } | null;
+  } | null;
 }
 
 export async function getVehicleImageByVin(
@@ -139,11 +186,33 @@ export async function getVehicleImageByVin(
 ): Promise<VehicleImage> {
 
   const response = await fetch(
-    `/api/vehicle/vin-image?vin=${vin}`
+    `/api/vehicles/search-by-vin/${encodeURIComponent(vin)}`
   );
 
-  if (!response.ok)
-    throw new Error("Failed to fetch vehicle image by VIN");
+  if (!response.ok) throw new Error("Failed to fetch vehicle image by VIN");
 
-  return response.json();
+  const data: VehicleByVinResponse = await response.json();
+  const vehicle = data.vehicle;
+
+  const modelId = vehicle?.modelId ?? undefined;
+  const variantId = vehicle?.variantId ?? undefined;
+  const colourId = vehicle?.colourId ?? undefined;
+
+  if (
+    modelId == null ||
+    variantId == null ||
+    colourId == null
+  ) {
+    throw new Error("Vehicle details are incomplete");
+  }
+
+  return {
+    imagePath: `/api/vehiclecolours/image?modelId=${modelId}&variantId=${variantId}&colourId=${colourId}`,
+    modelId,
+    variantId,
+    colourId,
+    modelName: vehicle?.model?.modelName ?? undefined,
+    variantName: vehicle?.variant?.variantName ?? undefined,
+    colourName: vehicle?.colour?.colourName ?? undefined
+  };
 }

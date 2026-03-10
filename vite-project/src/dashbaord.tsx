@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import logo from "./assets/logo.jpg";
 import "./dashbaord.css";
 import TableSelect from "./components/TableSelect";
@@ -31,6 +31,24 @@ const Dashboard = () => {
   const [variants, setVariants] = useState<VehicleVariant[]>([]);
   const [colours, setColours] = useState<VehicleColour[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const filteredColours = useMemo(() => {
+
+    const hasVehicleMapping = colours.some(
+      (c) => c.modelId != null && c.variantId != null
+    );
+
+    if (!hasVehicleMapping) return colours;
+    if (!model || !variant) return [];
+
+    const modelId = Number(model);
+    const variantId = Number(variant);
+
+    return colours.filter(
+      (c) => c.modelId === modelId && c.variantId === variantId
+    );
+
+  }, [colours, model, variant]);
 
   useEffect(() => {
 
@@ -71,6 +89,7 @@ const Dashboard = () => {
 
           setVariants(variantsData);
           setVariant("");
+          setColour("");
 
         } catch (error) {
 
@@ -127,11 +146,19 @@ const Dashboard = () => {
 
     setModelError("");
 
+    const selectedModel = models.find((m) => String(m.id) === model);
+    const selectedVariant = variants.find((v) => String(v.id) === variant);
+    const selectedColour = filteredColours.find((c) => String(c.id) === colour)
+      ?? colours.find((c) => String(c.id) === colour);
+
     const modelSearchState = {
       searchType: "model",
       modelId: parseInt(model),
       variantId: parseInt(variant),
-      colourId: parseInt(colour)
+      colourId: parseInt(colour),
+      modelName: selectedModel?.modelName ?? "",
+      variantName: selectedVariant?.variantName ?? "",
+      colourName: selectedColour?.colourName ?? ""
     };
 
     sessionStorage.setItem("partsSearchState", JSON.stringify(modelSearchState));
@@ -236,6 +263,8 @@ const Dashboard = () => {
                   value={model}
                   onChange={(id) => {
                     setModel(String(id));
+                    setVariant("");
+                    setColour("");
                     setModelError("");
                   }}
                   displayColumn="modelName"
@@ -255,6 +284,7 @@ const Dashboard = () => {
                   value={variant}
                   onChange={(id) => {
                     setVariant(String(id));
+                    setColour("");
                     setModelError("");
                   }}
                   displayColumn="variantName"
@@ -268,7 +298,7 @@ const Dashboard = () => {
                 <TableSelect
                   label="Vehicle Colour"
                   columns={["Colour Name"]}
-                  options={colours.map((c) => ({
+                  options={filteredColours.map((c) => ({
                     id: c.id,
                     colourName: c.colourName
                   }))}
@@ -278,6 +308,7 @@ const Dashboard = () => {
                     setModelError("");
                   }}
                   displayColumn="colourName"
+                  disabled={!variant}
                 />
 
               </div>

@@ -9,12 +9,6 @@ import logo from "./assets/logo.jpg";
 import "./V_Preview.css";
 import AccountMenu from "./components/AccountMenu";
 
-interface VehicleInfo {
-  model: string;
-  variant: string;
-  colour: string;
-}
-
 interface VehicleSearchState {
   searchType?: "vin" | "model";
   vin?: string;
@@ -82,21 +76,6 @@ const VehiclePreview = () => {
   const colourId = toNumber(searchState.colourId);
 
   const [vehicleImage, setVehicleImage] = useState<string | null>(null);
-  const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(() => {
-    if (
-      !searchState.modelName &&
-      !searchState.variantName &&
-      !searchState.colourName
-    ) {
-      return null;
-    }
-
-    return {
-      model: searchState.modelName ?? "",
-      variant: searchState.variantName ?? "",
-      colour: searchState.colourName ?? ""
-    };
-  });
   const [errorMessage, setErrorMessage] = useState("");
   const [resolvedIds, setResolvedIds] = useState<{
     modelId?: number;
@@ -144,12 +123,6 @@ const VehiclePreview = () => {
 
           setVehicleImage(resolveVehicleImage(data.imagePath));
 
-          setVehicleInfo({
-            model: data.modelName ?? "",
-            variant: data.variantName ?? "",
-            colour: data.colourName ?? ""
-          });
-
           setResolvedIds({
             modelId: data.modelId,
             variantId: data.variantId,
@@ -186,12 +159,6 @@ const VehiclePreview = () => {
           );
 
           setVehicleImage(resolveVehicleImage(data.imagePath));
-
-          setVehicleInfo({
-            model: searchState.modelName ?? data.modelName ?? "",
-            variant: searchState.variantName ?? data.variantName ?? "",
-            colour: searchState.colourName ?? data.colourName ?? ""
-          });
 
           return;
 
@@ -260,20 +227,6 @@ const VehiclePreview = () => {
 
       <div className="vehicle-container">
 
-        <h2>Vehicle Preview</h2>
-
-        {vehicleInfo && (
-
-          <div className="vehicle-info">
-
-            <p><strong>Model:</strong> {vehicleInfo.model}</p>
-            <p><strong>Variant:</strong> {vehicleInfo.variant}</p>
-            <p><strong>Colour:</strong> {vehicleInfo.colour}</p>
-
-          </div>
-
-        )}
-
         {errorMessage ? (
 
           <p className="error-text">{errorMessage}</p>
@@ -297,24 +250,6 @@ const VehiclePreview = () => {
           <p>Loading vehicle image...</p>
 
         )}
-
-        <div className="vehicle-buttons">
-
-          <button
-            className="primary-btn"
-            onClick={goToCatalogue}
-          >
-            View Assemblies
-          </button>
-
-          <button
-            className="secondary-btn"
-            onClick={() => navigate("/dashboard")}
-          >
-            Back
-          </button>
-
-        </div>
 
       </div>
 

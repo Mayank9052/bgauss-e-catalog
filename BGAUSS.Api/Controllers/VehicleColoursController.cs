@@ -22,6 +22,35 @@ public class VehicleColoursController : ControllerBase
         return Ok(colours);
     }
 
+    [HttpGet("image")]
+    public async Task<IActionResult> GetImage(int modelId, int variantId, int colourId)
+    {
+        var colour = await _context.VehicleColours
+            .FirstOrDefaultAsync(x =>
+                x.ModelId == modelId &&
+                x.VariantId == variantId &&
+                x.Id == colourId);
+
+        if (colour == null || string.IsNullOrWhiteSpace(colour.ImagePath))
+            return NotFound("Image not found");
+
+        // Fix DB path issue (remove spaces/new lines)
+        var cleanPath = colour.ImagePath.Replace("\n", "")
+                                        .Replace("\r", "")
+                                        .Trim();
+
+        var filePath = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "wwwroot",
+            cleanPath.TrimStart('/')
+        );
+
+        if (!System.IO.File.Exists(filePath))
+            return NotFound("Image file not found");
+
+        return PhysicalFile(filePath, "image/jpeg");
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(VehicleColour colour)
     {

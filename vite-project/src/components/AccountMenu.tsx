@@ -41,6 +41,13 @@ const AccountMenu = () => {
     navigate("/login", { replace: true });
   };
 
+  const handleAdminPanel = () => {
+    setIsOpen(false);
+    navigate("/admin/users");
+  };
+
+  const isAdmin = profile?.role === "Admin";
+
   return (
     <div className="account-menu" ref={menuRef}>
       <button
@@ -65,6 +72,16 @@ const AccountMenu = () => {
             <span>User ID</span>
             <strong>{profile?.userId ?? "-"}</strong>
           </div>
+
+          {isAdmin && (
+            <button
+              type="button"
+              className="account-menu-admin"
+              onClick={handleAdminPanel}
+            >
+              Admin Panel
+            </button>
+          )}
 
           <button
             type="button"

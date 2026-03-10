@@ -75,3 +75,19 @@
 .account-menu-logout:hover {
   background: #bb2e2e;
 }
+
+.account-menu-admin {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #0f5575;
+  border-radius: 6px;
+  background: #e9f4fb;
+  color: #0f5575;
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.account-menu-admin:hover {
+  background: #d7ebf8;
+}

@@ -4,13 +4,12 @@ import "./login.css";
 import { login } from "./services/api";
 import logo from "./assets/logo.jpg";
 import ev from "./assets/ev.png";
-import { getDefaultPathForRole, getRoleFromToken, type AppRole } from "./auth";
+import { getDefaultPathForRole, getRoleFromToken } from "./auth";
 
 const Login = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState<AppRole>("User");
   const [error, setError] = useState("");
 
   const handleLogin = async () => {
@@ -33,12 +32,6 @@ const Login = () => {
         return;
       }
 
-      if (role !== selectedRole) {
-        localStorage.removeItem("token");
-        setError(`Selected ${selectedRole} login, but this account is ${role}`);
-        return;
-      }
-
       navigate(getDefaultPathForRole(role), { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -58,26 +51,6 @@ const Login = () => {
           <div className="logo-section">
             <img src={logo} alt="BGAUSS Logo" />
             <h2>BGAUSS Auto India Pvt Ltd</h2>
-          </div>
-
-          <div className="login-role">
-            <p>Login As</p>
-            <div className="role-options">
-              <button
-                type="button"
-                className={selectedRole === "User" ? "role-btn active" : "role-btn"}
-                onClick={() => setSelectedRole("User")}
-              >
-                User
-              </button>
-              <button
-                type="button"
-                className={selectedRole === "Admin" ? "role-btn active" : "role-btn"}
-                onClick={() => setSelectedRole("Admin")}
-              >
-                Admin
-              </button>
-            </div>
           </div>
 
           <div className="form-group">

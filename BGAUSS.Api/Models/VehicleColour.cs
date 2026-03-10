@@ -17,6 +17,8 @@ public partial class VehicleColour
 
     public virtual VehicleModel? Model { get; set; }
 
+    public virtual ICollection<PartColour> PartColours { get; set; } = new List<PartColour>();
+
     public virtual ICollection<Part> Parts { get; set; } = new List<Part>();
 
     public virtual VehicleVariant? Variant { get; set; }

@@ -16,7 +16,7 @@ namespace BGAUSS.Api.Controllers
             _context = context;
         }
 
-        // ✅ GET ALL
+        // GET ALL
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -25,14 +25,15 @@ namespace BGAUSS.Api.Controllers
                 {
                     Id = a.Id,
                     AssemblyName = a.AssemblyName,
-                    ImagePath = a.ImagePath
+                    ImagePath = a.ImagePath,
+                    ModelId = a.ModelId
                 })
                 .ToListAsync();
 
             return Ok(assemblies);
         }
 
-        // ✅ GET BY ID
+        // GET BY ID
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -42,7 +43,8 @@ namespace BGAUSS.Api.Controllers
                 {
                     Id = a.Id,
                     AssemblyName = a.AssemblyName,
-                    ImagePath = a.ImagePath
+                    ImagePath = a.ImagePath,
+                    ModelId = a.ModelId
                 })
                 .FirstOrDefaultAsync();
 
@@ -52,7 +54,47 @@ namespace BGAUSS.Api.Controllers
             return Ok(assembly);
         }
 
-        // ✅ CREATE
+        // GET all Assembly images by ModelId
+        [HttpGet("images/{modelId}")]
+        public async Task<IActionResult> GetImagesByModelId(int modelId)
+        {
+            // Fetch assemblies for this ModelId
+            var assemblies = await _context.Assemblies
+                .Where(a => a.ModelId == modelId && !string.IsNullOrEmpty(a.ImagePath))
+                .ToListAsync();
+
+            if (!assemblies.Any())
+                return NotFound("No assembly images found for this ModelId");
+
+            var imageUrls = new List<string>();
+            var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+
+            foreach (var assembly in assemblies)
+            {
+                // Clean DB path
+                var cleanPath = assembly.ImagePath.Replace("\n", "")
+                                                .Replace("\r", "")
+                                                .Trim();
+
+                // Physical file path
+                var filePath = Path.Combine(wwwrootPath, cleanPath.TrimStart('/'));
+
+                // Only add if the file exists
+                if (System.IO.File.Exists(filePath))
+                {
+                    // Build relative URL for frontend
+                    var url = $"{Request.Scheme}://{Request.Host}/{cleanPath.Replace("\\", "/").TrimStart('/')}";
+                    imageUrls.Add(url);
+                }
+            }
+
+            if (!imageUrls.Any())
+                return NotFound("No assembly images found on server for this ModelId");
+
+            return Ok(imageUrls);
+        }
+
+        // CREATE
         [HttpPost]
         public async Task<IActionResult> Create(AssemblyDto dto)
         {
@@ -62,7 +104,8 @@ namespace BGAUSS.Api.Controllers
             var assembly = new Assembly
             {
                 AssemblyName = dto.AssemblyName,
-                ImagePath = dto.ImagePath
+                ImagePath = dto.ImagePath,
+                ModelId = dto.ModelId
             };
 
             _context.Assemblies.Add(assembly);
@@ -73,7 +116,7 @@ namespace BGAUSS.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = assembly.Id }, dto);
         }
 
-        // ✅ UPDATE
+        // UPDATE
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, AssemblyDto dto)
         {
@@ -84,13 +127,14 @@ namespace BGAUSS.Api.Controllers
 
             assembly.AssemblyName = dto.AssemblyName;
             assembly.ImagePath = dto.ImagePath;
+            assembly.ModelId = dto.ModelId;
 
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        // ✅ DELETE
+        // DELETE
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

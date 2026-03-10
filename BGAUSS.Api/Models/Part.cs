@@ -32,5 +32,22 @@ public partial class Part
     public int? ColourId { get; set; }
 
     public decimal? TorqueNm { get; set; }
-    public ICollection<PartColour> PartColours { get; set; } = new List<PartColour>();
+
+    public virtual Assembly? Assembly { get; set; }
+
+    public virtual ICollection<AssemblyPart> AssemblyParts { get; set; } = new List<AssemblyPart>();
+
+    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+
+    public virtual VehicleColour? Colour { get; set; }
+
+    public virtual ICollection<ModelPart> ModelParts { get; set; } = new List<ModelPart>();
+
+    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+    public virtual ICollection<PartColour> PartColours { get; set; } = new List<PartColour>();
+
+    public virtual ICollection<PartImage> PartImages { get; set; } = new List<PartImage>();
+
+    public virtual VehicleVariant? Variant { get; set; }
 }

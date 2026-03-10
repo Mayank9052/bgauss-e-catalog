@@ -7,11 +7,12 @@ using BGAUSS.Api.Services;
 using OfficeOpenXml;
 using QuestPDF.Infrastructure;
 
+// SET LICENSES FIRST
+ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
+QuestPDF.Settings.License = LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// ================= LICENSE =================
-QuestPDF.Settings.License = LicenseType.Community;
-ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
 
 // ================= CONTROLLERS =================
 builder.Services.AddControllers()
@@ -109,8 +110,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseCors("ReactPolicy");
 app.UseHttpsRedirection();
 
 app.UseAuthentication();   // MUST come before Authorization

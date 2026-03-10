@@ -1,18 +1,21 @@
+﻿using System;
+using System.Collections.Generic;
+
 namespace BGAUSS.Api.Models;
 
-public class Order
+public partial class Order
 {
     public int Id { get; set; }
 
     public int UserId { get; set; }
-    public User? User { get; set; }
 
-    //public decimal TotalAmount { get; set; }
-    public decimal TotalAmount { get; set; } = 0;
+    public decimal TotalAmount { get; set; }
 
-    public string Status { get; set; } = "Pending";
+    public string Status { get; set; } = null!;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
 
-    public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+    public virtual User User { get; set; } = null!;
 }

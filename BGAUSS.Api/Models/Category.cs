@@ -1,13 +1,13 @@
-using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
 
 namespace BGAUSS.Api.Models;
 
-public class Category
+public partial class Category
 {
     public int Id { get; set; }
 
     public string? CategoryName { get; set; }
 
-    [JsonIgnore]   // 🔥 IMPORTANT
-    public ICollection<Part>? Parts { get; set; }
+    public virtual ICollection<Part> Parts { get; set; } = new List<Part>();
 }

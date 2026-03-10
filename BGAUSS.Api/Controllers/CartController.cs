@@ -105,7 +105,7 @@ namespace BGAUSS.Api.Controllers
                 ci.Id,
                 PartName = ci.Part!.PartName,
                 PartNumber = ci.Part.PartNumber,
-                ImagePath = ci.Part.ImagePath,
+                //ImagePath = ci.Part.PartImages,
                 Price = ci.Part.Price,
                 ci.Quantity,
                 SubTotal = ci.Quantity * (ci.Part.Price ?? 0),

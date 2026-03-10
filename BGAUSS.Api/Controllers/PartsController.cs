@@ -17,31 +17,28 @@ public class PartsController : ControllerBase
         _context = context;
     }
 
-    // ✅ GET ALL PARTS
+    // ================= GET ALL =================
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var parts = await _context.Parts
-            .Include(p => p.Category)
             .Select(p => new PartResponse
             {
                 Id = p.Id,
-                PartNumber = p.PartNumber ?? string.Empty,
-                PartName = p.PartName ?? string.Empty,
-                Description = p.Description ?? string.Empty,
-                BDP = p.BDP ?? 0,
-                MRP = p.MRP ?? 0,
+                PartNumber = p.PartNumber ?? "",
+                PartName = p.PartName ?? "",
+                Description = p.Description ?? "",
+                Bdp = p.Bdp ?? 0,
+                Mrp = p.Mrp ?? 0,
                 TaxPercent = p.TaxPercent ?? 0,
-                PageReference = p.PageReference ?? string.Empty,
-                ImagePath = p.ImagePath ?? string.Empty,
-                CategoryName = p.Category != null ? p.Category.CategoryName ?? string.Empty : string.Empty
+                ImagePath = ""
             })
             .ToListAsync();
 
         return Ok(parts);
     }
 
-    // ✅ CREATE PART
+    // ================= CREATE =================
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] Part part)
     {
@@ -54,36 +51,45 @@ public class PartsController : ControllerBase
         return Ok(part);
     }
 
-    // ✅ UPDATE PART
+    // ================= UPDATE =================
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] Part updated)
     {
         var part = await _context.Parts.FindAsync(id);
+
         if (part == null)
             return NotFound();
 
-        part.PartName = updated.PartName;
         part.PartNumber = updated.PartNumber;
+        part.PartName = updated.PartName;
         part.Description = updated.Description;
 
-        part.BDP = updated.BDP ?? 0;
-        part.MRP = updated.MRP ?? 0;
-        part.TaxPercent = updated.TaxPercent ?? 0;
+        part.Price = updated.Price;
 
-        part.PageReference = updated.PageReference;
-        part.ImagePath = updated.ImagePath;
-        part.CategoryId = updated.CategoryId;
+        part.Bdp = updated.Bdp;
+        part.Mrp = updated.Mrp;
+        part.TaxPercent = updated.TaxPercent;
+
+        part.StockQuantity = updated.StockQuantity;
+
+        part.AssemblyId = updated.AssemblyId;
+        part.ModelId = updated.ModelId;
+        part.VariantId = updated.VariantId;
+        part.ColourId = updated.ColourId;
+
+        part.TorqueNm = updated.TorqueNm;
 
         await _context.SaveChangesAsync();
 
         return Ok(part);
     }
 
-    // ✅ DELETE
+    // ================= DELETE =================
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var part = await _context.Parts.FindAsync(id);
+
         if (part == null)
             return NotFound();
 
@@ -93,40 +99,35 @@ public class PartsController : ControllerBase
         return Ok(new { message = "Deleted successfully" });
     }
 
-    // ✅ SEARCH
+    // ================= SEARCH =================
     [HttpGet("search")]
     public async Task<IActionResult> Search(string? name, string? partNumber)
     {
-        var query = _context.Parts
-            .Include(p => p.Category)
-            .AsQueryable();
+        var query = _context.Parts.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(name))
-            query = query.Where(p => p.PartName != null && p.PartName.Contains(name.Trim()));
+            query = query.Where(p => p.PartName!.Contains(name));
 
         if (!string.IsNullOrWhiteSpace(partNumber))
-            query = query.Where(p => p.PartNumber != null && p.PartNumber.Contains(partNumber.Trim()));
+            query = query.Where(p => p.PartNumber!.Contains(partNumber));
 
         var result = await query
             .Select(p => new PartResponse
             {
                 Id = p.Id,
-                PartNumber = p.PartNumber ?? string.Empty,
-                PartName = p.PartName ?? string.Empty,
-                Description = p.Description ?? string.Empty,
-                BDP = p.BDP ?? 0,
-                MRP = p.MRP ?? 0,
+                PartNumber = p.PartNumber ?? "",
+                PartName = p.PartName ?? "",
+                Description = p.Description ?? "",
+                Bdp = p.Bdp ?? 0,
+                Mrp = p.Mrp ?? 0,
                 TaxPercent = p.TaxPercent ?? 0,
-                PageReference = p.PageReference ?? string.Empty,
-                ImagePath = p.ImagePath ?? string.Empty,
-                CategoryName = p.Category != null ? p.Category.CategoryName ?? string.Empty : string.Empty
+                ImagePath = ""
             })
             .ToListAsync();
 
         return Ok(result);
     }
 
-    // ✅ IMPORT PARTS
     [HttpPost("import")]
     public async Task<IActionResult> ImportParts(IFormFile file)
     {
@@ -134,61 +135,107 @@ public class PartsController : ControllerBase
             return BadRequest("No file uploaded.");
 
         var partsToInsert = new List<Part>();
+        var partColoursToInsert = new List<PartColour>();
 
-        using var stream = new MemoryStream();
-        await file.CopyToAsync(stream);
-        stream.Position = 0;
-
-        using var package = new ExcelPackage(stream);
-        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-
-        if (worksheet == null)
-            return BadRequest("Invalid Excel file.");
-
-        var rowCount = worksheet.Dimension.Rows;
-
-        var existingPartNumbers = await _context.Parts
-            .Select(p => p.PartNumber)
-            .ToListAsync();
-
-        for (int row = 2; row <= rowCount; row++)
+        try
         {
-            var partNumber = worksheet.Cells[row, 2].Text?.Trim();
-            if (string.IsNullOrWhiteSpace(partNumber))
-                continue;
+            // Existing Part Numbers
+            var existingPartNumbers = new HashSet<string>(
+                await _context.Parts
+                .Where(p => p.PartNumber != null)
+                .Select(p => p.PartNumber!)
+                .ToListAsync()
+            );
 
-            if (existingPartNumbers.Contains(partNumber))
-                continue;
+            // Valid Foreign Keys
+            var validAssemblies = new HashSet<int>(await _context.Assemblies.Select(x => x.Id).ToListAsync());
+            var validModels = new HashSet<int>(await _context.VehicleModels.Select(x => x.Id).ToListAsync());
+            var validVariants = new HashSet<int>(await _context.VehicleVariants.Select(x => x.Id).ToListAsync());
+            var validColours = new HashSet<int>(await _context.VehicleColours.Select(x => x.Id).ToListAsync());
 
-            decimal bdp = ParseDecimalSafe(worksheet.Cells[row, 5].Text);
-            decimal mrp = ParseDecimalSafe(worksheet.Cells[row, 6].Text);
-            decimal tax = ParseDecimalSafe(worksheet.Cells[row, 7].Text);
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
 
-            var part = new Part
+            using var package = new ExcelPackage(stream);
+            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+
+            if (worksheet == null)
+                return BadRequest("Invalid Excel file.");
+
+            int rowCount = worksheet.Dimension.Rows;
+
+            for (int row = 2; row <= rowCount; row++)
             {
-                PartNumber = partNumber,
-                PartName = worksheet.Cells[row, 3].Text?.Trim() ?? string.Empty,
-                Description = worksheet.Cells[row, 3].Text?.Trim() ?? string.Empty,
-                PageReference = worksheet.Cells[row, 4].Text?.Trim() ?? string.Empty,
-                BDP = bdp,
-                MRP = mrp,
-                TaxPercent = tax,
-                Price = mrp,
-                CategoryId = 1
-            };
+                var partNumber = worksheet.Cells[row, 1].Text?.Trim();
 
-            partsToInsert.Add(part);
+                if (string.IsNullOrWhiteSpace(partNumber))
+                    continue;
+
+                if (existingPartNumbers.Contains(partNumber))
+                    continue;
+
+                int assemblyId = ParseIntSafe(worksheet.Cells[row, 9].Text);
+                int modelId = ParseIntSafe(worksheet.Cells[row, 10].Text);
+                int variantId = ParseIntSafe(worksheet.Cells[row, 11].Text);
+
+                // Multiple colours from CSV
+                var colourText = worksheet.Cells[row, 12].Text?.Trim() ?? "";
+
+                var validColourIds = colourText
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => ParseIntSafe(x))
+                    .Where(x => validColours.Contains(x))
+                    .ToList();
+
+                var part = new Part
+                {
+                    PartNumber = partNumber,
+                    PartName = worksheet.Cells[row, 2].Text?.Trim(),
+                    Description = worksheet.Cells[row, 3].Text?.Trim(),
+
+                    Price = ParseDecimalSafe(worksheet.Cells[row, 4].Text),
+                    Bdp = ParseDecimalSafe(worksheet.Cells[row, 5].Text),
+                    Mrp = ParseDecimalSafe(worksheet.Cells[row, 6].Text),
+                    TaxPercent = ParseDecimalSafe(worksheet.Cells[row, 7].Text),
+
+                    StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Text),
+
+                    AssemblyId = validAssemblies.Contains(assemblyId) ? assemblyId : null,
+                    ModelId = validModels.Contains(modelId) ? modelId : null,
+                    VariantId = validVariants.Contains(variantId) ? variantId : null,
+
+                    TorqueNm = ParseDecimalSafe(worksheet.Cells[row, 13].Text)
+                };
+
+                partsToInsert.Add(part);
+
+                // Add multiple colours
+                foreach (var colourId in validColourIds)
+                {
+                    part.PartColours.Add(new PartColour
+                    {
+                        ColourId = colourId
+                    });
+                }
+            }
+
+            if (partsToInsert.Any())
+            {
+                await _context.Parts.AddRangeAsync(partsToInsert);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok($"{partsToInsert.Count} parts imported successfully.");
         }
-
-        if (partsToInsert.Any())
+        catch (Exception ex)
         {
-            _context.Parts.AddRange(partsToInsert);
-            await _context.SaveChangesAsync();
+            var inner = ex.InnerException?.Message;
+            return BadRequest($"Import failed: {ex.Message} | SQL Error: {inner}");
         }
-
-        return Ok($"{partsToInsert.Count} parts imported successfully.");
     }
 
+    // ================= SAFE PARSING METHODS =================
     private decimal ParseDecimalSafe(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -199,77 +246,11 @@ public class PartsController : ControllerBase
         return decimal.TryParse(value, out var result) ? result : 0;
     }
 
-    [HttpPost("import-assembly")]
-    public async Task<IActionResult> ImportAssembly(IFormFile file)
+    private int ParseIntSafe(string? value)
     {
-        if (file == null || file.Length == 0)
-            return BadRequest("No file uploaded.");
+        if (string.IsNullOrWhiteSpace(value))
+            return 0;
 
-        using var stream = new MemoryStream();
-        await file.CopyToAsync(stream);
-        stream.Position = 0;
-
-        using var package = new ExcelPackage(stream);
-        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-
-        if (worksheet == null)
-            return BadRequest("Invalid file.");
-
-        var rowCount = worksheet.Dimension.Rows;
-
-        for (int row = 2; row <= rowCount; row++)
-        {
-            var assemblyName = worksheet.Cells[row, 1].Text?.Trim();
-            var imageNo = worksheet.Cells[row, 2].Text?.Trim();
-            var partNumber = worksheet.Cells[row, 3].Text?.Trim();
-            var partName = worksheet.Cells[row, 4].Text?.Trim();
-            var qty = int.TryParse(worksheet.Cells[row, 5].Text, out var q) ? q : 0;
-            var frt = worksheet.Cells[row, 6].Text?.Trim();
-            var remark = worksheet.Cells[row, 7].Text?.Trim();
-            var erp = worksheet.Cells[row, 8].Text?.Trim();
-
-            if (string.IsNullOrWhiteSpace(partNumber))
-                continue;
-
-            // 🔥 1. Create Assembly if not exists
-            var assembly = await _context.Assemblies
-                .FirstOrDefaultAsync(a => a.AssemblyName == assemblyName);
-
-            if (assembly == null)
-            {
-                assembly = new Assembly
-                {
-                    AssemblyName = assemblyName,
-                    ImageNo = imageNo
-                };
-
-                _context.Assemblies.Add(assembly);
-                await _context.SaveChangesAsync();
-            }
-
-            // 🔥 2. Get Part
-            var part = await _context.Parts
-                .FirstOrDefaultAsync(p => p.PartNumber == partNumber);
-
-            if (part == null)
-                continue; // skip if part not exists
-
-            // 🔥 3. Insert Mapping
-            var assemblyPart = new AssemblyPart
-            {
-                AssemblyId = assembly.Id,
-                PartId = part.Id,
-                Quantity = qty,
-                FRT = frt,
-                Remark = remark,
-                ERP = erp
-            };
-
-            _context.AssemblyParts.Add(assemblyPart);
-        }
-
-        await _context.SaveChangesAsync();
-
-        return Ok("Assembly data imported successfully.");
+        return int.TryParse(value, out var result) ? result : 0;
     }
 }

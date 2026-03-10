@@ -1,12 +1,17 @@
+﻿using System;
+using System.Collections.Generic;
+
 namespace BGAUSS.Api.Models;
-public class Cart
+
+public partial class Cart
 {
     public int Id { get; set; }
 
     public int UserId { get; set; }
-    public User? User { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? CreatedAt { get; set; }
 
-    public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+
+    public virtual User User { get; set; } = null!;
 }

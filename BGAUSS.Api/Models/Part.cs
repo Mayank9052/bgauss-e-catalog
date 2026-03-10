@@ -1,29 +1,36 @@
+﻿using System;
 using System.Collections.Generic;
 
 namespace BGAUSS.Api.Models;
 
-public class Part
+public partial class Part
 {
     public int Id { get; set; }
 
     public string? PartNumber { get; set; }
-    public string? PartName { get; set; }
-    public string? Description { get; set; }
 
-    public decimal? BDP { get; set; }
-    public decimal? MRP { get; set; }
-    public decimal? TaxPercent { get; set; }
+    public string? PartName { get; set; }
+
+    public string? Description { get; set; }
 
     public decimal? Price { get; set; }
 
-    public int StockQuantity { get; set; } = 0;   // ✅ ADD THIS
+    public decimal? Bdp { get; set; }
 
-    public string? PageReference { get; set; }
-    public string? ImagePath { get; set; }
+    public decimal? Mrp { get; set; }
 
-    public int CategoryId { get; set; }
-    public Category? Category { get; set; }
+    public decimal? TaxPercent { get; set; }
 
-    public ICollection<ModelPart>? ModelParts { get; set; }
-    public ICollection<PartImage>? PartImages { get; set; }
+    public int StockQuantity { get; set; }
+
+    public int? AssemblyId { get; set; }
+
+    public int? ModelId { get; set; }
+
+    public int? VariantId { get; set; }
+
+    public int? ColourId { get; set; }
+
+    public decimal? TorqueNm { get; set; }
+    public ICollection<PartColour> PartColours { get; set; } = new List<PartColour>();
 }

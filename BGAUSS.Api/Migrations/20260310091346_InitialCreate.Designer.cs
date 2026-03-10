@@ -12,15 +12,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BGAUSS.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260304065957_InitialFullMigration")]
-    partial class InitialFullMigration
+    [Migration("20260310091346_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "8.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -34,13 +34,10 @@ namespace BGAUSS.Api.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AssemblyName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ImageNo")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<string>("ImagePath")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -55,33 +52,31 @@ namespace BGAUSS.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AssemblyId")
+                    b.Property<int?>("AssemblyId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ERP")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<string>("Erp")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FRT")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<string>("Frt")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PartId")
+                    b.Property<int?>("PartId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Quantity")
+                    b.Property<int?>("Quantity")
                         .HasColumnType("int");
 
                     b.Property<string>("Remark")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("PartId");
 
                     b.HasIndex("AssemblyId", "PartId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[AssemblyId] IS NOT NULL AND [PartId] IS NOT NULL");
 
                     b.ToTable("AssemblyParts");
                 });
@@ -94,7 +89,7 @@ namespace BGAUSS.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("UserId")
@@ -115,7 +110,7 @@ namespace BGAUSS.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("AddedAt")
+                    b.Property<DateTime?>("AddedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("CartId")
@@ -137,22 +132,6 @@ namespace BGAUSS.Api.Migrations
                     b.ToTable("CartItems");
                 });
 
-            modelBuilder.Entity("BGAUSS.Api.Models.Category", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CategoryName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Categories");
-                });
-
             modelBuilder.Entity("BGAUSS.Api.Models.ModelPart", b =>
                 {
                     b.Property<int>("Id")
@@ -164,18 +143,16 @@ namespace BGAUSS.Api.Migrations
                     b.Property<int?>("ColourId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ModelId")
+                    b.Property<int?>("ModelId")
                         .HasColumnType("int");
 
-                    b.Property<int>("PartId")
+                    b.Property<int?>("PartId")
                         .HasColumnType("int");
 
-                    b.Property<int>("VariantId")
+                    b.Property<int?>("VariantId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ColourId");
 
                     b.HasIndex("ModelId");
 
@@ -254,23 +231,23 @@ namespace BGAUSS.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal?>("BDP")
+                    b.Property<int?>("AssemblyId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Bdp")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("CategoryId")
+                    b.Property<int?>("ColourId")
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ImagePath")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("ModelId")
+                        .HasColumnType("int");
 
-                    b.Property<decimal?>("MRP")
+                    b.Property<decimal?>("Mrp")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("PageReference")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PartName")
                         .HasColumnType("nvarchar(max)");
@@ -287,9 +264,19 @@ namespace BGAUSS.Api.Migrations
                     b.Property<decimal?>("TaxPercent")
                         .HasColumnType("decimal(5,2)");
 
+                    b.Property<decimal?>("TorqueNm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("VariantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("AssemblyId");
+
+                    b.HasIndex("ColourId");
+
+                    b.HasIndex("VariantId");
 
                     b.ToTable("Parts");
                 });
@@ -305,7 +292,7 @@ namespace BGAUSS.Api.Migrations
                     b.Property<string>("ImagePath")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PartId")
+                    b.Property<int?>("PartId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -331,8 +318,7 @@ namespace BGAUSS.Api.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PasswordResetToken")
                         .HasColumnType("nvarchar(max)");
@@ -342,16 +328,14 @@ namespace BGAUSS.Api.Migrations
 
                     b.Property<string>("Role")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -366,17 +350,17 @@ namespace BGAUSS.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ColourId")
+                    b.Property<int?>("ColourId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ModelId")
+                    b.Property<int?>("ModelId")
                         .HasColumnType("int");
 
-                    b.Property<string>("VIN")
+                    b.Property<int?>("VariantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Vin")
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("VariantId")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -384,11 +368,11 @@ namespace BGAUSS.Api.Migrations
 
                     b.HasIndex("ModelId");
 
-                    b.HasIndex("VIN")
-                        .IsUnique()
-                        .HasFilter("[VIN] IS NOT NULL");
-
                     b.HasIndex("VariantId");
+
+                    b.HasIndex("Vin")
+                        .IsUnique()
+                        .HasFilter("[Vin] IS NOT NULL");
 
                     b.ToTable("Vehicles");
                 });
@@ -404,7 +388,20 @@ namespace BGAUSS.Api.Migrations
                     b.Property<string>("ColourName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ImagePath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ModelId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("VariantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ModelId");
+
+                    b.HasIndex("VariantId");
 
                     b.ToTable("VehicleColours");
                 });
@@ -419,8 +416,7 @@ namespace BGAUSS.Api.Migrations
 
                     b.Property<string>("ModelName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -435,7 +431,7 @@ namespace BGAUSS.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ModelId")
+                    b.Property<int?>("ModelId")
                         .HasColumnType("int");
 
                     b.Property<string>("VariantName")
@@ -453,14 +449,12 @@ namespace BGAUSS.Api.Migrations
                     b.HasOne("BGAUSS.Api.Models.Assembly", "Assembly")
                         .WithMany("AssemblyParts")
                         .HasForeignKey("AssemblyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("BGAUSS.Api.Models.Part", "Part")
                         .WithMany()
                         .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Assembly");
 
@@ -470,7 +464,7 @@ namespace BGAUSS.Api.Migrations
             modelBuilder.Entity("BGAUSS.Api.Models.Cart", b =>
                 {
                     b.HasOne("BGAUSS.Api.Models.User", "User")
-                        .WithMany()
+                        .WithMany("Carts")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -499,29 +493,17 @@ namespace BGAUSS.Api.Migrations
 
             modelBuilder.Entity("BGAUSS.Api.Models.ModelPart", b =>
                 {
-                    b.HasOne("BGAUSS.Api.Models.VehicleColour", "Colour")
-                        .WithMany("ModelParts")
-                        .HasForeignKey("ColourId");
-
                     b.HasOne("BGAUSS.Api.Models.VehicleModel", "Model")
                         .WithMany("ModelParts")
-                        .HasForeignKey("ModelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ModelId");
 
                     b.HasOne("BGAUSS.Api.Models.Part", "Part")
-                        .WithMany("ModelParts")
-                        .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .WithMany()
+                        .HasForeignKey("PartId");
 
                     b.HasOne("BGAUSS.Api.Models.VehicleVariant", "Variant")
                         .WithMany("ModelParts")
-                        .HasForeignKey("VariantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Colour");
+                        .HasForeignKey("VariantId");
 
                     b.Navigation("Model");
 
@@ -533,7 +515,7 @@ namespace BGAUSS.Api.Migrations
             modelBuilder.Entity("BGAUSS.Api.Models.Order", b =>
                 {
                     b.HasOne("BGAUSS.Api.Models.User", "User")
-                        .WithMany()
+                        .WithMany("Orders")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -562,22 +544,24 @@ namespace BGAUSS.Api.Migrations
 
             modelBuilder.Entity("BGAUSS.Api.Models.Part", b =>
                 {
-                    b.HasOne("BGAUSS.Api.Models.Category", "Category")
+                    b.HasOne("BGAUSS.Api.Models.Assembly", null)
                         .WithMany("Parts")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("AssemblyId");
 
-                    b.Navigation("Category");
+                    b.HasOne("BGAUSS.Api.Models.VehicleColour", null)
+                        .WithMany("Parts")
+                        .HasForeignKey("ColourId");
+
+                    b.HasOne("BGAUSS.Api.Models.VehicleVariant", null)
+                        .WithMany("Parts")
+                        .HasForeignKey("VariantId");
                 });
 
             modelBuilder.Entity("BGAUSS.Api.Models.PartImage", b =>
                 {
                     b.HasOne("BGAUSS.Api.Models.Part", "Part")
-                        .WithMany("PartImages")
-                        .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .WithMany()
+                        .HasForeignKey("PartId");
 
                     b.Navigation("Part");
                 });
@@ -586,23 +570,32 @@ namespace BGAUSS.Api.Migrations
                 {
                     b.HasOne("BGAUSS.Api.Models.VehicleColour", "Colour")
                         .WithMany("Vehicles")
-                        .HasForeignKey("ColourId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ColourId");
 
                     b.HasOne("BGAUSS.Api.Models.VehicleModel", "Model")
                         .WithMany("Vehicles")
-                        .HasForeignKey("ModelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ModelId");
 
                     b.HasOne("BGAUSS.Api.Models.VehicleVariant", "Variant")
                         .WithMany("Vehicles")
-                        .HasForeignKey("VariantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("VariantId");
 
                     b.Navigation("Colour");
+
+                    b.Navigation("Model");
+
+                    b.Navigation("Variant");
+                });
+
+            modelBuilder.Entity("BGAUSS.Api.Models.VehicleColour", b =>
+                {
+                    b.HasOne("BGAUSS.Api.Models.VehicleModel", "Model")
+                        .WithMany("VehicleColours")
+                        .HasForeignKey("ModelId");
+
+                    b.HasOne("BGAUSS.Api.Models.VehicleVariant", "Variant")
+                        .WithMany("VehicleColours")
+                        .HasForeignKey("VariantId");
 
                     b.Navigation("Model");
 
@@ -612,10 +605,8 @@ namespace BGAUSS.Api.Migrations
             modelBuilder.Entity("BGAUSS.Api.Models.VehicleVariant", b =>
                 {
                     b.HasOne("BGAUSS.Api.Models.VehicleModel", "Model")
-                        .WithMany("Variants")
-                        .HasForeignKey("ModelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .WithMany("VehicleVariants")
+                        .HasForeignKey("ModelId");
 
                     b.Navigation("Model");
                 });
@@ -623,6 +614,8 @@ namespace BGAUSS.Api.Migrations
             modelBuilder.Entity("BGAUSS.Api.Models.Assembly", b =>
                 {
                     b.Navigation("AssemblyParts");
+
+                    b.Navigation("Parts");
                 });
 
             modelBuilder.Entity("BGAUSS.Api.Models.Cart", b =>
@@ -630,26 +623,21 @@ namespace BGAUSS.Api.Migrations
                     b.Navigation("CartItems");
                 });
 
-            modelBuilder.Entity("BGAUSS.Api.Models.Category", b =>
-                {
-                    b.Navigation("Parts");
-                });
-
             modelBuilder.Entity("BGAUSS.Api.Models.Order", b =>
                 {
                     b.Navigation("OrderItems");
                 });
 
-            modelBuilder.Entity("BGAUSS.Api.Models.Part", b =>
+            modelBuilder.Entity("BGAUSS.Api.Models.User", b =>
                 {
-                    b.Navigation("ModelParts");
+                    b.Navigation("Carts");
 
-                    b.Navigation("PartImages");
+                    b.Navigation("Orders");
                 });
 
             modelBuilder.Entity("BGAUSS.Api.Models.VehicleColour", b =>
                 {
-                    b.Navigation("ModelParts");
+                    b.Navigation("Parts");
 
                     b.Navigation("Vehicles");
                 });
@@ -658,7 +646,9 @@ namespace BGAUSS.Api.Migrations
                 {
                     b.Navigation("ModelParts");
 
-                    b.Navigation("Variants");
+                    b.Navigation("VehicleColours");
+
+                    b.Navigation("VehicleVariants");
 
                     b.Navigation("Vehicles");
                 });
@@ -666,6 +656,10 @@ namespace BGAUSS.Api.Migrations
             modelBuilder.Entity("BGAUSS.Api.Models.VehicleVariant", b =>
                 {
                     b.Navigation("ModelParts");
+
+                    b.Navigation("Parts");
+
+                    b.Navigation("VehicleColours");
 
                     b.Navigation("Vehicles");
                 });

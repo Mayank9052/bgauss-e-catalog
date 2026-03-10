@@ -1,18 +1,17 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
 
-namespace BGAUSS.Api.Models
+namespace BGAUSS.Api.Models;
+
+public partial class Assembly
 {
-    public class Assembly
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        [Required]
-        [MaxLength(200)]
-        public string AssemblyName { get; set; } = string.Empty;
+    public string? AssemblyName { get; set; }
 
-        [MaxLength(100)]
-        public string? ImageNo { get; set; }
+    public string? ImagePath { get; set; }
 
-        public ICollection<AssemblyPart> AssemblyParts { get; set; } = new List<AssemblyPart>();
-    }
+    public virtual ICollection<AssemblyPart> AssemblyParts { get; set; } = new List<AssemblyPart>();
+
+    public virtual ICollection<Part> Parts { get; set; } = new List<Part>();
 }

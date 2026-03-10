@@ -41,9 +41,9 @@ namespace BGAUSS.Api.Controllers
                     var assemblies = await _searchService.SearchAsync(_context.Assemblies, query, "AssemblyName", "ImageNo");
                     return Ok(assemblies);
 
-                case "categories":
+                /*case "categories":
                     var categories = await _searchService.SearchAsync(_context.Categories, query, "CategoryName");
-                    return Ok(categories);
+                    return Ok(categories);*/
 
                 case "vehiclemodels":
                     var models = await _searchService.SearchAsync(_context.VehicleModels, query, "ModelName");

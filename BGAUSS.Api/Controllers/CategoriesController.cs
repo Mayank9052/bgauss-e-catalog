@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+/*using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using BGAUSS.Api.DTOs;
@@ -30,7 +30,7 @@ public class CategoriesController : ControllerBase
         return Ok(category);
     }*/
 
-    [HttpPost]
+    /*[HttpPost]
     public async Task<IActionResult> Create(CreateCategoryDto dto)
     {
         var category = new Category
@@ -43,4 +43,4 @@ public class CategoriesController : ControllerBase
 
         return Ok(category);
     }
-}
+} */

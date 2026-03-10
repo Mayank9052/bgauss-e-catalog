@@ -1,33 +1,29 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
 namespace BGAUSS.Api.Models;
 
-[Table("Users")]
-public class User
+public partial class User
 {
-    [Key]
     public int Id { get; set; }
 
-    [Required]
-    [MaxLength(100)]
-    public string Username { get; set; } = string.Empty;
+    public string Username { get; set; } = null!;
 
-    [Required]
-    [MaxLength(255)]
-    public string PasswordHash { get; set; } = string.Empty;
+    public string PasswordHash { get; set; } = null!;
 
-    [Required]
-    [MaxLength(50)]
-    public string Role { get; set; } = "User";
+    public string Role { get; set; } = null!;
 
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
-    
+
     public string? PasswordResetToken { get; set; }
 
     public DateTime? PasswordResetTokenExpiry { get; set; }
+
+    public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
+
+    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

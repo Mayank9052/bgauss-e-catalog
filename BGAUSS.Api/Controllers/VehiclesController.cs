@@ -22,7 +22,7 @@ public class VehiclesController : ControllerBase
             .Include(v => v.Model)
             .Include(v => v.Variant)
             .Include(v => v.Colour)
-            .FirstOrDefaultAsync(v => v.VIN == vin);
+            .FirstOrDefaultAsync(v => v.Vin == vin);
 
         if (vehicle == null)
             return NotFound("Vehicle not found");

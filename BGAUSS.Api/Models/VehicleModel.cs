@@ -1,17 +1,19 @@
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 
 namespace BGAUSS.Api.Models;
 
-public class VehicleModel
+public partial class VehicleModel
 {
     public int Id { get; set; }
 
-    [Required]
-    [MaxLength(100)]
-    public string ModelName { get; set; } = string.Empty;
+    public string ModelName { get; set; } = null!;
 
-    public ICollection<VehicleVariant>? Variants { get; set; }
-    public ICollection<Vehicle>? Vehicles { get; set; }
-    public ICollection<ModelPart>? ModelParts { get; set; }
+    public virtual ICollection<ModelPart> ModelParts { get; set; } = new List<ModelPart>();
+
+    public virtual ICollection<VehicleColour> VehicleColours { get; set; } = new List<VehicleColour>();
+
+    public virtual ICollection<VehicleVariant> VehicleVariants { get; set; } = new List<VehicleVariant>();
+
+    public virtual ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
 }

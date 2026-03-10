@@ -25,7 +25,7 @@ namespace BGAUSS.Api.Controllers
                 {
                     Id = a.Id,
                     AssemblyName = a.AssemblyName,
-                    ImageNo = a.ImageNo
+                    ImagePath = a.ImagePath
                 })
                 .ToListAsync();
 
@@ -42,7 +42,7 @@ namespace BGAUSS.Api.Controllers
                 {
                     Id = a.Id,
                     AssemblyName = a.AssemblyName,
-                    ImageNo = a.ImageNo
+                    ImagePath = a.ImagePath
                 })
                 .FirstOrDefaultAsync();
 
@@ -62,7 +62,7 @@ namespace BGAUSS.Api.Controllers
             var assembly = new Assembly
             {
                 AssemblyName = dto.AssemblyName,
-                ImageNo = dto.ImageNo
+                ImagePath = dto.ImagePath
             };
 
             _context.Assemblies.Add(assembly);
@@ -83,7 +83,7 @@ namespace BGAUSS.Api.Controllers
                 return NotFound();
 
             assembly.AssemblyName = dto.AssemblyName;
-            assembly.ImageNo = dto.ImageNo;
+            assembly.ImagePath = dto.ImagePath;
 
             await _context.SaveChangesAsync();
 

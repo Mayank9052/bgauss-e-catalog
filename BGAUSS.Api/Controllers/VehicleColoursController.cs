@@ -129,15 +129,18 @@ public class VehicleColoursController : ControllerBase
             return BadRequest("No file uploaded.");
 
         var coloursToInsert = new List<VehicleColour>();
+        var skippedRows = new List<int>(); // Track skipped rows
 
         try
         {
-            // Existing colours to prevent duplicates
-            var existingColours = new HashSet<string>(
-                await _context.VehicleColours
-                .Where(c => c.ColourName != null)
-                .Select(c => c.ColourName!)
-                .ToListAsync()
+            // Load existing combinations to prevent duplicates
+            var existingColours = await _context.VehicleColours
+                .Select(c => new { c.ColourName, c.ModelId, c.VariantId })
+                .ToListAsync();
+
+            var existingSet = new HashSet<string>(
+                existingColours.Select(c =>
+                    $"{c.ColourName?.Trim()?.ToLower()}_{c.ModelId}_{c.VariantId}")
             );
 
             using var stream = new MemoryStream();
@@ -155,12 +158,24 @@ public class VehicleColoursController : ControllerBase
             for (int row = 2; row <= rowCount; row++)
             {
                 var colourName = worksheet.Cells[row, 1].Text?.Trim();
-                if (string.IsNullOrWhiteSpace(colourName) || existingColours.Contains(colourName))
+                if (string.IsNullOrWhiteSpace(colourName))
+                {
+                    skippedRows.Add(row);
                     continue;
+                }
 
                 var modelId = int.TryParse(worksheet.Cells[row, 2].Text, out var mId) ? mId : (int?)null;
                 var variantId = int.TryParse(worksheet.Cells[row, 3].Text, out var vId) ? vId : (int?)null;
                 var imagePath = worksheet.Cells[row, 4].Text?.Trim();
+
+                var key = $"{colourName.ToLower()}_{modelId}_{variantId}";
+
+                // Skip if duplicate combination already exists
+                if (existingSet.Contains(key))
+                {
+                    skippedRows.Add(row);
+                    continue;
+                }
 
                 var colour = new VehicleColour
                 {
@@ -171,6 +186,7 @@ public class VehicleColoursController : ControllerBase
                 };
 
                 coloursToInsert.Add(colour);
+                existingSet.Add(key); // prevent duplicate in same Excel file
             }
 
             if (coloursToInsert.Any())
@@ -179,7 +195,11 @@ public class VehicleColoursController : ControllerBase
                 await _context.SaveChangesAsync();
             }
 
-            return Ok($"{coloursToInsert.Count} vehicle colours imported successfully.");
+            var message = $"{coloursToInsert.Count} vehicle colours imported successfully.";
+            if (skippedRows.Any())
+                message += $" Skipped duplicate/invalid rows: {string.Join(", ", skippedRows)}";
+
+            return Ok(message);
         }
         catch (Exception ex)
         {

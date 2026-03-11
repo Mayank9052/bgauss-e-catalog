@@ -25,7 +25,9 @@ builder.Services.AddControllers()
 // ================= DATABASE =================
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure()
+    ));
 
 // ================= JWT AUTH =================
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

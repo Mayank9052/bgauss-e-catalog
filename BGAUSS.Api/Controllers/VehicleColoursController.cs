@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
+using OfficeOpenXml;
 
 namespace BGAUSS.Api.Controllers;
 
@@ -15,6 +16,7 @@ public class VehicleColoursController : ControllerBase
         _context = context;
     }
 
+    // ================= GET ALL =================
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -22,6 +24,7 @@ public class VehicleColoursController : ControllerBase
         return Ok(colours);
     }
 
+    // ================= GET IMAGE =================
     [HttpGet("image")]
     public async Task<IActionResult> GetImage(int modelId, int variantId, int colourId)
     {
@@ -51,14 +54,19 @@ public class VehicleColoursController : ControllerBase
         return PhysicalFile(filePath, "image/jpeg");
     }
 
+    // ================= CREATE =================
     [HttpPost]
     public async Task<IActionResult> Create(VehicleColour colour)
     {
+        if (string.IsNullOrWhiteSpace(colour.ColourName))
+            return BadRequest("ColourName is required.");
+
         await _context.VehicleColours.AddAsync(colour);
         await _context.SaveChangesAsync();
         return Ok(colour);
     }
 
+    // ================= UPDATE =================
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, VehicleColour updated)
     {
@@ -66,10 +74,15 @@ public class VehicleColoursController : ControllerBase
         if (colour == null) return NotFound();
 
         colour.ColourName = updated.ColourName;
+        colour.ModelId = updated.ModelId;
+        colour.VariantId = updated.VariantId;
+        colour.ImagePath = updated.ImagePath;
+
         await _context.SaveChangesAsync();
         return Ok(colour);
     }
 
+    // ================= DELETE =================
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -79,5 +92,99 @@ public class VehicleColoursController : ControllerBase
         _context.VehicleColours.Remove(colour);
         await _context.SaveChangesAsync();
         return Ok("Deleted successfully");
+    }
+
+    // ================= DOWNLOAD BLANK EXCEL =================
+    [HttpGet("download-template")]
+    public IActionResult DownloadTemplate()
+    {
+        using var package = new ExcelPackage();
+        var worksheet = package.Workbook.Worksheets.Add("VehicleColoursTemplate");
+
+        // Header row
+        worksheet.Cells[1, 1].Value = "ColourName";
+        worksheet.Cells[1, 2].Value = "ModelId";
+        worksheet.Cells[1, 3].Value = "VariantId";
+        worksheet.Cells[1, 4].Value = "ImagePath";
+
+        using (var range = worksheet.Cells[1, 1, 1, 4])
+        {
+            range.Style.Font.Bold = true;
+            range.AutoFitColumns();
+        }
+
+        var fileBytes = package.GetAsByteArray();
+        var fileName = "VehicleColours_Import_Template.xlsx";
+
+        return File(fileBytes,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    fileName);
+    }
+
+    // ================= IMPORT FROM EXCEL =================
+    [HttpPost("import")]
+    public async Task<IActionResult> ImportVehicleColours(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("No file uploaded.");
+
+        var coloursToInsert = new List<VehicleColour>();
+
+        try
+        {
+            // Existing colours to prevent duplicates
+            var existingColours = new HashSet<string>(
+                await _context.VehicleColours
+                .Where(c => c.ColourName != null)
+                .Select(c => c.ColourName!)
+                .ToListAsync()
+            );
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+
+            using var package = new ExcelPackage(stream);
+            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+
+            if (worksheet == null)
+                return BadRequest("Invalid Excel file.");
+
+            int rowCount = worksheet.Dimension.Rows;
+
+            for (int row = 2; row <= rowCount; row++)
+            {
+                var colourName = worksheet.Cells[row, 1].Text?.Trim();
+                if (string.IsNullOrWhiteSpace(colourName) || existingColours.Contains(colourName))
+                    continue;
+
+                var modelId = int.TryParse(worksheet.Cells[row, 2].Text, out var mId) ? mId : (int?)null;
+                var variantId = int.TryParse(worksheet.Cells[row, 3].Text, out var vId) ? vId : (int?)null;
+                var imagePath = worksheet.Cells[row, 4].Text?.Trim();
+
+                var colour = new VehicleColour
+                {
+                    ColourName = colourName,
+                    ModelId = modelId,
+                    VariantId = variantId,
+                    ImagePath = imagePath
+                };
+
+                coloursToInsert.Add(colour);
+            }
+
+            if (coloursToInsert.Any())
+            {
+                await _context.VehicleColours.AddRangeAsync(coloursToInsert);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok($"{coloursToInsert.Count} vehicle colours imported successfully.");
+        }
+        catch (Exception ex)
+        {
+            var inner = ex.InnerException?.Message;
+            return BadRequest($"Import failed: {ex.Message} | SQL Error: {inner}");
+        }
     }
 }

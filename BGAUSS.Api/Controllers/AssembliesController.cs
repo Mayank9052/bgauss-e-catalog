@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using BGAUSS.Api.DTOs;
+using OfficeOpenXml;
 
 namespace BGAUSS.Api.Controllers
 {
@@ -82,7 +83,6 @@ namespace BGAUSS.Api.Controllers
                 // Only add if the file exists
                 if (System.IO.File.Exists(filePath))
                 {
-                    // Build relative URL for frontend
                     var url = $"{Request.Scheme}://{Request.Host}/{cleanPath.Replace("\\", "/").TrimStart('/')}";
                     imageUrls.Add(url);
                 }
@@ -147,6 +147,133 @@ namespace BGAUSS.Api.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // ================= DOWNLOAD BLANK EXCEL =================
+        [HttpGet("download-template")]
+        public IActionResult DownloadTemplate()
+        {
+            using var package = new ExcelPackage();
+            var worksheet = package.Workbook.Worksheets.Add("AssembliesTemplate");
+
+            // Header row
+            worksheet.Cells[1, 1].Value = "AssemblyName";
+            worksheet.Cells[1, 2].Value = "ImagePath";
+            worksheet.Cells[1, 3].Value = "ModelId";
+
+            using (var range = worksheet.Cells[1, 1, 1, 3])
+            {
+                range.Style.Font.Bold = true;
+                range.AutoFitColumns();
+            }
+
+            var fileBytes = package.GetAsByteArray();
+            var fileName = "Assemblies_Import_Template.xlsx";
+
+            return File(fileBytes,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        fileName);
+        }
+
+        // ================= IMPORT FROM EXCEL =================
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportAssemblies(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded.");
+
+            var assembliesToInsert = new List<Assembly>();
+
+            try
+            {
+                // Valid Model IDs
+                var validModels = new HashSet<int>(
+                    await _context.VehicleModels.Select(x => x.Id).ToListAsync()
+                );
+
+                // Load existing assemblies as dictionary by ModelId for per-model duplicate check
+                var existingAssemblies = await _context.Assemblies
+                    .Where(a => a.AssemblyName != null && a.ModelId != null)
+                    .ToListAsync();
+
+                var existingByModel = existingAssemblies
+                    .GroupBy(a => a.ModelId.Value)
+                    .ToDictionary(g => g.Key, g => new HashSet<string>(g.Select(a => a.AssemblyName!)));
+
+                // Track new names in Excel per modelId to avoid duplicates within file
+                var newNamesByModel = new Dictionary<int, HashSet<string>>();
+
+                using var stream = new MemoryStream();
+                await file.CopyToAsync(stream);
+                stream.Position = 0;
+
+                using var package = new ExcelPackage(stream);
+                var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+
+                if (worksheet == null)
+                    return BadRequest("Invalid Excel file.");
+
+                int rowCount = worksheet.Dimension.Rows;
+
+                for (int row = 2; row <= rowCount; row++)
+                {
+                    var name = worksheet.Cells[row, 1].Text?.Trim();
+                    var imagePath = worksheet.Cells[row, 2].Text?.Trim();
+                    int modelId = ParseIntSafe(worksheet.Cells[row, 3].Text);
+
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
+
+                    if (!validModels.Contains(modelId))
+                        continue;
+
+                    // Initialize tracking for this model
+                    if (!newNamesByModel.ContainsKey(modelId))
+                        newNamesByModel[modelId] = new HashSet<string>();
+
+                    var existingNamesForModel = existingByModel.ContainsKey(modelId)
+                        ? existingByModel[modelId]
+                        : new HashSet<string>();
+
+                    var newNamesForModel = newNamesByModel[modelId];
+
+                    // Skip if AssemblyName already exists for this ModelId
+                    if (existingNamesForModel.Contains(name) || newNamesForModel.Contains(name))
+                        continue;
+
+                    var assembly = new Assembly
+                    {
+                        AssemblyName = name,
+                        ImagePath = imagePath,
+                        ModelId = modelId
+                    };
+
+                    assembliesToInsert.Add(assembly);
+                    newNamesForModel.Add(name); // track this name for Excel duplicates per ModelId
+                }
+
+                if (assembliesToInsert.Any())
+                {
+                    await _context.Assemblies.AddRangeAsync(assembliesToInsert);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok($"{assembliesToInsert.Count} assemblies imported successfully.");
+            }
+            catch (Exception ex)
+            {
+                var inner = ex.InnerException?.Message;
+                return BadRequest($"Import failed: {ex.Message} | SQL Error: {inner}");
+            }
+        }
+
+        // ================= SAFE PARSING METHODS =================
+        private int ParseIntSafe(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return 0;
+
+            return int.TryParse(value.Trim(), out var result) ? result : 0;
         }
     }
 }

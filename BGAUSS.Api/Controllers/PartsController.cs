@@ -128,6 +128,45 @@ public class PartsController : ControllerBase
         return Ok(result);
     }
 
+    // ================= DOWNLOAD BLANK EXCEL =================
+    [HttpGet("download-template")]
+    public IActionResult DownloadTemplate()
+    {
+        using var package = new ExcelPackage();
+        var worksheet = package.Workbook.Worksheets.Add("PartsTemplate");
+
+        // ✅ Header row (same as import)
+        worksheet.Cells[1, 1].Value = "PartNumber";
+        worksheet.Cells[1, 2].Value = "PartName";
+        worksheet.Cells[1, 3].Value = "Description";
+        worksheet.Cells[1, 4].Value = "Price";
+        worksheet.Cells[1, 5].Value = "Bdp";
+        worksheet.Cells[1, 6].Value = "Mrp";
+        worksheet.Cells[1, 7].Value = "TaxPercent";
+        worksheet.Cells[1, 8].Value = "StockQuantity";
+        worksheet.Cells[1, 9].Value = "AssemblyId";
+        worksheet.Cells[1, 10].Value = "ModelId";
+        worksheet.Cells[1, 11].Value = "VariantId";
+        worksheet.Cells[1, 12].Value = "ColourIds"; // multiple CSV like "1,2,3"
+        worksheet.Cells[1, 13].Value = "TorqueNm";
+
+        // ✅ Optional: Set bold header
+        using (var range = worksheet.Cells[1, 1, 1, 13])
+        {
+            range.Style.Font.Bold = true;
+            range.AutoFitColumns();
+        }
+
+        // Convert package to byte array
+        var fileBytes = package.GetAsByteArray();
+        var fileName = "Parts_Import_Template.xlsx";
+
+        // Return as file
+        return File(fileBytes, 
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                    fileName);
+    }
+
     [HttpPost("import")]
     public async Task<IActionResult> ImportParts(IFormFile file)
     {

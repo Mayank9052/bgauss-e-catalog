@@ -52,6 +52,7 @@ public class PartsController : ControllerBase
                 Description = p.Description ?? "",
                 Bdp = p.Bdp ?? 0,
                 Mrp = p.Mrp ?? 0,
+                StockQuantity = p.StockQuantity,
                 TaxPercent = p.TaxPercent ?? 0,
                 ImagePath = ""
             })

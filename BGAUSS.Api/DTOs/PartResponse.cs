@@ -10,6 +10,7 @@ public class PartResponse
     public decimal Bdp { get; set; }
     public decimal Mrp { get; set; }
     public decimal TaxPercent { get; set; }
+    public int StockQuantity { get; set; }
 
     public string ImagePath { get; set; } = string.Empty;
 }

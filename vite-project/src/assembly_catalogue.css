@@ -1,112 +1,45 @@
-.assembly-page {
-  min-height: 100vh;
-  background: linear-gradient(180deg,#f4f8fb 0%,#edf3f7 100%);
+.assembly-page{
+min-height:100vh;
+background:#f4f8fb;
 }
 
-.assembly-content {
-  width:min(1200px,92%);
-  margin:24px auto 40px;
+.assembly-content{
+width:92%;
+margin:auto;
+padding:20px;
 }
 
-.assembly-grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-  gap:16px;
+.assembly-grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+gap:18px;
 }
 
-.assembly-card {
-  background:#fff;
-  border:1px solid #d9e5ef;
-  border-radius:14px;
-  padding:12px;
-  text-align:center;
-  cursor:pointer;
-  transition:transform .2s, box-shadow .2s;
+.assembly-card{
+background:white;
+border:1px solid #d9e5ef;
+border-radius:12px;
+padding:12px;
+cursor:pointer;
+text-align:center;
+transition:.2s;
 }
 
-.assembly-card:hover {
-  transform:translateY(-3px);
-  box-shadow:0 10px 20px rgba(19,45,74,.15);
+.assembly-card:hover{
+transform:translateY(-3px);
+box-shadow:0 10px 20px rgba(0,0,0,.1);
 }
 
-.assembly-image {
-  width:100%;
-  height:170px;
-  object-fit:contain;
-  border-radius:10px;
-  background:#f4f8fb;
-  cursor:zoom-in;
-}
-
-.assembly-image.placeholder{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#777;
+.assembly-image{
+width:100%;
+height:160px;
+object-fit:contain;
+background:#f4f8fb;
+border-radius:8px;
 }
 
 .assembly-name{
-  margin-top:10px;
-  font-weight:600;
-  color:#19364f;
-}
-
-/* MODAL */
-
-.image-modal{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,.85);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:1000;
-}
-
-.image-modal-content{
-  position:relative;
-}
-
-.zoom-container{
-  position:relative;
-}
-
-.zoom-image{
-  max-width:90vw;
-  max-height:85vh;
-  object-fit:contain;
-  border-radius:10px;
-  background:white;
-}
-
-/* MAGNIFY LENS */
-
-.lens{
-  position:absolute;
-  width:150px;
-  height:150px;
-  border-radius:50%;
-  border:3px solid #1976d2;
-  pointer-events:none;
-  background-repeat:no-repeat;
-  box-shadow:0 10px 25px rgba(0,0,0,.35);
-}
-
-/* CLOSE BUTTON */
-
-.close-btn{
-  position:absolute;
-  top:-15px;
-  right:-15px;
-  background:#e53935;
-  color:white;
-  border:none;
-  width:36px;
-  height:36px;
-  border-radius:50%;
-  font-size:18px;
-  cursor:pointer;
+margin-top:10px;
+font-weight:600;
+color:#19364f;
 }

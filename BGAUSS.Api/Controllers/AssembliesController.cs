@@ -55,13 +55,13 @@ namespace BGAUSS.Api.Controllers
             return Ok(assembly);
         }
 
-        // GET all Assembly images by ModelId
+        // ================= GET all Assembly images by ModelId =================
         [HttpGet("images/{modelId}")]
         public async Task<IActionResult> GetImagesByModelId(int modelId)
         {
-            // Fetch assemblies for this ModelId
+            // Fetch assemblies for this ModelId with non-empty ImagePath
             var assemblies = await _context.Assemblies
-                .Where(a => a.ModelId == modelId && !string.IsNullOrEmpty(a.ImagePath))
+                .Where(a => a.ModelId == modelId && !string.IsNullOrWhiteSpace(a.ImagePath))
                 .ToListAsync();
 
             if (!assemblies.Any())
@@ -72,18 +72,20 @@ namespace BGAUSS.Api.Controllers
 
             foreach (var assembly in assemblies)
             {
-                // Clean DB path
+                // Clean DB path (remove extra spaces/newlines)
                 var cleanPath = assembly.ImagePath.Replace("\n", "")
                                                 .Replace("\r", "")
                                                 .Trim();
 
-                // Physical file path
-                var filePath = Path.Combine(wwwrootPath, cleanPath.TrimStart('/'));
+                // Handle spaces and normalize separators
+                var filePath = Path.Combine(wwwrootPath, cleanPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
 
                 // Only add if the file exists
                 if (System.IO.File.Exists(filePath))
                 {
-                    var url = $"{Request.Scheme}://{Request.Host}/{cleanPath.Replace("\\", "/").TrimStart('/')}";
+                    // Convert to URL-friendly format (forward slashes)
+                    var relativeUrl = cleanPath.Replace("\\", "/").TrimStart('/');
+                    var url = $"{Request.Scheme}://{Request.Host}/{Uri.EscapeUriString(relativeUrl)}";
                     imageUrls.Add(url);
                 }
             }

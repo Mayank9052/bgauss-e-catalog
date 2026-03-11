@@ -38,6 +38,31 @@ public class PartsController : ControllerBase
         return Ok(parts);
     }
 
+    // ================= GET PARTS BY MODEL + ASSEMBLY =================
+    [HttpGet("by-assembly")]
+    public async Task<IActionResult> GetPartsByAssembly(int modelId, int assemblyId)
+    {
+        var parts = await _context.Parts
+            .Where(p => p.ModelId == modelId && p.AssemblyId == assemblyId)
+            .Select(p => new PartResponse
+            {
+                Id = p.Id,
+                PartNumber = p.PartNumber ?? "",
+                PartName = p.PartName ?? "",
+                Description = p.Description ?? "",
+                Bdp = p.Bdp ?? 0,
+                Mrp = p.Mrp ?? 0,
+                TaxPercent = p.TaxPercent ?? 0,
+                ImagePath = ""
+            })
+            .ToListAsync();
+
+        if (!parts.Any())
+            return NotFound("No parts found for this assembly.");
+
+        return Ok(parts);
+    }
+
     // ================= CREATE =================
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] Part part)

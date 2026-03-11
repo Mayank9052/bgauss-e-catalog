@@ -1,267 +1,148 @@
-import "./searchparts.css";
-import logo from "./assets/logo.jpg";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
-import { getFilteredParts, getAllParts } from "./services/api";
-import type { Part } from "./services/api";
-import axios from "axios";
-import GlobalSearch from "./components/GlobalSearch";
-import AccountMenu from "./components/AccountMenu";
-
-const readStoredSearchState = () => {
-  try {
-    const raw = sessionStorage.getItem("partsSearchState");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
+import "./searchparts.css"
+import logo from "./assets/logo.jpg"
+import { useLocation,useNavigate } from "react-router-dom"
+import { useState,useEffect } from "react"
+import axios from "axios"
+import AccountMenu from "./components/AccountMenu"
+import type { Part } from "./services/api"
 
 const SearchParts = () => {
 
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const location = useLocation()
+  const navigate = useNavigate()
 
-  const [parts, setParts] = useState<Part[]>([]);
-  const [filteredParts, setFilteredParts] = useState<Part[]>([]);
-  const [selectedParts, setSelectedParts] = useState<number[]>([]);
-  const [quantities, setQuantities] = useState<Record<number, number>>({});
-  const [cartCount, setCartCount] = useState(0);
+  const { modelId, assemblyId, assemblyName } = location.state || {}
 
-  const searchQuery = searchParams.get("q");
+  const [parts,setParts] = useState<Part[]>([])
+  const [selectedParts,setSelectedParts] = useState<number[]>([])
+  const [quantities,setQuantities] = useState<Record<number,number>>({})
+  const [cartCount,setCartCount] = useState(0)
 
-  const searchState = useMemo(() => {
-    const routeState = location.state as any;
-    const storedState = readStoredSearchState();
-    return routeState && Object.keys(routeState).length > 0
-      ? routeState
-      : (storedState || {});
-  }, [location.state]);
+  /* FETCH PARTS */
 
-  const { searchType, modelId, variantId, colourId, assemblyId, results } = searchState;
+  useEffect(()=>{
 
-  /* ================= FETCH PARTS ================= */
+    const fetchParts = async()=>{
 
-  useEffect(() => {
+      const res = await fetch(`/api/parts/by-assembly?modelId=${modelId}&assemblyId=${assemblyId}`)
+      const data = await res.json()
 
-    const fetchParts = async () => {
+      setParts(data)
 
-      try {
+      const qty:Record<number,number> = {}
+      data.forEach((p:Part)=>qty[p.id]=1)
 
-        if (searchType === "model") {
+      setQuantities(qty)
 
-          const filtered = await getFilteredParts(modelId, variantId, colourId);
-          const assemblyFiltered = assemblyId
-            ? filtered.filter((part) => part.assemblyId === assemblyId)
-            : filtered;
-          setParts(assemblyFiltered);
-          setFilteredParts(assemblyFiltered);
+    }
 
-        } else if (searchType === "global") {
+    fetchParts()
 
-          setParts(results);
-          setFilteredParts(results);
+  },[assemblyId])
 
-        } else {
+  /* FETCH CART COUNT */
 
-          const all = await getAllParts();
-          setParts(all);
-          setFilteredParts(all);
+  useEffect(()=>{
 
+    const fetchCart = async()=>{
+
+      try{
+
+        const res = await axios.get("/cart/my-cart")
+
+        if(res.data?.items){
+          setCartCount(res.data.items.length)
         }
 
-      } catch {
+      }catch{}
 
-        alert("Failed to load parts");
+    }
 
+    fetchCart()
+
+  },[])
+
+  /* SELECT PART */
+
+  const toggleSelect=(part:Part)=>{
+
+    if(part.stockQuantity===0){
+      alert(`⚠ ${part.partName} is Out of Stock`)
+      return
+    }
+
+    setSelectedParts(prev=>{
+
+      if(prev.includes(part.id))
+        return prev.filter(x=>x!==part.id)
+
+      return [...prev,part.id]
+
+    })
+
+  }
+
+  /* QUANTITY CONTROL */
+
+  const changeQty=(id:number,delta:number)=>{
+
+    const part = parts.find(p=>p.id===id)
+    if(!part) return
+
+    setQuantities(prev=>{
+
+      const currentQty = prev[id] || 1
+      const newQty = currentQty + delta
+
+      if(newQty < 1) return prev
+
+      if(newQty > part.stockQuantity){
+        alert(`⚠ Only ${part.stockQuantity} items available`)
+        return prev
       }
 
-    };
-
-    fetchParts();
-
-  }, [searchType, modelId, variantId, colourId, assemblyId, results, searchQuery]);
-
-  /* ================= INIT QUANTITY ================= */
-
-  useEffect(() => {
-
-    const qty: Record<number, number> = {};
-
-    parts.forEach(p => {
-
-      qty[p.id] = 1;
-
-      p.subParts?.forEach(sp => {
-        qty[sp.id] = 1;
-      });
-
-    });
-
-    setQuantities(qty);
-
-  }, [parts]);
-
-  /* ================= CART COUNT ================= */
-
-  useEffect(() => {
-
-    const fetchCart = async () => {
-
-      try {
-
-        const res = await axios.get("/cart/my-cart");
-
-        if (res.data?.items) {
-          setCartCount(res.data.items.length);
-        }
-
-      } catch {}
-
-    };
-
-    fetchCart();
-
-  }, []);
-
-  useEffect(() => {
-    setFilteredParts(parts);
-  }, [parts]);
-
-  /* ================= SELECT PART ================= */
-
-  const toggleSelect = (part: any) => {
-
-    setSelectedParts(prev => {
-
-      let updated = [...prev];
-
-      const isSelected = updated.includes(part.id);
-
-      if (isSelected) {
-
-        updated = updated.filter(id => id !== part.id);
-
-        part.subParts?.forEach((sp: any) => {
-          updated = updated.filter(id => id !== sp.id);
-        });
-
-      } else {
-
-        updated.push(part.id);
-
-        part.subParts?.forEach((sp: any) => {
-          if (!updated.includes(sp.id)) {
-            updated.push(sp.id);
-          }
-        });
-
-      }
-
-      return updated;
-
-    });
-
-  };
-
-  /* ================= QUANTITY ================= */
-
-  const changeQty = (id: number, delta: number) => {
-
-    const part =
-      parts.find(p => p.id === id) ||
-      parts.flatMap(p => p.subParts ?? []).find(sp => sp.id === id);
-
-    if (!part) return;
-
-    setQuantities(prev => {
-
-      const currentQty = prev[id] || 1;
-      const newQty = currentQty + delta;
-
-      if (newQty < 1) return prev;
-
-      if (newQty > part.stockQuantity) {
-
-        alert(`⚠ Stock limit reached\n\n${part.partName}\nAvailable: ${part.stockQuantity}`);
-
-        return prev;
-
-      }
-
-      return {
+      return{
         ...prev,
-        [id]: newQty
-      };
+        [id]:newQty
+      }
 
-    });
+    })
 
-  };
-  
-  /* ================= CHECKOUT ================= */
+  }
 
-  const checkoutSelected = async () => {
+  /* ADD TO CART */
 
-    try {
-      
-    if (selectedParts.length === 0) {
-      alert("Please select at least one item");
-      return;
+  const addSelectedToCart = async()=>{
+
+    if(selectedParts.length===0){
+      alert("Please select parts")
+      return
     }
 
-      for (const partId of selectedParts) {
+    try{
 
-        const qty = quantities[partId] ?? 1;
+      for(const partId of selectedParts){
 
-         const part =
-        parts.find(p => p.id === partId) ||
-        parts.flatMap(p => p.subParts ?? []).find(sp => sp.id === partId);
+        const qty = quantities[partId] || 1
 
-      if (!part) continue;
-
-        if (qty > part.stockQuantity) {
-          alert(`${part.partName} only has ${part.stockQuantity} items available`);
-          return;
-        }
-
-        await axios.post("/cart/add", {
-          PartId: partId,
-          Quantity: qty
-        });
+        await axios.post("/cart/add",{
+          PartId:partId,
+          Quantity:qty
+        })
 
       }
 
-      navigate("/checkout");
+      navigate("/checkout")
 
-    } catch (error) {
+    }catch{
 
-    console.error(error);
-    alert("Failed to proceed to checkout");
+      alert("Failed to add items to cart")
 
     }
 
-  };
+  }
 
-  
-
-  /* ================= IMAGE ================= */
-
-  const resolvePartImage = (part: Pick<Part, "imagePath">) => {
-
-    const baseUrl = "http://localhost:5053";
-
-    if (!part.imagePath) return "";
-
-    const normalized = part.imagePath
-      .replace(/\\/g, "/")
-      .replace(/^\/+/, "");
-
-    return `${baseUrl}/${normalized}`;
-
-  };
-
-  return (
+  return(
 
     <div className="catalog-wrapper">
 
@@ -270,110 +151,150 @@ const SearchParts = () => {
       <nav className="catalog-navbar">
 
         <div className="brand">
-          <img src={logo} alt="Logo" className="nav-logo"/>
+
+          <img src={logo} className="nav-logo"/>
+
           <span>Electronic Parts Catalog</span>
+
         </div>
 
         <div className="nav-right">
 
           <button
             className="back-button"
-            onClick={() => navigate("/dashboard")}
+            onClick={()=>navigate(-1)}
           >
-            ← Back to Dashboard
+            ← Back
           </button>
-
-          <GlobalSearch parts={parts} setFilteredParts={setFilteredParts} />
 
           <div
             className="cart-icon"
-            onClick={() => navigate('/checkout')}
+            onClick={()=>navigate("/checkout")}
           >
             🛒
-            {cartCount > 0 &&
-              <span className="cart-badge">{cartCount}</span>
+            {cartCount>0 &&
+              <span className="cart-badge">
+                {cartCount}
+              </span>
             }
           </div>
 
-          <AccountMenu />
+          <AccountMenu/>
 
         </div>
 
       </nav>
 
-      {/* ACTION BUTTONS */}
+      {/* PAGE TITLE */}
+
+      <h2 className="assembly-title">
+        {assemblyName}
+      </h2>
+
+      {/* ACTION BUTTON */}
 
       <div className="parts-actions">
 
         <button
           disabled={!selectedParts.length}
-          onClick={checkoutSelected}
+          onClick={addSelectedToCart}
         >
-          Checkout Selected
+          Add Selected To Cart
         </button>
 
       </div>
 
-      {/* PARTS GRID */}
+      {/* PARTS TABLE */}
 
-      <div className="parts-grid">
+      <div className="parts-table">
 
-        {filteredParts.map(part => (
+        <table>
 
-          <div key={part.id} className="part-card">
+          <thead>
 
-            <div className="part-select">
-              <input
-                type="checkbox"
-                checked={selectedParts.includes(part.id)}
-                onChange={() => toggleSelect(part)}
-              />
-            </div>
+            <tr>
+              <th>Select</th>
+              <th>Part Number</th>
+              <th>Part Name</th>
+              <th>Stock</th>
+              <th>Quantity</th>
+            </tr>
 
-            <div className="product-image">
+          </thead>
 
-              {part.imagePath && (
-                <img
-                  src={resolvePartImage(part)}
-                  alt={part.partName}
-                />
-              )}
+          <tbody>
 
-            </div>
+            {parts.map(part=>{
 
-            <div className="product-name">
-              {part.partName}
-            </div>
+              const qty = quantities[part.id] || 1
 
-            <div className="stock-text">
-              Stock: {part.stockQuantity}
-            </div>
+              return(
 
-            <div className="qty-control">
+                <tr key={part.id} className={part.stockQuantity===0 ? "row-out-stock" : ""}>
 
-              <button onClick={() => changeQty(part.id, -1)}>-</button>
+                  <td>
 
-              <span>{quantities[part.id]}</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedParts.includes(part.id)}
+                      disabled={part.stockQuantity===0}
+                      onChange={()=>toggleSelect(part)}
+                    />
 
-              <button
-                onClick={() => changeQty(part.id, 1)}
-                disabled={quantities[part.id] >= part.stockQuantity}
-              >
-                +
-              </button>
+                  </td>
 
-            </div>
+                  <td>{part.partNumber}</td>
 
-          </div>
+                  <td>{part.partName}</td>
 
-        ))}
+                  {/* STOCK DIGITS ONLY */}
+
+                  <td className={part.stockQuantity===0 ? "out-stock" : ""}>
+                    {part.stockQuantity}
+                  </td>
+
+                  {/* QUANTITY */}
+
+                  <td>
+
+                    <div className="qty-control">
+
+                      <button
+                        onClick={()=>changeQty(part.id,-1)}
+                        disabled={qty <= 1 || part.stockQuantity === 0}
+                      >
+                        -
+                      </button>
+
+                      <span>{qty}</span>
+
+                      <button
+                        onClick={()=>changeQty(part.id,1)}
+                        disabled={qty >= part.stockQuantity || part.stockQuantity === 0}
+                      >
+                        +
+                      </button>
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              )
+
+            })}
+
+          </tbody>
+
+        </table>
 
       </div>
 
     </div>
 
-  );
+  )
 
-};
+}
 
-export default SearchParts;
+export default SearchParts

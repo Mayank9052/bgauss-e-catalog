@@ -36,6 +36,7 @@ export interface Assembly {
   id: number;
   assemblyName: string;
   imagePath?: string | null;
+  modelId?: number
 }
 
 export interface Part {
@@ -122,21 +123,14 @@ export async function getFilteredParts(
   return response.json();
 }
 
-export async function getVehicleAssemblies(
-  modelId: number,
-  variantId: number,
-  colourId?: number
-): Promise<Assembly[]> {
+export async function getAssembliesByModel(modelId: number): Promise<string[]> {
 
-  const url = `/api/modelparts/assemblies?modelId=${modelId}&variantId=${variantId}${
-    colourId ? `&colourId=${colourId}` : ""
-  }`;
+  const response = await fetch(`/api/assemblies/images/${modelId}`)
 
-  const response = await fetch(url);
+  if (!response.ok)
+    throw new Error("Failed to fetch assembly images")
 
-  if (!response.ok) throw new Error("Failed to fetch vehicle assemblies");
-
-  return response.json();
+  return response.json()
 }
 
 export async function getAllParts(): Promise<Part[]> {

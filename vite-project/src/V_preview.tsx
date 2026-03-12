@@ -9,6 +9,8 @@ import logo from "./assets/logo.jpg";
 import "./V_Preview.css";
 import AccountMenu from "./components/AccountMenu";
 
+import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa";
+
 interface VehicleSearchState {
   searchType?: "vin" | "model";
   vin?: string;
@@ -77,6 +79,7 @@ const VehiclePreview = () => {
 
   const [vehicleImage, setVehicleImage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+
   const [resolvedIds, setResolvedIds] = useState<{
     modelId?: number;
     variantId?: number;
@@ -209,15 +212,26 @@ const VehiclePreview = () => {
         <div className="nav-actions">
 
           <button
-            className="nav-link active"
+            className="nav-icon-btn active"
+            title="Home"
             onClick={() => navigate("/dashboard")}
           >
-            Home
+            <FaHome />
           </button>
 
-          <button className="nav-link">Contact</button>
+          <button
+            className="nav-icon-btn"
+            title="Contact"
+          >
+            <FaPhoneAlt />
+          </button>
 
-          <span className="nav-icon">🛒</span>
+          <button
+            className="nav-icon-btn"
+            title="Cart"
+          >
+            <FaShoppingCart />
+          </button>
 
           <AccountMenu />
 

@@ -10,48 +10,86 @@ font-family:Arial, Helvetica, sans-serif;
 display:flex;
 justify-content:space-between;
 align-items:center;
-background:#0b3c4d;
+background:linear-gradient(90deg,#0e4f67,#0b3d52);
 padding:14px 40px;
 color:white;
+
+position:sticky;
+top:0;
+z-index:1000;
+
+box-shadow:0 8px 18px rgba(0,0,0,.2);
 }
 
 .brand{
 display:flex;
 align-items:center;
-gap:10px;
+gap:12px;
 }
 
 .nav-logo{
-height:36px;
+height:40px;
 }
 
-.nav-right{
+.brand-text{
 display:flex;
-gap:20px;
-align-items:center;
+flex-direction:column;
 }
 
-.back-button{
-background:white;
-border:none;
-padding:6px 12px;
-cursor:pointer;
-border-radius:4px;
-}
-
-/* CART */
-
-.cart-icon{
-position:relative;
+.logo-text{
 font-size:22px;
-cursor:pointer;
+font-weight:700;
 }
+
+.sub-title{
+font-size:14px;
+opacity:.9;
+}
+
+/* NAV ACTIONS */
+
+.nav-actions{
+display:flex;
+align-items:center;
+gap:14px;
+}
+
+/* NAV ICON BUTTON */
+
+.nav-icon-btn{
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+width:40px;
+height:40px;
+
+border:none;
+border-radius:10px;
+
+background:rgba(255,255,255,0.15);
+color:white;
+
+font-size:18px;
+cursor:pointer;
+
+transition:all .25s ease;
+position:relative;
+}
+
+.nav-icon-btn:hover{
+background:rgba(255,255,255,0.28);
+transform:translateY(-2px);
+}
+
+/* CART BADGE */
 
 .cart-badge{
 position:absolute;
-top:-8px;
-right:-10px;
-background:red;
+top:-6px;
+right:-6px;
+background:#ff3b30;
 color:white;
 font-size:11px;
 padding:2px 6px;
@@ -115,8 +153,8 @@ border-right:1px solid #e0e0e0;
 .parts-table td{
 padding:12px;
 text-align:center;
-border-bottom:1px solid #d0d0d0;   
-border-right:1px solid #e6e6e6;   
+border-bottom:1px solid #d0d0d0;
+border-right:1px solid #e6e6e6;
 }
 
 .parts-table td:last-child,
@@ -127,15 +165,23 @@ border-right:none;
 .parts-table tbody tr:hover{
 background:#f5f7f9;
 }
-/* STOCK */
 
-.out-stock{
-color:red;
-font-weight:600;
+/* REMARKS INPUT */
+
+.remarks-input{
+width:90%;
+padding:6px;
+border:1px solid #ccc;
+border-radius:4px;
+font-size:13px;
 }
 
-.row-out-stock{
-background:#fff5f5;
+/* EMPTY DATA */
+
+.no-data{
+padding:20px;
+text-align:center;
+color:#777;
 }
 
 /* QUANTITY */
@@ -165,4 +211,10 @@ font-weight:600;
 .qty-control button:disabled{
 background:#ccc;
 cursor:not-allowed;
+}
+
+/* OUT OF STOCK */
+
+.row-out-stock{
+background:#fff5f5;
 }

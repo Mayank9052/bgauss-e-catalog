@@ -11,7 +11,7 @@ const SearchParts = () => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const { modelId, assemblyId, assemblyName } = location.state || {}
+  const { modelId, assemblyId, assemblyName, partPosition } = location.state || {}
 
   const [parts,setParts] = useState<Part[]>([])
   const [selectedParts,setSelectedParts] = useState<number[]>([])
@@ -24,7 +24,13 @@ const SearchParts = () => {
 
     const fetchParts = async()=>{
 
-      const res = await fetch(`/api/parts/by-assembly?modelId=${modelId}&assemblyId=${assemblyId}`)
+      const positionFilter = partPosition != null
+        ? `&partPosition=${encodeURIComponent(String(partPosition))}`
+        : ""
+
+      const res = await fetch(
+        `/api/parts/by-assembly?modelId=${modelId}&assemblyId=${assemblyId}${positionFilter}`
+      )
       const data = await res.json()
 
       setParts(data)
@@ -38,7 +44,7 @@ const SearchParts = () => {
 
     fetchParts()
 
-  },[assemblyId])
+  },[assemblyId, modelId, partPosition])
 
   /* FETCH CART COUNT */
 
@@ -189,6 +195,7 @@ const SearchParts = () => {
 
       <h2 className="assembly-title">
         {assemblyName}
+        {partPosition != null ? ` - Hotspot ${partPosition}` : ""}
       </h2>
 
       {/* ACTION BUTTON */}

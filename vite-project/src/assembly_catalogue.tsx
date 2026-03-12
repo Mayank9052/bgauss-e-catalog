@@ -1,54 +1,103 @@
-import { useEffect, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
-import logo from "./assets/logo.jpg"
-import "./assembly_catalogue.css"
-import AccountMenu from "./components/AccountMenu"
-import type { Assembly } from "./services/api"
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+
+import logo from "./assets/logo.jpg";
+import "./assembly_catalogue.css";
+
+import AccountMenu from "./components/AccountMenu";
+import type { Assembly } from "./services/api";
 
 interface VehicleSearchState {
-  searchType?: "vin" | "model"
-  vin?: string
-  modelId?: number | string
-  variantId?: number | string
-  colourId?: number | string
+  modelId?: number | string;
 }
 
 const resolveAssemblyImage = (imagePath?: string | null): string => {
-
-  if (!imagePath) return ""
+  if (!imagePath) return "";
 
   const normalized = imagePath
     .replace(/\\/g, "/")
-    .replace(/^\/+/, "")
+    .replace(/^\/+/, "");
 
-  return `http://localhost:5053/${normalized}`
-}
+  return `http://localhost:5053/${normalized}`;
+};
 
 const AssemblyCatalogue = () => {
 
-  const location = useLocation()
-  const navigate = useNavigate()
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const searchState = location.state as VehicleSearchState
+  const searchState = location.state as VehicleSearchState;
 
-  const [assemblies,setAssemblies] = useState<Assembly[]>([])
-  const [loading,setLoading] = useState(true)
+  const [assemblies, setAssemblies] = useState<Assembly[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(()=>{
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
-    const fetchAssemblies = async()=>{
+  const [scale, setScale] = useState(1);
+  const [origin, setOrigin] = useState("center center");
 
-      const res = await fetch("/api/assemblies")
-      const data = await res.json()
+  useEffect(() => {
 
-      setAssemblies(data)
-      setLoading(false)
+    const fetchAssemblies = async () => {
 
-    }
+      const res = await fetch("/api/assemblies");
+      const data = await res.json();
 
-    fetchAssemblies()
+      setAssemblies(data);
+      setLoading(false);
 
-  },[])
+    };
+
+    fetchAssemblies();
+
+  }, []);
+
+  useEffect(() => {
+
+  if (zoomImage) {
+    document.body.style.overflow = "hidden"
+  } else {
+    document.body.style.overflow = "auto"
+  }
+
+  return () => {
+    document.body.style.overflow = "auto"
+  }
+
+}, [zoomImage])
+
+  const openZoom = (image: string) => {
+    setZoomImage(image);
+    setScale(1);
+  };
+
+  /* Wheel Zoom */
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+
+    e.preventDefault();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    setOrigin(`${x}% ${y}%`);
+
+    setScale(prev => {
+
+      const zoomAmount = e.deltaY < 0 ? 0.2 : -0.2;
+
+      let next = prev + zoomAmount;
+
+      if (next < 1) next = 1;
+      if (next > 4) next = 4;
+
+      return next;
+
+    });
+
+  };
 
   return (
 
@@ -59,20 +108,17 @@ const AssemblyCatalogue = () => {
       <nav className="epc-navbar">
 
         <div className="brand">
-
           <img src={logo} className="nav-logo"/>
-
           <span className="logo-text">
             Electronic Parts Catalog
           </span>
-
         </div>
 
         <div className="nav-actions">
 
           <button
             className="nav-link"
-            onClick={()=>navigate("/dashboard")}
+            onClick={() => navigate("/dashboard")}
           >
             Home
           </button>
@@ -84,6 +130,7 @@ const AssemblyCatalogue = () => {
         </div>
 
       </nav>
+
 
       {/* CONTENT */}
 
@@ -99,23 +146,28 @@ const AssemblyCatalogue = () => {
 
           <div className="assembly-grid">
 
-            {assemblies.map(assembly=>(
+            {assemblies.map((assembly) => (
 
               <button
                 key={assembly.id}
                 className="assembly-card"
-                onClick={()=>navigate("/parts",{
-                  state:{
-                    modelId: searchState?.modelId,
-                    assemblyId: assembly.id,
-                    assemblyName: assembly.assemblyName
-                  }
-                })}
+                onClick={() =>
+                  navigate("/parts", {
+                    state:{
+                      modelId: searchState?.modelId,
+                      assemblyId: assembly.id
+                    }
+                  })
+                }
               >
 
                 <img
                   src={resolveAssemblyImage(assembly.imagePath)}
                   className="assembly-image"
+                  onClick={(e)=>{
+                    e.stopPropagation();
+                    openZoom(resolveAssemblyImage(assembly.imagePath));
+                  }}
                 />
 
                 <div className="assembly-name">
@@ -132,10 +184,41 @@ const AssemblyCatalogue = () => {
 
       </main>
 
+
+      {/* ZOOM VIEWER */}
+
+      {zoomImage && (
+
+        <div
+          className="image-modal"
+          onClick={()=>setZoomImage(null)}
+        >
+
+          <div
+            className="zoom-container"
+            onClick={(e)=>e.stopPropagation()}
+            onWheel={handleWheel}
+          >
+
+            <img
+              src={zoomImage}
+              className="zoomed-image"
+              style={{
+                transform:`scale(${scale})`,
+                transformOrigin:origin
+              }}
+            />
+
+          </div>
+
+        </div>
+
+      )}
+
     </div>
 
-  )
+  );
 
-}
+};
 
-export default AssemblyCatalogue
+export default AssemblyCatalogue;

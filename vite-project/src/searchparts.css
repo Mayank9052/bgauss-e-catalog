@@ -93,7 +93,7 @@ width:92%;
 margin:20px auto;
 background:white;
 border-radius:8px;
-border:1px solid #ddd;
+border:1px solid #d0d0d0;
 overflow:hidden;
 }
 
@@ -109,14 +109,24 @@ color:white;
 padding:12px;
 font-size:14px;
 text-align:center;
+border-right:1px solid #e0e0e0;
 }
 
 .parts-table td{
 padding:12px;
-border-bottom:1px solid #eee;
 text-align:center;
+border-bottom:1px solid #d0d0d0;   
+border-right:1px solid #e6e6e6;   
 }
 
+.parts-table td:last-child,
+.parts-table th:last-child{
+border-right:none;
+}
+
+.parts-table tbody tr:hover{
+background:#f5f7f9;
+}
 /* STOCK */
 
 .out-stock{

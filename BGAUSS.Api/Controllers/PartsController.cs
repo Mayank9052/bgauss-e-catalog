@@ -28,6 +28,7 @@ public class PartsController : ControllerBase
                 PartNumber = p.PartNumber ?? "",
                 PartName = p.PartName ?? "",
                 Description = p.Description ?? "",
+                Remarks = p.Remarks ?? "",
                 Bdp = p.Bdp ?? 0,
                 Mrp = p.Mrp ?? 0,
                 TaxPercent = p.TaxPercent ?? 0,
@@ -50,6 +51,7 @@ public class PartsController : ControllerBase
                 PartNumber = p.PartNumber ?? "",
                 PartName = p.PartName ?? "",
                 Description = p.Description ?? "",
+                Remarks = p.Remarks ?? "",
                 Bdp = p.Bdp ?? 0,
                 Mrp = p.Mrp ?? 0,
                 StockQuantity = p.StockQuantity,
@@ -89,7 +91,7 @@ public class PartsController : ControllerBase
         part.PartNumber = updated.PartNumber;
         part.PartName = updated.PartName;
         part.Description = updated.Description;
-
+        part.Remarks = updated.Remarks;
         part.Price = updated.Price;
 
         part.Bdp = updated.Bdp;
@@ -144,6 +146,7 @@ public class PartsController : ControllerBase
                 PartNumber = p.PartNumber ?? "",
                 PartName = p.PartName ?? "",
                 Description = p.Description ?? "",
+                Remarks = p.Remarks ?? "",
                 Bdp = p.Bdp ?? 0,
                 Mrp = p.Mrp ?? 0,
                 TaxPercent = p.TaxPercent ?? 0,
@@ -175,9 +178,10 @@ public class PartsController : ControllerBase
         worksheet.Cells[1, 11].Value = "VariantId";
         worksheet.Cells[1, 12].Value = "ColourIds"; // multiple CSV like "1,2,3"
         worksheet.Cells[1, 13].Value = "TorqueNm";
+        worksheet.Cells[1, 14].Value = "Remarks";
 
         // ✅ Optional: Set bold header
-        using (var range = worksheet.Cells[1, 1, 1, 13])
+        using (var range = worksheet.Cells[1, 1, 1, 14])
         {
             range.Style.Font.Bold = true;
             range.AutoFitColumns();
@@ -199,52 +203,39 @@ public class PartsController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest("No file uploaded.");
 
-        var partsToInsert = new List<Part>();
-        var partColoursToInsert = new List<PartColour>();
-
         try
         {
-            // Existing Part Numbers
-            var existingPartNumbers = new HashSet<string>(
-                await _context.Parts
-                .Where(p => p.PartNumber != null)
-                .Select(p => p.PartNumber!)
-                .ToListAsync()
-            );
-
-            // Valid Foreign Keys
-            var validAssemblies = new HashSet<int>(await _context.Assemblies.Select(x => x.Id).ToListAsync());
-            var validModels = new HashSet<int>(await _context.VehicleModels.Select(x => x.Id).ToListAsync());
-            var validVariants = new HashSet<int>(await _context.VehicleVariants.Select(x => x.Id).ToListAsync());
-            var validColours = new HashSet<int>(await _context.VehicleColours.Select(x => x.Id).ToListAsync());
-
             using var stream = new MemoryStream();
             await file.CopyToAsync(stream);
             stream.Position = 0;
 
             using var package = new ExcelPackage(stream);
             var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-
-            if (worksheet == null)
-                return BadRequest("Invalid Excel file.");
+            if (worksheet == null) return BadRequest("Invalid Excel file.");
 
             int rowCount = worksheet.Dimension.Rows;
+
+            // Load existing parts
+            var existingParts = await _context.Parts
+                .Include(p => p.PartColours)
+                .ToListAsync();
+            var validAssemblies = new HashSet<int>(await _context.Assemblies.Select(x => x.Id).ToListAsync());
+            var validModels = new HashSet<int>(await _context.VehicleModels.Select(x => x.Id).ToListAsync());
+            var validVariants = new HashSet<int>(await _context.VehicleVariants.Select(x => x.Id).ToListAsync());
+            var validColours = new HashSet<int>(await _context.VehicleColours.Select(x => x.Id).ToListAsync());
+
+            int insertedCount = 0;
+            int updatedCount = 0;
 
             for (int row = 2; row <= rowCount; row++)
             {
                 var partNumber = worksheet.Cells[row, 1].Text?.Trim();
-
                 if (string.IsNullOrWhiteSpace(partNumber))
-                    continue;
-
-                if (existingPartNumbers.Contains(partNumber))
                     continue;
 
                 int assemblyId = ParseIntSafe(worksheet.Cells[row, 9].Text);
                 int modelId = ParseIntSafe(worksheet.Cells[row, 10].Text);
                 int variantId = ParseIntSafe(worksheet.Cells[row, 11].Text);
-
-                // Multiple colours from CSV
                 var colourText = worksheet.Cells[row, 12].Text?.Trim() ?? "";
 
                 var validColourIds = colourText
@@ -253,45 +244,66 @@ public class PartsController : ControllerBase
                     .Where(x => validColours.Contains(x))
                     .ToList();
 
-                var part = new Part
+                var existingPart = existingParts.FirstOrDefault(p => p.PartNumber == partNumber);
+
+                if (existingPart != null)
                 {
-                    PartNumber = partNumber,
-                    PartName = worksheet.Cells[row, 2].Text?.Trim(),
-                    Description = worksheet.Cells[row, 3].Text?.Trim(),
+                    // UPDATE existing record
+                    existingPart.PartName = worksheet.Cells[row, 2].Text?.Trim();
+                    existingPart.Description = worksheet.Cells[row, 3].Text?.Trim();
+                    existingPart.Price = ParseDecimalSafe(worksheet.Cells[row, 4].Text);
+                    existingPart.Bdp = ParseDecimalSafe(worksheet.Cells[row, 5].Text);
+                    existingPart.Mrp = ParseDecimalSafe(worksheet.Cells[row, 6].Text);
+                    existingPart.TaxPercent = ParseDecimalSafe(worksheet.Cells[row, 7].Text);
+                    existingPart.StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Text);
+                    existingPart.AssemblyId = validAssemblies.Contains(assemblyId) ? assemblyId : null;
+                    existingPart.ModelId = validModels.Contains(modelId) ? modelId : null;
+                    existingPart.VariantId = validVariants.Contains(variantId) ? variantId : null;
+                    existingPart.TorqueNm = ParseDecimalSafe(worksheet.Cells[row, 13].Text);
+                    existingPart.Remarks = worksheet.Cells[row, 14].Text?.Trim();
 
-                    Price = ParseDecimalSafe(worksheet.Cells[row, 4].Text),
-                    Bdp = ParseDecimalSafe(worksheet.Cells[row, 5].Text),
-                    Mrp = ParseDecimalSafe(worksheet.Cells[row, 6].Text),
-                    TaxPercent = ParseDecimalSafe(worksheet.Cells[row, 7].Text),
-
-                    StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Text),
-
-                    AssemblyId = validAssemblies.Contains(assemblyId) ? assemblyId : null,
-                    ModelId = validModels.Contains(modelId) ? modelId : null,
-                    VariantId = validVariants.Contains(variantId) ? variantId : null,
-
-                    TorqueNm = ParseDecimalSafe(worksheet.Cells[row, 13].Text)
-                };
-
-                partsToInsert.Add(part);
-
-                // Add multiple colours
-                foreach (var colourId in validColourIds)
-                {
-                    part.PartColours.Add(new PartColour
+                    // Update colours
+                    existingPart.PartColours.Clear();
+                    foreach (var colourId in validColourIds)
                     {
-                        ColourId = colourId
-                    });
+                        existingPart.PartColours.Add(new PartColour { ColourId = colourId });
+                    }
+
+                    updatedCount++;
+                }
+                else
+                {
+                    // INSERT new record
+                    var newPart = new Part
+                    {
+                        PartNumber = partNumber,
+                        PartName = worksheet.Cells[row, 2].Text?.Trim(),
+                        Description = worksheet.Cells[row, 3].Text?.Trim(),
+                        Price = ParseDecimalSafe(worksheet.Cells[row, 4].Text),
+                        Bdp = ParseDecimalSafe(worksheet.Cells[row, 5].Text),
+                        Mrp = ParseDecimalSafe(worksheet.Cells[row, 6].Text),
+                        TaxPercent = ParseDecimalSafe(worksheet.Cells[row, 7].Text),
+                        StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Text),
+                        AssemblyId = validAssemblies.Contains(assemblyId) ? assemblyId : null,
+                        ModelId = validModels.Contains(modelId) ? modelId : null,
+                        VariantId = validVariants.Contains(variantId) ? variantId : null,
+                        TorqueNm = ParseDecimalSafe(worksheet.Cells[row, 13].Text),
+                        Remarks = worksheet.Cells[row, 14].Text?.Trim()
+                    };
+
+                    foreach (var colourId in validColourIds)
+                    {
+                        newPart.PartColours.Add(new PartColour { ColourId = colourId });
+                    }
+
+                    _context.Parts.Add(newPart);
+                    insertedCount++;
                 }
             }
 
-            if (partsToInsert.Any())
-            {
-                await _context.Parts.AddRangeAsync(partsToInsert);
-                await _context.SaveChangesAsync();
-            }
+            await _context.SaveChangesAsync();
 
-            return Ok($"{partsToInsert.Count} parts imported successfully.");
+            return Ok($"Import completed: {insertedCount} inserted, {updatedCount} updated.");
         }
         catch (Exception ex)
         {

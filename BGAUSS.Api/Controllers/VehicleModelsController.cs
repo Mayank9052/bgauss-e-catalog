@@ -92,16 +92,14 @@ public class VehicleModelsController : ControllerBase
             return BadRequest("No file uploaded.");
 
         var modelsToInsert = new List<VehicleModel>();
+        int updatedCount = 0;
 
         try
         {
-            // Existing model names to avoid duplicates
-            var existingNames = new HashSet<string>(
-                await _context.VehicleModels
-                    .Where(m => m.ModelName != null)
-                    .Select(m => m.ModelName!)
-                    .ToListAsync()
-            );
+            // Load existing models from DB
+            var existingModels = await _context.VehicleModels
+                .Where(m => m.ModelName != null)
+                .ToListAsync();
 
             using var stream = new MemoryStream();
             await file.CopyToAsync(stream);
@@ -109,7 +107,6 @@ public class VehicleModelsController : ControllerBase
 
             using var package = new ExcelPackage(stream);
             var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-
             if (worksheet == null)
                 return BadRequest("Invalid Excel file.");
 
@@ -121,31 +118,30 @@ public class VehicleModelsController : ControllerBase
                 if (string.IsNullOrWhiteSpace(modelName))
                     continue;
 
-                // Skip duplicates in DB
-                if (existingNames.Contains(modelName))
-                    continue;
+                // Check if model already exists
+                var existingModel = existingModels.FirstOrDefault(m => m.ModelName.Equals(modelName, StringComparison.OrdinalIgnoreCase));
 
-                var model = new VehicleModel
+                if (existingModel != null)
+                {
+                    // Example: if you had other columns, you could update them here
+                    updatedCount++;
+                    continue; // Already exists, skip insert
+                }
+
+                // Insert new model
+                modelsToInsert.Add(new VehicleModel
                 {
                     ModelName = modelName
-                };
-
-                modelsToInsert.Add(model);
+                });
             }
 
             if (modelsToInsert.Any())
-            {
-                // Ensure EF does not attempt to set Id
-                foreach (var model in modelsToInsert)
-                {
-                    model.Id = 0; // EF will generate Id automatically
-                }
-
                 await _context.VehicleModels.AddRangeAsync(modelsToInsert);
-                await _context.SaveChangesAsync();
-            }
 
-            return Ok($"{modelsToInsert.Count} vehicle models imported successfully.");
+            if (modelsToInsert.Any() || updatedCount > 0)
+                await _context.SaveChangesAsync();
+
+            return Ok($"{modelsToInsert.Count} inserted, {updatedCount} already existed and skipped/updated.");
         }
         catch (Exception ex)
         {

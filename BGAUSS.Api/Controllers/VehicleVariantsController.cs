@@ -40,7 +40,33 @@ public class VehicleVariantsController : ControllerBase
         return Ok(variants);
     }
 
-    // ================= CREATE =================
+    // ================= DOWNLOAD EXCEL TEMPLATE =================
+    [HttpGet("download-template")]
+    public IActionResult DownloadTemplate()
+    {
+        using var package = new ExcelPackage();
+        var worksheet = package.Workbook.Worksheets.Add("VehicleVariantsTemplate");
+
+        // ✅ Header row
+        worksheet.Cells[1, 1].Value = "VariantName";
+        worksheet.Cells[1, 2].Value = "ModelId";
+
+        // Optional: make headers bold
+        using (var range = worksheet.Cells[1, 1, 1, 2])
+        {
+            range.Style.Font.Bold = true;
+            range.AutoFitColumns();
+        }
+
+        var fileBytes = package.GetAsByteArray();
+        var fileName = "VehicleVariants_Import_Template.xlsx";
+
+        return File(fileBytes, 
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                    fileName);
+    }
+
+    // ================= CREATE / IMPORT WITH UPSERT =================
     [HttpPost("import")]
     public async Task<IActionResult> ImportVariants(IFormFile file)
     {
@@ -48,6 +74,7 @@ public class VehicleVariantsController : ControllerBase
             return BadRequest("No file uploaded.");
 
         var variantsToInsert = new List<VehicleVariant>();
+        int updatedCount = 0;
 
         try
         {
@@ -56,25 +83,16 @@ public class VehicleVariantsController : ControllerBase
                 await _context.VehicleModels.Select(m => m.Id).ToListAsync()
             );
 
-            // Existing variants grouped by ModelId
-            var existingVariantsList = await _context.VehicleVariants
+            // Load existing variants
+            var existingVariants = await _context.VehicleVariants
                 .Where(v => v.VariantName != null && v.ModelId != null)
                 .ToListAsync();
-
-            var existingByModel = existingVariantsList
-                .GroupBy(v => v.ModelId.Value)
-                .ToDictionary(
-                    g => g.Key,
-                    g => new HashSet<string>(g.Select(v => v.VariantName!))
-                );
-
-            var newNamesByModel = new Dictionary<int, HashSet<string>>();
 
             using var stream = new MemoryStream();
             await file.CopyToAsync(stream);
             stream.Position = 0;
 
-            using var package = new OfficeOpenXml.ExcelPackage(stream);
+            using var package = new ExcelPackage(stream);
             var worksheet = package.Workbook.Worksheets.FirstOrDefault();
             if (worksheet == null)
                 return BadRequest("Invalid Excel file.");
@@ -91,37 +109,33 @@ public class VehicleVariantsController : ControllerBase
                 if (modelId == 0)
                     continue;
 
-                if (!newNamesByModel.ContainsKey(modelId))
-                    newNamesByModel[modelId] = new HashSet<string>();
+                // Check if variant exists
+                var existingVariant = existingVariants.FirstOrDefault(v => v.ModelId == modelId && v.VariantName == variantName);
 
-                var existingNamesForModel = existingByModel.ContainsKey(modelId)
-                    ? existingByModel[modelId]
-                    : new HashSet<string>();
+                if (existingVariant != null)
+                {
+                    // You can update additional columns here if needed
+                    updatedCount++;
+                    continue; // Skip adding, already exists
+                }
 
-                var newNamesForModel = newNamesByModel[modelId];
-
-                // Skip if variant already exists for this model
-                if (existingNamesForModel.Contains(variantName) || newNamesForModel.Contains(variantName))
-                    continue;
-
-                // IMPORTANT: Do NOT set Id
-                var variant = new VehicleVariant
+                // Insert new variant
+                variantsToInsert.Add(new VehicleVariant
                 {
                     VariantName = variantName,
                     ModelId = modelId
-                };
-
-                variantsToInsert.Add(variant);
-                newNamesForModel.Add(variantName);
+                });
             }
 
             if (variantsToInsert.Any())
             {
                 await _context.VehicleVariants.AddRangeAsync(variantsToInsert);
-                await _context.SaveChangesAsync();
             }
 
-            return Ok($"{variantsToInsert.Count} vehicle variants imported successfully.");
+            if (variantsToInsert.Any() || updatedCount > 0)
+                await _context.SaveChangesAsync();
+
+            return Ok($"{variantsToInsert.Count} inserted, {updatedCount} already existed and skipped/updated.");
         }
         catch (Exception ex)
         {

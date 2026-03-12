@@ -12,6 +12,7 @@ public partial class Part
     public string? PartName { get; set; }
 
     public string? Description { get; set; }
+    public string? Remarks { get; set; }
 
     public decimal? Price { get; set; }
 

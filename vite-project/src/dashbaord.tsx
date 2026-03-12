@@ -4,11 +4,14 @@ import logo from "./assets/logo.jpg";
 import "./dashbaord.css";
 import TableSelect from "./components/TableSelect";
 import AccountMenu from "./components/AccountMenu";
+import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa";
+
 import type {
   VehicleModel,
   VehicleVariant,
   VehicleColour
 } from "./services/api";
+
 import {
   getVehicleModels,
   getVehicleVariants,
@@ -197,10 +200,17 @@ const Dashboard = () => {
 
         <div className="nav-actions">
 
-          <button className="nav-link active">Home</button>
-          <button className="nav-link">Contact</button>
+          <button className="nav-icon-btn active" title="Home">
+            <FaHome />
+          </button>
 
-          <span className="nav-icon">🛒</span>
+          <button className="nav-icon-btn" title="Contact">
+            <FaPhoneAlt />
+          </button>
+
+          <button className="nav-icon-btn" title="Cart">
+            <FaShoppingCart />
+          </button>
 
           <AccountMenu />
 

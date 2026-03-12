@@ -5,28 +5,78 @@
   background:#eef3f7;
 }
 
-/* HEADER */
+/* ===== NAVBAR ===== */
 
-.vehicle-header{
-  height:70px;
-  background:#0e4f67;
+.epc-navbar{
+  height:75px;
+  padding:0 50px;
+  background:linear-gradient(90deg,#0e4f67,#0b3d52);
   color:white;
   display:flex;
+  justify-content:space-between;
   align-items:center;
-  padding:0 40px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.2);
 }
 
 .brand{
   display:flex;
-  gap:15px;
   align-items:center;
+  gap:15px;
 }
 
-.logo{
-  width:40px;
+.brand-text{
+  display:flex;
+  flex-direction:column;
 }
 
-/* MAIN */
+.logo-text{
+  font-size:24px;
+  font-weight:bold;
+}
+
+.sub-title{
+  font-size:15px;
+}
+
+.nav-logo{
+  width:45px;
+}
+
+/* NAV ACTIONS */
+
+.nav-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+/* ICON BUTTONS */
+
+.nav-icon-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:38px;
+  height:38px;
+  border-radius:8px;
+  border:none;
+  background:rgba(255,255,255,0.15);
+  color:white;
+  font-size:16px;
+  cursor:pointer;
+  transition:all 0.25s ease;
+}
+
+.nav-icon-btn:hover{
+  background:rgba(255,255,255,0.25);
+  transform:translateY(-2px);
+}
+
+.nav-icon-btn.active{
+  background:rgba(255,255,255,0.35);
+}
+
+/* ===== VEHICLE DISPLAY ===== */
 
 .vehicle-container{
   flex:1;
@@ -65,4 +115,11 @@
   border:none;
   padding:12px 20px;
   border-radius:6px;
+}
+
+/* ERROR */
+
+.error-text{
+  color:#e63946;
+  font-size:14px;
 }

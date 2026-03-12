@@ -7,6 +7,8 @@ import "./assembly_catalogue.css";
 import AccountMenu from "./components/AccountMenu";
 import type { Assembly } from "./services/api";
 
+import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa";
+
 interface VehicleSearchState {
   modelId?: number | string;
 }
@@ -32,7 +34,6 @@ const AssemblyCatalogue = () => {
   const [loading, setLoading] = useState(true);
 
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-
   const [scale, setScale] = useState(1);
   const [origin, setOrigin] = useState("center center");
 
@@ -54,24 +55,22 @@ const AssemblyCatalogue = () => {
 
   useEffect(() => {
 
-  if (zoomImage) {
-    document.body.style.overflow = "hidden"
-  } else {
-    document.body.style.overflow = "auto"
-  }
+    if (zoomImage) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
 
-  return () => {
-    document.body.style.overflow = "auto"
-  }
+    return () => {
+      document.body.style.overflow = "auto";
+    };
 
-}, [zoomImage])
+  }, [zoomImage]);
 
   const openZoom = (image: string) => {
     setZoomImage(image);
     setScale(1);
   };
-
-  /* Wheel Zoom */
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
 
@@ -103,27 +102,42 @@ const AssemblyCatalogue = () => {
 
     <div className="assembly-page">
 
-      {/* NAVBAR */}
-
       <nav className="epc-navbar">
 
         <div className="brand">
+
           <img src={logo} className="nav-logo"/>
-          <span className="logo-text">
-            Electronic Parts Catalog
-          </span>
+
+          <div className="brand-text">
+            <span className="logo-text">BGAUSS</span>
+            <span className="sub-title">Electronic Parts Catalog</span>
+          </div>
+
         </div>
 
         <div className="nav-actions">
 
           <button
-            className="nav-link"
+            className="nav-icon-btn active"
+            title="Home"
             onClick={() => navigate("/dashboard")}
           >
-            Home
+            <FaHome />
           </button>
 
-          <span className="nav-icon">🛒</span>
+          <button
+            className="nav-icon-btn"
+            title="Contact"
+          >
+            <FaPhoneAlt />
+          </button>
+
+          <button
+            className="nav-icon-btn"
+            title="Cart"
+          >
+            <FaShoppingCart />
+          </button>
 
           <AccountMenu/>
 
@@ -131,8 +145,6 @@ const AssemblyCatalogue = () => {
 
       </nav>
 
-
-      {/* CONTENT */}
 
       <main className="assembly-content">
 
@@ -184,8 +196,6 @@ const AssemblyCatalogue = () => {
 
       </main>
 
-
-      {/* ZOOM VIEWER */}
 
       {zoomImage && (
 

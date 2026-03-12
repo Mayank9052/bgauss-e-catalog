@@ -4,6 +4,7 @@ import "./checkout.css";
 import logo from "./assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
 import AccountMenu from "./components/AccountMenu";
+import { FaHome, FaPhoneAlt, FaShoppingCart, FaSearch } from "react-icons/fa";
 
 interface CartItem {
   id: number;
@@ -16,19 +17,11 @@ interface CartItem {
   stockQuantity: number;
 }
 
-interface OrderSummaryItem {
-  id: number;
-  partName: string;
-  partNumber: string;
-  price: number;
-  quantity: number;
-  subTotal: number;
-}
-
 const CheckoutPage = () => {
 
   const [items, setItems] = useState<CartItem[]>([]);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [searchTerm, setSearchTerm] = useState("");
 
   const navigate = useNavigate();
 
@@ -115,17 +108,23 @@ const CheckoutPage = () => {
     await axios.delete("/cart/empty");
 
     setItems([]);
-
     setQuantities({});
 
   };
 
-  /* ================= TOTAL SUM ================= */
+  /* ================= TOTAL ================= */
 
   const totalSum = items.reduce(
     (sum, item) =>
       sum + item.price * (quantities[item.id] ?? item.quantity),
     0
+  );
+
+  /* ================= SEARCH ================= */
+
+  const filteredItems = items.filter(item =>
+    item.partName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.partNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   /* ================= SHOP MORE ================= */
@@ -135,15 +134,16 @@ const CheckoutPage = () => {
     const storedSearchState = sessionStorage.getItem("partsSearchState");
 
     if (storedSearchState) {
-      navigate("/parts", {
+
+      navigate("/assembly_catalogue", {
         replace: true,
         state: JSON.parse(storedSearchState)
       });
+
       return;
     }
 
-    navigate("/parts");
-
+    navigate("/dashboard");
   };
 
   /* ================= DOWNLOAD CSV ================= */
@@ -197,80 +197,19 @@ const CheckoutPage = () => {
         return;
       }
 
-      const summaryItems: OrderSummaryItem[] = items.map((item) => {
-        const quantity = quantities[item.id] ?? item.quantity;
-        return {
-          id: item.id,
-          partName: item.partName,
-          partNumber: item.partNumber,
-          price: item.price,
-          quantity,
-          subTotal: item.price * quantity
-        };
-      });
-
-      const quantityUpdates = items
-        .map((item) => {
-          const quantity = quantities[item.id] ?? item.quantity;
-          if (quantity === item.quantity) return null;
-          return axios.put(`/cart/update/${item.id}`, null, {
-            params: { quantity }
-          });
-        })
-        .filter(Boolean);
-
-      if (quantityUpdates.length > 0) {
-        await Promise.all(quantityUpdates);
-      }
-
-      const fallbackTotal = summaryItems.reduce(
-        (sum, item) => sum + item.subTotal,
-        0
-      );
-
       const res = await axios.post("/cart/checkout");
 
       alert("Order placed successfully");
 
-      const orderId = res.data?.orderId ?? res.data?.OrderId ?? null;
-      const totalAmount =
-        Number(res.data?.total ?? res.data?.Total) || fallbackTotal;
-      const message = res.data?.message ?? res.data?.Message;
-      const backendItems = res.data?.items ?? res.data?.Items;
-      const normalizedItems = Array.isArray(backendItems)
-        ? backendItems.map((item: any) => ({
-          id: item.id,
-          partName: item.partName,
-          partNumber: item.partNumber,
-          price: Number(item.price),
-          quantity: Number(item.quantity),
-          subTotal: Number(item.subTotal)
-        }))
-        : summaryItems;
-
       navigate("/order_details", {
-        state: {
-          order: {
-            orderId,
-            totalAmount,
-            items: normalizedItems,
-            message
-          }
-        }
+        state: { order: res.data }
       });
 
-    } catch (error: any) {
+    } catch (err: any) {
 
-      const responseData = error.response?.data;
-      const message =
-        (typeof responseData === "string" ? responseData : null) ||
-        responseData?.message ||
-        responseData?.Message ||
-        responseData?.details ||
-        responseData?.Details ||
-        "Checkout failed";
+      console.error(err.response?.data);
 
-      alert(message);
+      alert(err.response?.data?.Message || "Checkout failed");
 
     }
 
@@ -280,7 +219,7 @@ const CheckoutPage = () => {
 
     <div className="checkout-page">
 
-      {/* ================= NAVBAR ================= */}
+      {/* NAVBAR */}
 
       <nav className="checkout-topbar">
 
@@ -288,24 +227,55 @@ const CheckoutPage = () => {
 
           <img src={logo} alt="Logo" className="checkout-logo" />
 
-          <span>Electronic Parts Catalog</span>
+          <div className="brand-text">
+            <span className="logo-text">BGAUSS</span>
+            <span className="sub-title">Electronic Parts Catalog</span>
+          </div>
 
         </div>
 
         <div className="checkout-topbar-right">
 
-          <span onClick={() => navigate("/dashboard")}>Home</span>
+          <button
+            className="nav-icon-btn"
+            onClick={() => navigate("/dashboard")}
+            title="Home"
+          >
+            <FaHome />
+          </button>
 
-          <span>Contact Us</span>
+          <button className="nav-icon-btn" title="Contact">
+            <FaPhoneAlt />
+          </button>
 
-          <span className="checkout-icon">🔍</span>
+          <div className="checkout-search">
+
+            <span className="search-icon">
+              <FaSearch />
+            </span>
+
+            <input
+              type="text"
+              placeholder="Search parts..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+
+          </div>
+
+          <div
+            className="nav-icon-btn cart-btn"
+            onClick={() => navigate("/checkout")}
+          >
+            <FaShoppingCart />
+
+            {items.length > 0 && (
+              <span className="cart-badge">{items.length}</span>
+            )}
+
+          </div>
 
           <AccountMenu />
-
-          <span className="checkout-cart">
-            🛒
-            <span className="checkout-cart-badge">{items.length}</span>
-          </span>
 
         </div>
 
@@ -336,7 +306,7 @@ const CheckoutPage = () => {
 
             <tbody>
 
-              {items.map((item) => {
+              {filteredItems.map((item) => {
 
                 const qty = quantities[item.id] ?? item.quantity;
 
@@ -345,21 +315,26 @@ const CheckoutPage = () => {
                   <tr key={item.id}>
 
                     <td>
+
                       <button
                         className="checkout-remove-btn"
                         onClick={() => removeItemDraft(item.id)}
                       >
                         ×
                       </button>
+
                     </td>
 
                     <td>
+
                       {item.imagePath && (
+
                         <img
-                          src={resolvePartImage(item)}
-                          className="checkout-product-img"
+                            src={resolvePartImage(item)}
+                            className="checkout-product-img"
                         />
                       )}
+
                     </td>
 
                     <td>{item.partNumber}</td>
@@ -383,9 +358,11 @@ const CheckoutPage = () => {
                       />
 
                       {qty >= item.stockQuantity && (
+
                         <div className="stock-warning">
                           Max stock reached
                         </div>
+
                       )}
 
                     </td>

@@ -5,6 +5,7 @@ public class PartResponse
     public int Id { get; set; }
     public string PartNumber { get; set; } = string.Empty;
     public string PartName { get; set; } = string.Empty;
+    public string? ImageNumber { get; set; }
     public string Description { get; set; } = string.Empty;
     public string Remarks { get; set; } = string.Empty;
 

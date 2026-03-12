@@ -32,7 +32,8 @@ public class PartsController : ControllerBase
                 Bdp = p.Bdp ?? 0,
                 Mrp = p.Mrp ?? 0,
                 TaxPercent = p.TaxPercent ?? 0,
-                ImagePath = ""
+                ImagePath = "",
+                ImageNumber = p.ImageNumber ?? ""
             })
             .ToListAsync();
 
@@ -56,7 +57,8 @@ public class PartsController : ControllerBase
                 Mrp = p.Mrp ?? 0,
                 StockQuantity = p.StockQuantity,
                 TaxPercent = p.TaxPercent ?? 0,
-                ImagePath = ""
+                ImagePath = "",
+                ImageNumber = p.ImageNumber ?? ""
             })
             .ToListAsync();
 
@@ -106,6 +108,7 @@ public class PartsController : ControllerBase
         part.ColourId = updated.ColourId;
 
         part.TorqueNm = updated.TorqueNm;
+        part.ImageNumber = updated.ImageNumber;
 
         await _context.SaveChangesAsync();
 
@@ -150,7 +153,8 @@ public class PartsController : ControllerBase
                 Bdp = p.Bdp ?? 0,
                 Mrp = p.Mrp ?? 0,
                 TaxPercent = p.TaxPercent ?? 0,
-                ImagePath = ""
+                ImagePath = "",
+                ImageNumber = p.ImageNumber ?? ""
             })
             .ToListAsync();
 
@@ -179,9 +183,10 @@ public class PartsController : ControllerBase
         worksheet.Cells[1, 12].Value = "ColourIds"; // multiple CSV like "1,2,3"
         worksheet.Cells[1, 13].Value = "TorqueNm";
         worksheet.Cells[1, 14].Value = "Remarks";
+        worksheet.Cells[1, 15].Value = "ImageNumber";
 
         // ✅ Optional: Set bold header
-        using (var range = worksheet.Cells[1, 1, 1, 14])
+        using (var range = worksheet.Cells[1, 1, 1, 15])
         {
             range.Style.Font.Bold = true;
             range.AutoFitColumns();
@@ -215,10 +220,12 @@ public class PartsController : ControllerBase
 
             int rowCount = worksheet.Dimension.Rows;
 
-            // Load existing parts
+            // Load existing parts including their colours
             var existingParts = await _context.Parts
                 .Include(p => p.PartColours)
                 .ToListAsync();
+
+            // Load valid IDs
             var validAssemblies = new HashSet<int>(await _context.Assemblies.Select(x => x.Id).ToListAsync());
             var validModels = new HashSet<int>(await _context.VehicleModels.Select(x => x.Id).ToListAsync());
             var validVariants = new HashSet<int>(await _context.VehicleVariants.Select(x => x.Id).ToListAsync());
@@ -244,11 +251,22 @@ public class PartsController : ControllerBase
                     .Where(x => validColours.Contains(x))
                     .ToList();
 
+                // Clean and parse ImageNumber safely as string
+                string? imageNumber = worksheet.Cells[row, 15].Text?.Trim();
+                if (!string.IsNullOrWhiteSpace(imageNumber))
+                {
+                    imageNumber = imageNumber.Replace("'", "").Trim(); // remove leading apostrophes
+                }
+                else
+                {
+                    imageNumber = null;
+                }
+
                 var existingPart = existingParts.FirstOrDefault(p => p.PartNumber == partNumber);
 
                 if (existingPart != null)
                 {
-                    // UPDATE existing record
+                    // ================= UPDATE existing record =================
                     existingPart.PartName = worksheet.Cells[row, 2].Text?.Trim();
                     existingPart.Description = worksheet.Cells[row, 3].Text?.Trim();
                     existingPart.Price = ParseDecimalSafe(worksheet.Cells[row, 4].Text);
@@ -261,6 +279,7 @@ public class PartsController : ControllerBase
                     existingPart.VariantId = validVariants.Contains(variantId) ? variantId : null;
                     existingPart.TorqueNm = ParseDecimalSafe(worksheet.Cells[row, 13].Text);
                     existingPart.Remarks = worksheet.Cells[row, 14].Text?.Trim();
+                    existingPart.ImageNumber = imageNumber;
 
                     // Update colours
                     existingPart.PartColours.Clear();
@@ -273,7 +292,7 @@ public class PartsController : ControllerBase
                 }
                 else
                 {
-                    // INSERT new record
+                    // ================= INSERT new record =================
                     var newPart = new Part
                     {
                         PartNumber = partNumber,
@@ -288,7 +307,8 @@ public class PartsController : ControllerBase
                         ModelId = validModels.Contains(modelId) ? modelId : null,
                         VariantId = validVariants.Contains(variantId) ? variantId : null,
                         TorqueNm = ParseDecimalSafe(worksheet.Cells[row, 13].Text),
-                        Remarks = worksheet.Cells[row, 14].Text?.Trim()
+                        Remarks = worksheet.Cells[row, 14].Text?.Trim(),
+                        ImageNumber = imageNumber
                     };
 
                     foreach (var colourId in validColourIds)
@@ -315,19 +335,14 @@ public class PartsController : ControllerBase
     // ================= SAFE PARSING METHODS =================
     private decimal ParseDecimalSafe(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return 0;
-
+        if (string.IsNullOrWhiteSpace(value)) return 0;
         value = value.Replace(",", "").Trim();
-
         return decimal.TryParse(value, out var result) ? result : 0;
     }
 
     private int ParseIntSafe(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return 0;
-
+        if (string.IsNullOrWhiteSpace(value)) return 0;
         return int.TryParse(value, out var result) ? result : 0;
     }
 }

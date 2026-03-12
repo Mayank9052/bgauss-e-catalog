@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 
 namespace BGAUSS.Api.Models;
 
@@ -10,6 +11,7 @@ public partial class Part
     public string? PartNumber { get; set; }
 
     public string? PartName { get; set; }
+    public string? ImageNumber { get; set; }
 
     public string? Description { get; set; }
     public string? Remarks { get; set; }

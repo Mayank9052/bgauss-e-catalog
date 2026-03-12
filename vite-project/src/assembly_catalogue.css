@@ -13,6 +13,7 @@ padding:20px;
 display:grid;
 grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
 gap:18px;
+margin-top:20px;
 }
 
 .assembly-card{
@@ -36,10 +37,69 @@ height:160px;
 object-fit:contain;
 background:#f4f8fb;
 border-radius:8px;
+cursor:zoom-in;
 }
 
 .assembly-name{
 margin-top:10px;
 font-weight:600;
 color:#19364f;
+}
+
+/* MODAL */
+
+.image-modal{
+position:fixed;
+top:0;
+left:0;
+width:100vw;
+height:100vh;
+background:rgba(0,0,0,.85);
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:1000;
+overflow:hidden;
+}
+
+/* VIEWER */
+
+.zoom-container{
+position:relative;
+max-width:80vw;
+max-height:80vh;
+background:white;
+border-radius:12px;
+padding:25px;
+overflow:hidden;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+/* IMAGE */
+
+.zoomed-image{
+max-width:100%;
+max-height:70vh;
+object-fit:contain;
+transition:transform .15s ease;
+}
+
+/* RESPONSIVE */
+
+@media(max-width:768px){
+
+.assembly-grid{
+grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+}
+
+.assembly-image{
+height:120px;
+}
+
+.zoom-container{
+max-width:90vw;
+}
+
 }

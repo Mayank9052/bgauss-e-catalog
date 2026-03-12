@@ -40,6 +40,49 @@ public class VehicleVariantsController : ControllerBase
         return Ok(variants);
     }
 
+    // ================= CREATE =================
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] VehicleVariant variant)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        _context.VehicleVariants.Add(variant);
+        await _context.SaveChangesAsync();
+
+        return Ok(variant);
+    }
+
+    // ================= UPDATE =================
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] VehicleVariant updated)
+    {
+        var variant = await _context.VehicleVariants.FindAsync(id);
+        if (variant == null)
+            return NotFound();
+
+        variant.VariantName = updated.VariantName;
+        variant.ModelId = updated.ModelId;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(variant);
+    }
+
+    // ================= DELETE =================
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var variant = await _context.VehicleVariants.FindAsync(id);
+        if (variant == null)
+            return NotFound();
+
+        _context.VehicleVariants.Remove(variant);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Deleted successfully" });
+    }
+
     // ================= DOWNLOAD EXCEL TEMPLATE =================
     [HttpGet("download-template")]
     public IActionResult DownloadTemplate()

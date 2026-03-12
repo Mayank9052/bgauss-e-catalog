@@ -6,6 +6,7 @@ public class PartResponse
     public string PartNumber { get; set; } = string.Empty;
     public string PartName { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string Remarks { get; set; } = string.Empty;
 
     public decimal Bdp { get; set; }
     public decimal Mrp { get; set; }

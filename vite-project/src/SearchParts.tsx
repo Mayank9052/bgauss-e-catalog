@@ -8,6 +8,12 @@ import type { Part } from "./services/api"
 
 import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa"
 
+interface CartItemSummary {
+  id: number
+  partId: number
+  quantity: number
+}
+
 const SearchParts = () => {
 
   const location = useLocation()
@@ -20,6 +26,30 @@ const SearchParts = () => {
   const [quantities, setQuantities] = useState<Record<number, number>>({})
   const [remarks, setRemarks] = useState<Record<number, string>>({})
   const [cartCount, setCartCount] = useState(0)
+  const [cartPartQuantities, setCartPartQuantities] = useState<Record<number, number>>({})
+
+  const fetchCart = async () => {
+
+    try {
+
+      const res = await axios.get("/cart/my-cart")
+      const cartItems: CartItemSummary[] = res.data?.items || []
+
+      setCartCount(cartItems.length)
+      setCartPartQuantities(
+        Object.fromEntries(
+          cartItems.map((item) => [item.partId, item.quantity])
+        )
+      )
+
+    } catch {
+
+      setCartCount(0)
+      setCartPartQuantities({})
+
+    }
+
+  }
 
   /* FETCH PARTS */
 
@@ -59,9 +89,9 @@ const SearchParts = () => {
         const qty: Record<number, number> = {}
         const rem: Record<number, string> = {}
 
-        data.forEach((p: Part) => {
-          qty[p.id] = 1
-          rem[p.id] = ""
+        data.forEach((part: Part) => {
+          qty[part.id] = 1
+          rem[part.id] = ""
         })
 
         setQuantities(qty)
@@ -75,37 +105,19 @@ const SearchParts = () => {
     }
 
     fetchParts()
+    fetchCart()
 
   }, [assemblyId, modelId, partPosition])
 
-  /* FETCH CART COUNT */
-
-  useEffect(() => {
-
-    const fetchCart = async () => {
-
-      try {
-
-        const res = await axios.get("/cart/my-cart")
-
-        if (res.data?.items) {
-          setCartCount(res.data.items.length)
-        }
-
-      } catch {}
-
-    }
-
-    fetchCart()
-
-  }, [])
+  const getAvailableStock = (part: Part) =>
+    Math.max(0, part.stockQuantity - (cartPartQuantities[part.id] ?? 0))
 
   /* SELECT PART */
 
   const toggleSelect = (part: Part) => {
 
-    if (part.stockQuantity === 0) {
-      alert(`⚠ ${part.partName} is Out of Stock`)
+    if (getAvailableStock(part) === 0) {
+      alert(`${part.partName} is out of stock`)
       return
     }
 
@@ -127,6 +139,8 @@ const SearchParts = () => {
     const part = parts.find(p => p.id === id)
     if (!part) return
 
+    const availableStock = getAvailableStock(part)
+
     setQuantities(prev => {
 
       const currentQty = prev[id] || 1
@@ -134,8 +148,8 @@ const SearchParts = () => {
 
       if (newQty < 1) return prev
 
-      if (newQty > part.stockQuantity) {
-        alert(`⚠ Only ${part.stockQuantity} items available`)
+      if (newQty > availableStock) {
+        alert(`Only ${availableStock} items available`)
         return prev
       }
 
@@ -161,7 +175,21 @@ const SearchParts = () => {
 
       for (const partId of selectedParts) {
 
+        const part = parts.find((item) => item.id === partId)
+        if (!part) continue
+
         const qty = quantities[partId] || 1
+        const availableStock = getAvailableStock(part)
+
+        if (availableStock <= 0) {
+          alert(`${part.partName} is out of stock`)
+          return
+        }
+
+        if (qty > availableStock) {
+          alert(`Only ${availableStock} items available for ${part.partName}`)
+          return
+        }
 
         await axios.post("/cart/add", {
           PartId: partId,
@@ -170,11 +198,12 @@ const SearchParts = () => {
 
       }
 
+      await fetchCart()
       navigate("/checkout")
 
-    } catch {
+    } catch (error: any) {
 
-      alert("Failed to add items to cart")
+      alert(error.response?.data || "Failed to add items to cart")
 
     }
 
@@ -183,8 +212,6 @@ const SearchParts = () => {
   return (
 
     <div className="catalog-wrapper">
-
-      {/* NAVBAR */}
 
       <nav className="catalog-navbar">
 
@@ -234,14 +261,10 @@ const SearchParts = () => {
 
       </nav>
 
-      {/* PAGE TITLE */}
-
       <h2 className="assembly-title">
         {assemblyName}
         {partPosition != null ? ` - Hotspot ${partPosition}` : ""}
       </h2>
-
-      {/* ACTION BUTTON */}
 
       <div className="parts-actions">
 
@@ -254,8 +277,6 @@ const SearchParts = () => {
 
       </div>
 
-      {/* PARTS TABLE */}
-
       <div className="parts-table">
 
         <table>
@@ -266,6 +287,7 @@ const SearchParts = () => {
               <th>Select</th>
               <th>Part Number</th>
               <th>Part Name</th>
+              <th>Available Stock</th>
               <th>Remarks</th>
               <th>Quantity</th>
             </tr>
@@ -276,7 +298,7 @@ const SearchParts = () => {
 
             {parts.length === 0 && (
               <tr>
-                <td colSpan={5} className="no-data">
+                <td colSpan={6} className="no-data">
                   No parts available
                 </td>
               </tr>
@@ -285,17 +307,18 @@ const SearchParts = () => {
             {parts.map(part => {
 
               const qty = quantities[part.id] || 1
+              const availableStock = getAvailableStock(part)
 
               return (
 
-                <tr key={part.id} className={part.stockQuantity === 0 ? "row-out-stock" : ""}>
+                <tr key={part.id} className={availableStock === 0 ? "row-out-stock" : ""}>
 
                   <td>
 
                     <input
                       type="checkbox"
                       checked={selectedParts.includes(part.id)}
-                      disabled={part.stockQuantity === 0}
+                      disabled={availableStock === 0}
                       onChange={() => toggleSelect(part)}
                     />
 
@@ -304,6 +327,8 @@ const SearchParts = () => {
                   <td>{part.partNumber}</td>
 
                   <td>{part.partName}</td>
+
+                  <td>{availableStock}</td>
 
                   <td>
 
@@ -328,7 +353,7 @@ const SearchParts = () => {
 
                       <button
                         onClick={() => changeQty(part.id, -1)}
-                        disabled={qty <= 1 || part.stockQuantity === 0}
+                        disabled={qty <= 1 || availableStock === 0}
                       >
                         -
                       </button>
@@ -337,7 +362,7 @@ const SearchParts = () => {
 
                       <button
                         onClick={() => changeQty(part.id, 1)}
-                        disabled={qty >= part.stockQuantity || part.stockQuantity === 0}
+                        disabled={qty >= availableStock || availableStock === 0}
                       >
                         +
                       </button>

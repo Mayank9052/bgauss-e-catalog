@@ -8,6 +8,7 @@ import { FaHome, FaPhoneAlt, FaShoppingCart, FaSearch } from "react-icons/fa";
 
 interface CartItem {
   id: number;
+  partId: number;
   partName: string;
   partNumber: string;
   imagePath?: string | null;
@@ -17,13 +18,39 @@ interface CartItem {
   stockQuantity: number;
 }
 
+interface OrderSummaryItem {
+  id: number;
+  partName: string;
+  partNumber: string;
+  price: number;
+  quantity: number;
+  subTotal: number;
+}
+
+interface OrderSummary {
+  orderId: number | string | null;
+  totalAmount: number;
+  items: OrderSummaryItem[];
+  message?: string;
+}
+
 const CheckoutPage = () => {
 
   const [items, setItems] = useState<CartItem[]>([]);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSyncingCart, setIsSyncingCart] = useState(false);
 
   const navigate = useNavigate();
+
+  const applyCartState = (cartItems: CartItem[]) => {
+    setItems(cartItems);
+    setQuantities(
+      Object.fromEntries(
+        cartItems.map((item) => [item.id, item.quantity])
+      )
+    );
+  };
 
   const resolvePartImage = (item: Pick<CartItem, "imagePath">) => {
 
@@ -45,41 +72,76 @@ const CheckoutPage = () => {
     return `${baseUrl}/${normalized}`;
   };
 
+  const normalizeOrderSummary = (rawOrder: any): OrderSummary => ({
+    orderId: rawOrder.orderId ?? rawOrder.OrderId ?? null,
+    totalAmount: Number(
+      rawOrder.totalAmount ?? rawOrder.TotalAmount ?? rawOrder.total ?? rawOrder.Total ?? 0
+    ),
+    items: Array.isArray(rawOrder.items)
+      ? rawOrder.items
+      : Array.isArray(rawOrder.Items)
+        ? rawOrder.Items
+        : [],
+    message: rawOrder.message ?? rawOrder.Message
+  });
+
   /* ================= FETCH CART ================= */
 
-  const fetchCart = async () => {
+  const fetchCart = async (showSyncAlert = false) => {
 
     try {
 
       const res = await axios.get("/cart/my-cart");
-
       const cartItems: CartItem[] = res.data.items || [];
-
-      setItems(cartItems);
-
-      setQuantities(
-        Object.fromEntries(
-          cartItems.map((item) => [item.id, item.quantity])
-        )
+      const invalidItems = cartItems.filter(
+        (item) => item.quantity > item.stockQuantity
       );
+
+      if (invalidItems.length > 0) {
+
+        setIsSyncingCart(true);
+
+        await Promise.all(
+          invalidItems.map((item) =>
+            axios.put(
+              `/cart/update/${item.id}?quantity=${Math.max(0, item.stockQuantity)}`
+            )
+          )
+        );
+
+        const refreshed = await axios.get("/cart/my-cart");
+        applyCartState(refreshed.data.items || []);
+
+        if (showSyncAlert) {
+          alert("Cart quantities were adjusted to match available stock.");
+        }
+
+        return;
+      }
+
+      applyCartState(cartItems);
 
     } catch (error) {
 
       console.error("Fetch cart failed:", error);
+
+    } finally {
+
+      setIsSyncingCart(false);
 
     }
 
   };
 
   useEffect(() => {
-    fetchCart();
+    fetchCart(true);
   }, []);
 
   /* ================= UPDATE QUANTITY ================= */
 
-  const updateQuantityDraft = (id: number, value: number) => {
+  const updateQuantity = async (id: number, value: number) => {
 
-    const item = items.find(i => i.id === id);
+    const item = items.find((cartItem) => cartItem.id === id);
 
     if (!item) return;
 
@@ -88,7 +150,6 @@ const CheckoutPage = () => {
     if (value > item.stockQuantity) {
 
       alert(`Only ${item.stockQuantity} items available for ${item.partName}`);
-
       return;
 
     }
@@ -97,6 +158,19 @@ const CheckoutPage = () => {
       ...prev,
       [id]: value
     }));
+
+    try {
+
+      await axios.put(`/cart/update/${id}?quantity=${value}`);
+      await fetchCart();
+
+    } catch (error: any) {
+
+      console.error("Update quantity failed:", error);
+      alert(error.response?.data || "Failed to update quantity");
+      await fetchCart();
+
+    }
 
   };
 
@@ -107,8 +181,7 @@ const CheckoutPage = () => {
     try {
 
       await axios.delete(`/cart/remove/${id}`);
-
-      fetchCart();
+      await fetchCart();
 
     } catch (error) {
 
@@ -147,7 +220,7 @@ const CheckoutPage = () => {
 
   /* ================= SEARCH ================= */
 
-  const filteredItems = items.filter(item =>
+  const filteredItems = items.filter((item) =>
     item.partName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.partNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -178,17 +251,13 @@ const CheckoutPage = () => {
     try {
 
       const res = await axios.get("/cart/download/csv");
-
       const fileUrl = `http://localhost:5053${res.data.path}`;
-
       const link = document.createElement("a");
 
       link.href = fileUrl;
 
       document.body.appendChild(link);
-
       link.click();
-
       document.body.removeChild(link);
 
     } catch (error) {
@@ -206,17 +275,13 @@ const CheckoutPage = () => {
     try {
 
       const res = await axios.get("/cart/download/pdf");
-
       const fileUrl = `http://localhost:5053${res.data.path}`;
-
       const link = document.createElement("a");
 
       link.href = fileUrl;
 
       document.body.appendChild(link);
-
       link.click();
-
       document.body.removeChild(link);
 
     } catch (error) {
@@ -229,87 +294,47 @@ const CheckoutPage = () => {
 
   /* ================= PLACE ORDER ================= */
 
-//   const placeOrder = () => {
+  const placeOrder = async () => {
 
-//   if (items.length === 0) {
-//     alert("Your cart is empty");
-//     return;
-//   }
+    try {
 
-//   const orderData = {
-//     orderId: Date.now(), // temporary order id
-//     totalAmount: totalSum,
-//     items: items.map(item => ({
-//       id: item.id,
-//       partName: item.partName,
-//       partNumber: item.partNumber,
-//       price: item.price,
-//       quantity: quantities[item.id] ?? item.quantity,
-//       subTotal: item.price * (quantities[item.id] ?? item.quantity)
-//     })),
-//     message: "Order placed successfully"
-//   };
+      if (items.length === 0) {
+        alert("Your cart is empty");
+        return;
+      }
 
-//   navigate("/order_details", {
-//     state: { order: orderData }
-//   });
+      if (isSyncingCart) {
+        alert("Cart is syncing with latest stock. Please wait.");
+        return;
+      }
 
-// };
+      const res = await axios.post("/cart/checkout");
+      const orderData = normalizeOrderSummary(res.data);
 
-const placeOrder = async () => {
+      sessionStorage.setItem(
+        "latestOrder",
+        JSON.stringify(orderData)
+      );
 
-  try {
+      alert("Order placed successfully");
+      navigate("/order_details", {
+        state: { order: orderData }
+      });
 
-    if (items.length === 0) {
-      alert("Your cart is empty");
-      return;
-    }
+    } catch (err: any) {
 
-    console.log("Calling checkout API...");
+      console.error("Checkout error:", err);
 
-    const res = await axios.post("/cart/checkout");
-
-    console.log("Checkout API response:", res.data);
-
-    const orderData = {
-      orderId: res.data.orderId ?? res.data.OrderId,
-      totalAmount:
-        res.data.totalAmount ??
-        res.data.TotalAmount ??
-        res.data.Total,
-      items: res.data.items ?? res.data.Items ?? [],
-      message: res.data.message ?? res.data.Message
-    };
-
-    // save order
-    sessionStorage.setItem(
-      "latestOrder",
-      JSON.stringify(orderData)
-    );
-
-    alert("Order placed successfully");
-
-    navigate("/order_details");
-
-  } catch (err: any) {
-
-    console.error("Checkout error:", err);
-
-    if (err.response) {
-
-      console.log("Server response:", err.response.data);
-
-      alert(err.response.data?.Message || "Checkout failed");
-
-    } else {
-
-      alert("Server not responding");
+      if (err.response) {
+        alert(err.response.data?.Message || "Checkout failed");
+        await fetchCart(true);
+      } else {
+        alert("Server not responding");
+      }
 
     }
 
-  }
-
-};
+  };
 
   return (
 
@@ -411,7 +436,7 @@ const placeOrder = async () => {
                         className="checkout-remove-btn"
                         onClick={() => removeItemDraft(item.id)}
                       >
-                        ×
+                        x
                       </button>
 
                     </td>
@@ -425,9 +450,9 @@ const placeOrder = async () => {
                       )}
                     </td>
 
-                    <td>{item.partNumber}</td>
+                    <td>{item.partName}</td>
 
-                    <td>₹ {item.price.toFixed(2)}</td>
+                    <td>Rs. {item.price.toFixed(2)}</td>
 
                     <td>
 
@@ -438,7 +463,7 @@ const placeOrder = async () => {
                         max={item.stockQuantity}
                         className="checkout-qty-input"
                         onChange={(e) =>
-                          updateQuantityDraft(
+                          updateQuantity(
                             item.id,
                             Number(e.target.value)
                           )
@@ -453,7 +478,7 @@ const placeOrder = async () => {
 
                     </td>
 
-                    <td>₹ {(item.price * qty).toFixed(2)}</td>
+                    <td>Rs. {(item.price * qty).toFixed(2)}</td>
 
                   </tr>
 
@@ -503,7 +528,7 @@ const placeOrder = async () => {
             <div className="summary-row">
               <span>Total Amount</span>
               <span className="summary-total">
-                ₹ {totalSum.toFixed(2)}
+                Rs. {totalSum.toFixed(2)}
               </span>
             </div>
 

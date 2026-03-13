@@ -74,7 +74,14 @@ namespace BGAUSS.Api.Controllers
             var existingItem = cart.CartItems.FirstOrDefault(ci => ci.PartId == request.PartId);
 
             if (existingItem != null)
+            {
+                int nextQuantity = existingItem.Quantity + request.Quantity;
+
+                if (nextQuantity > part.StockQuantity)
+                    return BadRequest($"Only {part.StockQuantity - existingItem.Quantity} additional items available for {part.PartName}");
+
                 existingItem.Quantity += request.Quantity;
+            }
             else
                 cart.CartItems.Add(new CartItem
                 {
@@ -103,6 +110,7 @@ namespace BGAUSS.Api.Controllers
             var items = cart.CartItems.Select(ci => new
             {
                 ci.Id,
+                ci.PartId,
                 PartName = ci.Part!.PartName,
                 PartNumber = ci.Part.PartNumber,
                 //ImagePath = ci.Part.PartImages,
@@ -224,92 +232,64 @@ namespace BGAUSS.Api.Controllers
         {
             int userId = GetUserId();
 
-            var strategy = _context.Database.CreateExecutionStrategy();
-            IActionResult result = BadRequest(new { Message = "Checkout failed" });
-
-            await strategy.ExecuteAsync(async () =>
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                await using var transaction = await _context.Database.BeginTransactionAsync();
+                var cart = await _context.Carts
+                    .Include(c => c.CartItems)
+                    .ThenInclude(ci => ci.Part)
+                    .FirstOrDefaultAsync(c => c.UserId == userId);
 
-                try
+                if (cart == null || !cart.CartItems.Any())
+                    return BadRequest("Cart is empty");
+
+                var order = new Order
                 {
-                    var cart = await _context.Carts
-                        .Include(c => c.CartItems)
-                        .ThenInclude(ci => ci.Part)
-                        .FirstOrDefaultAsync(c => c.UserId == userId);
+                    UserId = userId,
+                    TotalAmount = 0
+                };
 
-                    if (cart == null || !cart.CartItems.Any())
+                foreach (var item in cart.CartItems)
+                {
+                    var part = item.Part!;
+                    if (part.StockQuantity < item.Quantity)
+                        throw new InvalidOperationException($"Insufficient stock for {part.PartName}");
+
+                    decimal price = part.Price ?? 0;
+                    decimal subTotal = price * item.Quantity;
+
+                    // Deduct stock
+                    part.StockQuantity -= item.Quantity;
+
+                    order.OrderItems.Add(new OrderItem
                     {
-                        result = BadRequest("Cart is empty");
-                        return;
-                    }
-
-                    var order = new Order
-                    {
-                        UserId = userId,
-                        TotalAmount = 0,
-                        Status = "Placed",
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    var orderSummaryItems = new List<object>();
-
-                    foreach (var item in cart.CartItems)
-                    {
-                        var part = item.Part!;
-
-                        if (part.StockQuantity < item.Quantity)
-                            throw new InvalidOperationException($"Insufficient stock for {part.PartName}");
-
-                        decimal price = part.Price ?? 0;
-                        decimal subTotal = price * item.Quantity;
-
-                        part.StockQuantity -= item.Quantity;
-
-                        order.OrderItems.Add(new OrderItem
-                        {
-                            PartId = part.Id,
-                            Quantity = item.Quantity,
-                            Price = price,
-                            SubTotal = subTotal
-                        });
-
-                        orderSummaryItems.Add(new
-                        {
-                            item.Id,
-                            PartName = part.PartName,
-                            PartNumber = part.PartNumber,
-                            Price = price,
-                            item.Quantity,
-                            SubTotal = subTotal
-                        });
-
-                        order.TotalAmount += subTotal;
-                    }
-
-                    _context.Orders.Add(order);
-                    _context.CartItems.RemoveRange(cart.CartItems);
-
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    result = Ok(new
-                    {
-                        Message = "Order placed successfully",
-                        OrderId = order.Id,
-                        Total = order.TotalAmount,
-                        TotalAmount = order.TotalAmount,
-                        Items = orderSummaryItems
+                        PartId = part.Id,
+                        Quantity = item.Quantity,
+                        Price = price,
+                        SubTotal = subTotal
                     });
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    result = BadRequest(new { Message = "Checkout failed", Details = ex.Message });
-                }
-            });
 
-            return result;
+                    order.TotalAmount += subTotal;
+                }
+
+                _context.Orders.Add(order);
+                _context.CartItems.RemoveRange(cart.CartItems);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    Message = "Order placed successfully",
+                    OrderId = order.Id,
+                    Total = order.TotalAmount
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return BadRequest(new { Message = "Checkout failed", Details = ex.Message });
+            }
         }
 
         // ================= DOWNLOAD CSV =================

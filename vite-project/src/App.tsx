@@ -8,9 +8,11 @@ import AdminUsers from "./admin";
 import OrderDetails from "./order_details";
 import VehiclePreview from "./V_preview";
 import AssemblyCatalogue from "./assembly_catalogue";
+import AdminModules from "./AdminModules";
 import { ProtectedRoute } from "./components/RouteGuard";
 
 function ScrollToTop() {
+
   const { pathname } = useLocation();
 
   useEffect(() => {
@@ -21,18 +23,21 @@ function ScrollToTop() {
 }
 
 function App() {
+
   return (
+
     <BrowserRouter>
+
       <ScrollToTop />
+
       <Routes>
-        <Route
-          path="/"
-          element={<Login />}
-        />
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+
+        <Route path="/" element={<Login />} />
+
+        <Route path="/login" element={<Login />} />
+
+        {/* Dashboard */}
+
         <Route
           path="/dashboard"
           element={
@@ -41,14 +46,20 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Vehicle Preview */}
+
         <Route
           path="/V_Priview"
           element={
-          <ProtectedRoute allowedRoles={["Admin", "User"]}>
-        <VehiclePreview />
-      </ProtectedRoute>
-      }
-      />
+            <ProtectedRoute allowedRoles={["Admin", "User"]}>
+              <VehiclePreview />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Search Parts */}
+
         <Route
           path="/parts"
           element={
@@ -57,6 +68,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Assembly Catalogue */}
+
         <Route
           path="/assembly_catalogue"
           element={
@@ -65,6 +79,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Checkout */}
+
         <Route
           path="/checkout"
           element={
@@ -73,6 +90,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Order Details */}
+
         <Route
           path="/order_details"
           element={
@@ -81,6 +101,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Admin Users */}
+
         <Route
           path="/admin/users"
           element={
@@ -89,9 +112,26 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Admin Modules (NEW ROUTE) */}
+
+        <Route
+          path="/admin/modules"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminModules />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Fallback */}
+
         <Route path="*" element={<Navigate to="/login" replace />} />
+
       </Routes>
+
     </BrowserRouter>
+
   );
 }
 

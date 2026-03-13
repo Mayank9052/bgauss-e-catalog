@@ -5,6 +5,7 @@ import "./admin.css";
 import logo from "./assets/logo.jpg";
 import { getRoleFromToken } from "./auth";
 import AccountMenu from "./components/AccountMenu";
+import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa";
 
 interface User {
   id: number;
@@ -14,6 +15,7 @@ interface User {
 }
 
 const AdminUsers = () => {
+
   const navigate = useNavigate();
 
   const [users, setUsers] = useState<User[]>([]);
@@ -39,15 +41,12 @@ const AdminUsers = () => {
       const res = await axios.get("/admin/users");
       setUsers(res.data);
     } catch (error) {
-      if (isAuthError(error)) {
-        handleUnauthorized();
-        return;
-      }
-      console.error("Failed to fetch users", error);
+      if (isAuthError(error)) handleUnauthorized();
     }
   };
 
   useEffect(() => {
+
     const role = getRoleFromToken();
 
     if (!role) {
@@ -61,10 +60,13 @@ const AdminUsers = () => {
     }
 
     fetchUsers();
+
   }, []);
 
   const createUser = async () => {
+
     try {
+
       await axios.post("/admin/users", newUser);
 
       setShowCreate(false);
@@ -79,13 +81,11 @@ const AdminUsers = () => {
 
     } catch (error) {
 
-      if (isAuthError(error)) {
-        handleUnauthorized();
-        return;
-      }
+      if (isAuthError(error)) handleUnauthorized();
+      else alert("Failed to create user");
 
-      alert("Failed to create user");
     }
+
   };
 
   const deleteUser = async (id: number) => {
@@ -104,15 +104,11 @@ const AdminUsers = () => {
 
     } catch (error) {
 
-      if (isAuthError(error)) {
-        handleUnauthorized();
-        return;
-      }
-
-      console.error("Delete failed", error);
-      alert("Delete failed");
+      if (isAuthError(error)) handleUnauthorized();
+      else alert("Delete failed");
 
     }
+
   };
 
   const changePassword = async (id: number) => {
@@ -130,40 +126,63 @@ const AdminUsers = () => {
 
     } catch (error) {
 
-      if (isAuthError(error)) {
-        handleUnauthorized();
-        return;
-      }
+      if (isAuthError(error)) handleUnauthorized();
+      else alert("Password update failed");
 
-      alert("Password update failed");
     }
+
   };
 
   return (
+
     <div className="admin-shell">
 
-      <div className="admin-page">
+      {/* NAVBAR */}
 
-        {/* Navbar */}
+      <div className="admin-navbar">
 
-        <div className="admin-navbar">
+        <div className="admin-navbar-left">
 
-          <div className="admin-navbar-left">
-            <img src={logo} alt="EPC Logo" className="admin-logo" />
-            <span className="admin-title">Electronic Parts Catalog</span>
-          </div>
+          <img src={logo} alt="BGAUSS" className="admin-logo"/>
 
-          <div className="admin-navbar-right">
-            <span className="admin-panel-text">Admin Panel</span>
-            <AccountMenu />
+          <div className="admin-title-wrap">
+            <span className="logo-text">BGAUSS</span>
+            <span className="sub-title">Electronic Parts Catalog</span>
           </div>
 
         </div>
 
+        <div className="admin-navbar-right">
+
+          <button
+            className="nav-icon-btn"
+            onClick={() => navigate("/dashboard")}
+          >
+            <FaHome />
+          </button>
+
+          <button className="nav-icon-btn">
+            <FaPhoneAlt />
+          </button>
+
+          <button
+            className="nav-icon-btn"
+            onClick={() => navigate("/checkout")}
+          >
+            <FaShoppingCart />
+          </button>
+
+          <AccountMenu />
+
+        </div>
+
+      </div>
+
+      {/* PAGE */}
+
+      <div className="admin-page">
 
         <div className="admin-content">
-
-          {/* Header */}
 
           <div className="admin-header">
 
@@ -174,30 +193,31 @@ const AdminUsers = () => {
               Back to Dashboard
             </button>
 
-            <button
-              className="create-user-btn"
-              onClick={() => setShowCreate(true)}
-            >
-              {/* <svg viewBox="0 0 24 24">
-                <path d="M15 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-8 8a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v1H7Zm15-9h-2V8h-2v2h-2v2h2v2h2v-2h2Z" />
-              </svg> */}
-              <span>Create User</span>
-            </button>
+            <div className="admin-actions">
+
+              <button
+                className="create-module-btn"
+                onClick={() => navigate("/admin/modules")}
+              >
+                Open Module
+              </button>
+
+              <button
+                className="create-user-btn"
+                onClick={() => setShowCreate(true)}
+              >
+                Create User
+              </button>
+
+            </div>
 
           </div>
 
-
-          {/* Table */}
+          {/* TABLE */}
 
           <div className="admin-table-wrap">
 
             <table className="admin-table">
-
-              <colgroup>
-                <col className="col-username" />
-                <col className="col-role" />
-                <col className="col-actions" />
-              </colgroup>
 
               <thead>
                 <tr>
@@ -251,69 +271,12 @@ const AdminUsers = () => {
 
         </div>
 
-
-        {/* Create User Modal */}
-
-        {showCreate && (
-
-          <div className="modal">
-
-            <div className="modal-content">
-
-              <h3>Create User</h3>
-
-              <input
-                placeholder="Username"
-                value={newUser.username}
-                onChange={(e) =>
-                  setNewUser({ ...newUser, username: e.target.value })
-                }
-              />
-
-              <input
-                type="password"
-                placeholder="Password"
-                value={newUser.password}
-                onChange={(e) =>
-                  setNewUser({ ...newUser, password: e.target.value })
-                }
-              />
-
-              <select
-                value={newUser.role}
-                onChange={(e) =>
-                  setNewUser({ ...newUser, role: e.target.value })
-                }
-              >
-                <option value="User">User</option>
-                <option value="Admin">Admin</option>
-              </select>
-
-              <div className="modal-buttons">
-
-                <button className="modal-create" onClick={createUser}>
-                  Create
-                </button>
-
-                <button
-                  className="modal-cancel"
-                  onClick={() => setShowCreate(false)}
-                >
-                  Cancel
-                </button>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        )}
-
       </div>
 
     </div>
+
   );
+
 };
 
 export default AdminUsers;

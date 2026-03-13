@@ -29,7 +29,7 @@ const CheckoutPage = () => {
 
     const baseUrl = "http://localhost:5053";
 
-    if (!item.imagePath) return "";
+    if (!item.imagePath) return null;
 
     if (
       item.imagePath.startsWith("http://") ||
@@ -49,17 +49,26 @@ const CheckoutPage = () => {
 
   const fetchCart = async () => {
 
-    const res = await axios.get("/cart/my-cart");
+    try {
 
-    const cartItems: CartItem[] = res.data.items || [];
+      const res = await axios.get("/cart/my-cart");
 
-    setItems(cartItems);
+      const cartItems: CartItem[] = res.data.items || [];
 
-    setQuantities(
-      Object.fromEntries(
-        cartItems.map((item) => [item.id, item.quantity])
-      )
-    );
+      setItems(cartItems);
+
+      setQuantities(
+        Object.fromEntries(
+          cartItems.map((item) => [item.id, item.quantity])
+        )
+      );
+
+    } catch (error) {
+
+      console.error("Fetch cart failed:", error);
+
+    }
+
   };
 
   useEffect(() => {
@@ -95,9 +104,17 @@ const CheckoutPage = () => {
 
   const removeItemDraft = async (id: number) => {
 
-    await axios.delete(`/cart/remove/${id}`);
+    try {
 
-    fetchCart();
+      await axios.delete(`/cart/remove/${id}`);
+
+      fetchCart();
+
+    } catch (error) {
+
+      console.error("Remove item failed:", error);
+
+    }
 
   };
 
@@ -105,10 +122,18 @@ const CheckoutPage = () => {
 
   const clearCheckoutItems = async () => {
 
-    await axios.delete("/cart/empty");
+    try {
 
-    setItems([]);
-    setQuantities({});
+      await axios.delete("/cart/empty");
+
+      setItems([]);
+      setQuantities({});
+
+    } catch (error) {
+
+      console.error("Empty cart failed:", error);
+
+    }
 
   };
 
@@ -150,19 +175,27 @@ const CheckoutPage = () => {
 
   const downloadCSV = async () => {
 
-    const res = await axios.get("/cart/download/csv");
+    try {
 
-    const fileUrl = `http://localhost:5053${res.data.path}`;
+      const res = await axios.get("/cart/download/csv");
 
-    const link = document.createElement("a");
+      const fileUrl = `http://localhost:5053${res.data.path}`;
 
-    link.href = fileUrl;
+      const link = document.createElement("a");
 
-    document.body.appendChild(link);
+      link.href = fileUrl;
 
-    link.click();
+      document.body.appendChild(link);
 
-    document.body.removeChild(link);
+      link.click();
+
+      document.body.removeChild(link);
+
+    } catch (error) {
+
+      console.error("CSV download failed:", error);
+
+    }
 
   };
 
@@ -170,56 +203,117 @@ const CheckoutPage = () => {
 
   const downloadPDF = async () => {
 
-    const res = await axios.get("/cart/download/pdf");
-
-    const fileUrl = `http://localhost:5053${res.data.path}`;
-
-    const link = document.createElement("a");
-
-    link.href = fileUrl;
-
-    document.body.appendChild(link);
-
-    link.click();
-
-    document.body.removeChild(link);
-
-  };
-
-  /* ================= PLACE ORDER ================= */
-
-  const placeOrder = async () => {
-
     try {
 
-      if (items.length === 0) {
-        alert("Your cart is empty");
-        return;
-      }
+      const res = await axios.get("/cart/download/pdf");
 
-      const res = await axios.post("/cart/checkout");
+      const fileUrl = `http://localhost:5053${res.data.path}`;
 
-      alert("Order placed successfully");
+      const link = document.createElement("a");
 
-      navigate("/order_details", {
-        state: { order: res.data }
-      });
+      link.href = fileUrl;
 
-    } catch (err: any) {
+      document.body.appendChild(link);
 
-      console.error(err.response?.data);
+      link.click();
 
-      alert(err.response?.data?.Message || "Checkout failed");
+      document.body.removeChild(link);
+
+    } catch (error) {
+
+      console.error("PDF download failed:", error);
 
     }
 
   };
 
+  /* ================= PLACE ORDER ================= */
+
+//   const placeOrder = () => {
+
+//   if (items.length === 0) {
+//     alert("Your cart is empty");
+//     return;
+//   }
+
+//   const orderData = {
+//     orderId: Date.now(), // temporary order id
+//     totalAmount: totalSum,
+//     items: items.map(item => ({
+//       id: item.id,
+//       partName: item.partName,
+//       partNumber: item.partNumber,
+//       price: item.price,
+//       quantity: quantities[item.id] ?? item.quantity,
+//       subTotal: item.price * (quantities[item.id] ?? item.quantity)
+//     })),
+//     message: "Order placed successfully"
+//   };
+
+//   navigate("/order_details", {
+//     state: { order: orderData }
+//   });
+
+// };
+
+const placeOrder = async () => {
+
+  try {
+
+    if (items.length === 0) {
+      alert("Your cart is empty");
+      return;
+    }
+
+    console.log("Calling checkout API...");
+
+    const res = await axios.post("/cart/checkout");
+
+    console.log("Checkout API response:", res.data);
+
+    const orderData = {
+      orderId: res.data.orderId ?? res.data.OrderId,
+      totalAmount:
+        res.data.totalAmount ??
+        res.data.TotalAmount ??
+        res.data.Total,
+      items: res.data.items ?? res.data.Items ?? [],
+      message: res.data.message ?? res.data.Message
+    };
+
+    // save order
+    sessionStorage.setItem(
+      "latestOrder",
+      JSON.stringify(orderData)
+    );
+
+    alert("Order placed successfully");
+
+    navigate("/order_details");
+
+  } catch (err: any) {
+
+    console.error("Checkout error:", err);
+
+    if (err.response) {
+
+      console.log("Server response:", err.response.data);
+
+      alert(err.response.data?.Message || "Checkout failed");
+
+    } else {
+
+      alert("Server not responding");
+
+    }
+
+  }
+
+};
+
   return (
 
     <div className="checkout-page">
-
-      {/* NAVBAR */}
 
       <nav className="checkout-topbar">
 
@@ -281,8 +375,6 @@ const CheckoutPage = () => {
 
       </nav>
 
-      {/* CONTENT */}
-
       <main className="checkout-content">
 
         <h1>Cart</h1>
@@ -292,7 +384,6 @@ const CheckoutPage = () => {
           <table className="checkout-cart-table">
 
             <thead>
-
               <tr>
                 <th></th>
                 <th>Product Image</th>
@@ -301,7 +392,6 @@ const CheckoutPage = () => {
                 <th>Quantity</th>
                 <th>Subtotal</th>
               </tr>
-
             </thead>
 
             <tbody>
@@ -309,6 +399,7 @@ const CheckoutPage = () => {
               {filteredItems.map((item) => {
 
                 const qty = quantities[item.id] ?? item.quantity;
+                const imageSrc = resolvePartImage(item);
 
                 return (
 
@@ -326,15 +417,12 @@ const CheckoutPage = () => {
                     </td>
 
                     <td>
-
-                      {item.imagePath && (
-
+                      {imageSrc && (
                         <img
-                            src={resolvePartImage(item)}
-                            className="checkout-product-img"
+                          src={imageSrc}
+                          className="checkout-product-img"
                         />
                       )}
-
                     </td>
 
                     <td>{item.partNumber}</td>
@@ -358,11 +446,9 @@ const CheckoutPage = () => {
                       />
 
                       {qty >= item.stockQuantity && (
-
                         <div className="stock-warning">
                           Max stock reached
                         </div>
-
                       )}
 
                     </td>
@@ -380,8 +466,6 @@ const CheckoutPage = () => {
           </table>
 
         </div>
-
-        {/* FOOTER */}
 
         <div className="checkout-footer">
 

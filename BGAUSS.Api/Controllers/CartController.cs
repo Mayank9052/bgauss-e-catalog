@@ -224,78 +224,92 @@ namespace BGAUSS.Api.Controllers
         {
             int userId = GetUserId();
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            var strategy = _context.Database.CreateExecutionStrategy();
+            IActionResult result = BadRequest(new { Message = "Checkout failed" });
+
+            await strategy.ExecuteAsync(async () =>
             {
-                var cart = await _context.Carts
-                    .Include(c => c.CartItems)
-                    .ThenInclude(ci => ci.Part)
-                    .FirstOrDefaultAsync(c => c.UserId == userId);
+                await using var transaction = await _context.Database.BeginTransactionAsync();
 
-                if (cart == null || !cart.CartItems.Any())
-                    return BadRequest("Cart is empty");
-
-                var order = new Order
+                try
                 {
-                    UserId = userId,
-                    TotalAmount = 0
-                };
+                    var cart = await _context.Carts
+                        .Include(c => c.CartItems)
+                        .ThenInclude(ci => ci.Part)
+                        .FirstOrDefaultAsync(c => c.UserId == userId);
 
-                var orderSummaryItems = new List<object>();
-
-                foreach (var item in cart.CartItems)
-                {
-                    var part = item.Part!;
-                    if (part.StockQuantity < item.Quantity)
-                        throw new InvalidOperationException($"Insufficient stock for {part.PartName}");
-
-                    decimal price = part.Price ?? 0;
-                    decimal subTotal = price * item.Quantity;
-
-                    // Deduct stock
-                    part.StockQuantity -= item.Quantity;
-
-                    order.OrderItems.Add(new OrderItem
+                    if (cart == null || !cart.CartItems.Any())
                     {
-                        PartId = part.Id,
-                        Quantity = item.Quantity,
-                        Price = price,
-                        SubTotal = subTotal
-                    });
+                        result = BadRequest("Cart is empty");
+                        return;
+                    }
 
-                    orderSummaryItems.Add(new
+                    var order = new Order
                     {
-                        item.Id,
-                        PartName = part.PartName,
-                        PartNumber = part.PartNumber,
-                        Price = price,
-                        item.Quantity,
-                        SubTotal = subTotal
-                    });
+                        UserId = userId,
+                        TotalAmount = 0,
+                        Status = "Placed",
+                        CreatedAt = DateTime.UtcNow
+                    };
 
-                    order.TotalAmount += subTotal;
+                    var orderSummaryItems = new List<object>();
+
+                    foreach (var item in cart.CartItems)
+                    {
+                        var part = item.Part!;
+
+                        if (part.StockQuantity < item.Quantity)
+                            throw new InvalidOperationException($"Insufficient stock for {part.PartName}");
+
+                        decimal price = part.Price ?? 0;
+                        decimal subTotal = price * item.Quantity;
+
+                        part.StockQuantity -= item.Quantity;
+
+                        order.OrderItems.Add(new OrderItem
+                        {
+                            PartId = part.Id,
+                            Quantity = item.Quantity,
+                            Price = price,
+                            SubTotal = subTotal
+                        });
+
+                        orderSummaryItems.Add(new
+                        {
+                            item.Id,
+                            PartName = part.PartName,
+                            PartNumber = part.PartNumber,
+                            Price = price,
+                            item.Quantity,
+                            SubTotal = subTotal
+                        });
+
+                        order.TotalAmount += subTotal;
+                    }
+
+                    _context.Orders.Add(order);
+                    _context.CartItems.RemoveRange(cart.CartItems);
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    result = Ok(new
+                    {
+                        Message = "Order placed successfully",
+                        OrderId = order.Id,
+                        Total = order.TotalAmount,
+                        TotalAmount = order.TotalAmount,
+                        Items = orderSummaryItems
+                    });
                 }
-
-                _context.Orders.Add(order);
-                _context.CartItems.RemoveRange(cart.CartItems);
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return Ok(new
+                catch (Exception ex)
                 {
-                    Message = "Order placed successfully",
-                    OrderId = order.Id,
-                    Total = order.TotalAmount,
-                    TotalAmount = order.TotalAmount,
-                    Items = orderSummaryItems
-                });
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                return BadRequest(new { Message = "Checkout failed", Details = ex.Message });
-            }
+                    await transaction.RollbackAsync();
+                    result = BadRequest(new { Message = "Checkout failed", Details = ex.Message });
+                }
+            });
+
+            return result;
         }
 
         // ================= DOWNLOAD CSV =================

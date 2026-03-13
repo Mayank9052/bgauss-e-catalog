@@ -4,6 +4,40 @@ min-height:100vh;
 font-family:Arial, Helvetica, sans-serif;
 }
 
+/* NAVBAR SEARCH */
+.navbar-search {
+  display: flex;
+  align-items: center;
+  margin: 0 12px;
+}
+
+.navbar-search input {
+  height: 36px;
+  width: 220px;
+  padding: 0 14px;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  outline: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+/* focus effect */
+.navbar-search input:focus {
+  border-color: #0a66c2;
+  box-shadow: 0 0 0 2px rgba(10,102,194,0.15);
+}
+
+/* placeholder style */
+.navbar-search input::placeholder {
+  color: #888;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 /* NAVBAR */
 
 .catalog-navbar{

@@ -19,9 +19,17 @@ namespace BGAUSS.Api.Controllers
 
         // GET ALL
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(int? modelId)
         {
-            var assemblies = await _context.Assemblies
+            var query = _context.Assemblies.AsQueryable();
+
+            // filter by modelId if provided
+            if (modelId.HasValue)
+            {
+                query = query.Where(a => a.ModelId == modelId.Value);
+            }
+
+            var assemblies = await query
                 .Select(a => new AssemblyDto
                 {
                     Id = a.Id,

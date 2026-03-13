@@ -28,6 +28,10 @@ const SearchParts = () => {
   const [remarks, setRemarks] = useState<Record<number, string>>({})
   const [cartCount, setCartCount] = useState(0)
   const [cartPartQuantities, setCartPartQuantities] = useState<Record<number, number>>({})
+
+  /* 🔎 SEARCH STATE */
+  const [searchTerm, setSearchTerm] = useState("")
+
   /* ================= FETCH CART ================= */
 
   const fetchCart = async () => {
@@ -44,7 +48,7 @@ const SearchParts = () => {
         )
       )
 
-    }catch {
+    } catch {
 
       setCartCount(0)
       setCartPartQuantities({})
@@ -61,9 +65,10 @@ const SearchParts = () => {
 
       try {
 
-        const positionFilter = partPosition != null
-          ? `&partPosition=${encodeURIComponent(String(partPosition))}`
-          : ""
+        const positionFilter =
+          partPosition != null
+            ? `&partPosition=${encodeURIComponent(String(partPosition))}`
+            : ""
 
         const res = await fetch(
           `/api/parts/by-assembly?modelId=${modelId}&assemblyId=${assemblyId}${positionFilter}`
@@ -91,8 +96,10 @@ const SearchParts = () => {
         setRemarks(rem)
 
       } catch (err) {
+
         console.error("Fetch error:", err)
         setParts([])
+
       }
 
     }
@@ -101,6 +108,16 @@ const SearchParts = () => {
     fetchCart()
 
   }, [assemblyId, modelId, partPosition])
+
+  /* ================= SEARCH FILTER ================= */
+
+  const filteredParts = parts.filter((part) =>
+    part.partName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    part.partNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    String(part.imageNumber).includes(searchTerm)
+  )
+
+  /* ================= STOCK ================= */
 
   const getAvailableStock = (part: Part) =>
     Math.max(0, part.stockQuantity - (cartPartQuantities[part.id] ?? 0))
@@ -155,7 +172,7 @@ const SearchParts = () => {
 
   }
 
-  /* ================= ADD TO CART + UPDATE REMARK ================= */
+  /* ================= ADD TO CART ================= */
 
   const addSelectedToCart = async () => {
 
@@ -201,7 +218,6 @@ const SearchParts = () => {
     } catch (error: any) {
 
       console.error("Cart error", error)
-
       alert(error.response?.data || "Failed to add items to cart")
 
     }
@@ -211,6 +227,8 @@ const SearchParts = () => {
   return (
 
     <div className="catalog-wrapper">
+
+      {/* NAVBAR */}
 
       <nav className="catalog-navbar">
 
@@ -226,6 +244,18 @@ const SearchParts = () => {
         </div>
 
         <div className="nav-actions">
+          {/* 🔎 SEARCH BAR IN NAVBAR */}
+
+        <div className="navbar-search">
+
+          <input
+            type="text"
+            placeholder="Search parts..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+
+        </div>
 
           <button
             className="nav-icon-btn"
@@ -243,6 +273,7 @@ const SearchParts = () => {
             className="nav-icon-btn cart-btn"
             onClick={() => navigate("/checkout")}
           >
+
             <FaShoppingCart />
 
             {cartCount > 0 && (
@@ -257,10 +288,14 @@ const SearchParts = () => {
 
       </nav>
 
+      {/* TITLE */}
+
       <h2 className="assembly-title">
         {assemblyName}
         {partPosition != null ? ` - Hotspot ${partPosition}` : ""}
       </h2>
+
+      {/* ACTION BUTTON */}
 
       <div className="parts-actions">
 
@@ -272,6 +307,8 @@ const SearchParts = () => {
         </button>
 
       </div>
+
+      {/* TABLE */}
 
       <div className="parts-table">
 
@@ -293,15 +330,15 @@ const SearchParts = () => {
 
           <tbody>
 
-            {parts.length === 0 && (
+            {filteredParts.length === 0 && (
               <tr>
                 <td colSpan={7} className="no-data">
-                  No parts available
+                  No parts found
                 </td>
               </tr>
             )}
 
-            {parts.map(part => {
+            {filteredParts.map(part => {
 
               const qty = quantities[part.id] || 1
               const availableStock = getAvailableStock(part)

@@ -33,25 +33,30 @@ const AssemblyCatalogue = () => {
   const [assemblies, setAssemblies] = useState<Assembly[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [origin, setOrigin] = useState("center center");
 
   useEffect(() => {
 
-    const fetchAssemblies = async () => {
+  const fetchAssemblies = async () => {
 
-      const res = await fetch("/api/assemblies");
-      const data = await res.json();
+    if (!searchState?.modelId) return;
 
-      setAssemblies(data);
-      setLoading(false);
+    const res = await fetch(`/api/assemblies?modelId=${searchState.modelId}`);
 
-    };
+    const data = await res.json();
 
-    fetchAssemblies();
+    setAssemblies(data);
+    setLoading(false);
 
-  }, []);
+  };
+
+  fetchAssemblies();
+
+}, [searchState]);
 
   useEffect(() => {
 
@@ -98,6 +103,18 @@ const AssemblyCatalogue = () => {
 
   };
 
+  // 🔎 Filter assemblies based on search
+  const filteredAssemblies = assemblies.filter((assembly) => {
+
+    const term = searchTerm.toLowerCase();
+
+    return (
+      assembly.assemblyName?.toLowerCase().includes(term) ||
+      assembly.id?.toString().includes(term)
+    );
+
+  });
+
   return (
 
     <div className="assembly-page">
@@ -116,6 +133,15 @@ const AssemblyCatalogue = () => {
         </div>
 
         <div className="nav-actions">
+
+          {/* 🔎 Search Bar */}
+          <input
+            type="text"
+            placeholder="Search assembly..."
+            className="nav-search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
 
           <button
             className="nav-icon-btn active"
@@ -158,20 +184,26 @@ const AssemblyCatalogue = () => {
 
           <div className="assembly-grid">
 
-            {assemblies.map((assembly) => (
+            {filteredAssemblies.length === 0 ? (
 
-              <button
-                key={assembly.id}
-                className="assembly-card"
-                onClick={() =>
-                  navigate("/parts", {
-                    state:{
-                      modelId: searchState?.modelId,
-                      assemblyId: assembly.id
-                    }
-                  })
-                }
-              >
+              <p>No assemblies found</p>
+
+            ) : (
+
+              filteredAssemblies.map((assembly) => (
+
+                <button
+                  key={assembly.id}
+                  className="assembly-card"
+                  onClick={() =>
+                    navigate("/parts", {
+                      state:{
+                        modelId: searchState?.modelId,
+                        assemblyId: assembly.id
+                      }
+                    })
+                  }
+                >
 
                 <img
                   src={resolveAssemblyImage(assembly.imagePath)}
@@ -188,7 +220,8 @@ const AssemblyCatalogue = () => {
 
               </button>
 
-            ))}
+              ))
+            )}
 
           </div>
 

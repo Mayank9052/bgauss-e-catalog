@@ -232,7 +232,6 @@ namespace BGAUSS.Api.Controllers
         {
             int userId = GetUserId();
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 var cart = await _context.Carts
@@ -246,18 +245,21 @@ namespace BGAUSS.Api.Controllers
                 var order = new Order
                 {
                     UserId = userId,
-                    TotalAmount = 0
+                    TotalAmount = 0,
+                    Status = "Pending",
+                    OrderItems = new List<OrderItem>()
                 };
 
                 foreach (var item in cart.CartItems)
                 {
-                    var part = item.Part!;
+                    var part = item.Part;
+
                     if (part.StockQuantity < item.Quantity)
-                        throw new InvalidOperationException($"Insufficient stock for {part.PartName}");
+                        return BadRequest($"Insufficient stock for {part.PartName}");
 
                     decimal price = part.Price ?? 0;
                     decimal subTotal = price * item.Quantity;
-
+                    
                     // Deduct stock
                     part.StockQuantity -= item.Quantity;
 
@@ -276,7 +278,6 @@ namespace BGAUSS.Api.Controllers
                 _context.CartItems.RemoveRange(cart.CartItems);
 
                 await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
 
                 return Ok(new
                 {
@@ -287,8 +288,11 @@ namespace BGAUSS.Api.Controllers
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
-                return BadRequest(new { Message = "Checkout failed", Details = ex.Message });
+                return BadRequest(new
+                {
+                    Message = "Checkout failed",
+                    Details = ex.Message
+                });
             }
         }
 

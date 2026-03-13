@@ -411,8 +411,8 @@ const CheckoutPage = () => {
             <thead>
               <tr>
                 <th></th>
-                <th>Product Image</th>
                 <th>Product Name</th>
+                <th>Product No.</th>
                 <th>Price</th>
                 <th>Quantity</th>
                 <th>Subtotal</th>
@@ -441,16 +441,9 @@ const CheckoutPage = () => {
 
                     </td>
 
-                    <td>
-                      {imageSrc && (
-                        <img
-                          src={imageSrc}
-                          className="checkout-product-img"
-                        />
-                      )}
-                    </td>
-
                     <td>{item.partName}</td>
+
+                    <td>{item.partNumber}</td>
 
                     <td>Rs. {item.price.toFixed(2)}</td>
 

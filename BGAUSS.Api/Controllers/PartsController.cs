@@ -115,6 +115,28 @@ public class PartsController : ControllerBase
         return Ok(part);
     }
 
+    // ====== Update remarks separately without affecting other fields =====/
+    [HttpPut("update-remark/{id}")]
+    public async Task<IActionResult> UpdateRemark(int id, [FromBody] UpdateRemarkDto dto)
+    {
+        if (dto == null)
+            return BadRequest("Invalid request");
+
+        var part = await _context.Parts.FindAsync(id);
+
+        if (part == null)
+            return NotFound("Part not found");
+
+        part.Remarks = dto.Remark ?? "";
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Remark updated successfully"
+        });
+    }
+
     // ================= DELETE =================
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)

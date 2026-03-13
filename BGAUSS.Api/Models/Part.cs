@@ -14,7 +14,7 @@ public partial class Part
     public string? ImageNumber { get; set; }
 
     public string? Description { get; set; }
-    public string? Remarks { get; set; }
+    public string Remarks { get; set; } = string.Empty;
 
     public decimal? Price { get; set; }
 

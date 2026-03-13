@@ -43,6 +43,8 @@ export interface Part {
   id: number;
   partNumber: string;
   partName: string;
+  imageNumber: string;
+  remarks?: string
   description: string;
   price: number;
   imagePath: string;
@@ -140,6 +142,34 @@ export async function getAllParts(): Promise<Part[]> {
   if (!response.ok) throw new Error("Failed to fetch parts");
 
   return response.json();
+}
+
+/* ================= UPDATE PART REMARK ================= */
+
+export async function updatePartRemark(
+  partId: number,
+  remark: string
+) {
+
+  const token = localStorage.getItem("token")
+
+  const response = await fetch(
+    `/api/parts/update-remark/${partId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ remark })
+    }
+  )
+
+  if (!response.ok)
+    throw new Error("Failed to update remark")
+
+  return response.json()
+
 }
 
 // ===== VEHICLE IMAGE BY MODEL =====

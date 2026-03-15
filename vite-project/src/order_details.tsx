@@ -2,6 +2,7 @@
 import logo from "./assets/logo.jpg";
 import "./checkout.css";
 import AccountMenu from "./components/AccountMenu";
+import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa";
 
 interface OrderSummaryItem {
   id: number;
@@ -38,12 +39,34 @@ const OrderDetails = () => {
     ? {
         orderId: rawOrder.orderId ?? rawOrder.OrderId ?? null,
         totalAmount: Number(
-          rawOrder.totalAmount ?? rawOrder.total ?? rawOrder.Total ?? 0
+          rawOrder.totalAmount ??
+          rawOrder.TotalAmount ??
+          rawOrder.total ??
+          rawOrder.Total ??
+          0
         ),
         items: Array.isArray(rawOrder.items)
-          ? rawOrder.items
+          ? rawOrder.items.map((item: any) => ({
+              id: item.id ?? item.Id ?? 0,
+              partName: item.partName ?? item.PartName ?? "-",
+              partNumber: item.partNumber ?? item.PartNumber ?? "-",
+              price: Number(item.price ?? item.Price ?? 0),
+              quantity: Number(item.quantity ?? item.Quantity ?? 0),
+              subTotal: Number(
+                item.subTotal ?? item.SubTotal ?? item.subtotal ?? 0
+              )
+            }))
           : Array.isArray(rawOrder.Items)
-          ? rawOrder.Items
+          ? rawOrder.Items.map((item: any) => ({
+              id: item.id ?? item.Id ?? 0,
+              partName: item.partName ?? item.PartName ?? "-",
+              partNumber: item.partNumber ?? item.PartNumber ?? "-",
+              price: Number(item.price ?? item.Price ?? 0),
+              quantity: Number(item.quantity ?? item.Quantity ?? 0),
+              subTotal: Number(
+                item.subTotal ?? item.SubTotal ?? item.subtotal ?? 0
+              )
+            }))
           : [],
         message: rawOrder.message ?? rawOrder.Message
       }
@@ -74,15 +97,35 @@ const OrderDetails = () => {
 
         <div className="checkout-topbar-left">
           <img src={logo} alt="Logo" className="checkout-logo" />
-          <span>Electronic Parts Catalog</span>
+
+          <div className="brand-text">
+            <span className="logo-text">BGAUSS</span>
+            <span className="sub-title">Electronic Parts Catalog</span>
+          </div>
         </div>
 
         <div className="checkout-topbar-right">
-          <span onClick={() => navigate("/dashboard")}>Home</span>
-          <span>Contact Us</span>
-          <span className="checkout-icon">🔍</span>
+          <button
+            className="nav-icon-btn"
+            onClick={() => navigate("/dashboard")}
+            title="Home"
+          >
+            <FaHome />
+          </button>
+
+          <button className="nav-icon-btn" title="Contact">
+            <FaPhoneAlt />
+          </button>
+
+          <button
+            className="nav-icon-btn"
+            onClick={() => navigate("/checkout")}
+            title="Cart"
+          >
+            <FaShoppingCart />
+          </button>
+
           <AccountMenu />
-          <span className="checkout-cart">🛒</span>
         </div>
 
       </nav>

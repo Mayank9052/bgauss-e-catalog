@@ -41,22 +41,22 @@ const AssemblyCatalogue = () => {
 
   useEffect(() => {
 
-  const fetchAssemblies = async () => {
+    const fetchAssemblies = async () => {
 
-    if (!searchState?.modelId) return;
+      if (!searchState?.modelId) return;
 
-    const res = await fetch(`/api/assemblies?modelId=${searchState.modelId}`);
+      const res = await fetch(`/api/assemblies?modelId=${searchState.modelId}`);
 
-    const data = await res.json();
+      const data = await res.json();
 
-    setAssemblies(data);
-    setLoading(false);
+      setAssemblies(data);
+      setLoading(false);
 
-  };
+    };
 
-  fetchAssemblies();
+    fetchAssemblies();
 
-}, [searchState]);
+  }, [searchState]);
 
   useEffect(() => {
 
@@ -103,7 +103,6 @@ const AssemblyCatalogue = () => {
 
   };
 
-  // 🔎 Filter assemblies based on search
   const filteredAssemblies = assemblies.filter((assembly) => {
 
     const term = searchTerm.toLowerCase();
@@ -134,7 +133,6 @@ const AssemblyCatalogue = () => {
 
         <div className="nav-actions">
 
-          {/* 🔎 Search Bar */}
           <input
             type="text"
             placeholder="Search assembly..."
@@ -145,23 +143,16 @@ const AssemblyCatalogue = () => {
 
           <button
             className="nav-icon-btn active"
-            title="Home"
             onClick={() => navigate("/dashboard")}
           >
             <FaHome />
           </button>
 
-          <button
-            className="nav-icon-btn"
-            title="Contact"
-          >
+          <button className="nav-icon-btn">
             <FaPhoneAlt />
           </button>
 
-          <button
-            className="nav-icon-btn"
-            title="Cart"
-          >
+          <button className="nav-icon-btn">
             <FaShoppingCart />
           </button>
 
@@ -170,7 +161,6 @@ const AssemblyCatalogue = () => {
         </div>
 
       </nav>
-
 
       <main className="assembly-content">
 
@@ -199,26 +189,28 @@ const AssemblyCatalogue = () => {
                     navigate("/parts", {
                       state:{
                         modelId: searchState?.modelId,
-                        assemblyId: assembly.id
+                        assemblyId: assembly.id,
+                        assemblyName: assembly.assemblyName,
+                        assemblyImage: resolveAssemblyImage(assembly.imagePath)
                       }
                     })
                   }
                 >
 
-                <img
-                  src={resolveAssemblyImage(assembly.imagePath)}
-                  className="assembly-image"
-                  onClick={(e)=>{
-                    e.stopPropagation();
-                    openZoom(resolveAssemblyImage(assembly.imagePath));
-                  }}
-                />
+                  <img
+                    src={resolveAssemblyImage(assembly.imagePath)}
+                    className="assembly-image"
+                    onClick={(e)=>{
+                      e.stopPropagation();
+                      openZoom(resolveAssemblyImage(assembly.imagePath));
+                    }}
+                  />
 
-                <div className="assembly-name">
-                  {assembly.assemblyName}
-                </div>
+                  <div className="assembly-name">
+                    {assembly.assemblyName}
+                  </div>
 
-              </button>
+                </button>
 
               ))
             )}
@@ -228,7 +220,6 @@ const AssemblyCatalogue = () => {
         )}
 
       </main>
-
 
       {zoomImage && (
 

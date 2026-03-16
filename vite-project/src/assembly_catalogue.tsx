@@ -6,6 +6,7 @@ import "./assembly_catalogue.css";
 
 import AccountMenu from "./components/AccountMenu";
 import type { Assembly } from "./services/api";
+import { commonSearch } from "./services/serachapi";
 
 import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa";
 
@@ -29,9 +30,12 @@ const AssemblyCatalogue = () => {
   const navigate = useNavigate();
 
   const searchState = location.state as VehicleSearchState;
+  const modelId = Number(searchState?.modelId);
 
   const [assemblies, setAssemblies] = useState<Assembly[]>([]);
+  const [visibleAssemblies, setVisibleAssemblies] = useState<Assembly[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -43,20 +47,101 @@ const AssemblyCatalogue = () => {
 
     const fetchAssemblies = async () => {
 
-      if (!searchState?.modelId) return;
+      if (!Number.isFinite(modelId)) {
+        setAssemblies([]);
+        setVisibleAssemblies([]);
+        setLoading(false);
+        return;
+      }
 
-      const res = await fetch(`/api/assemblies?modelId=${searchState.modelId}`);
+      setLoading(true);
 
-      const data = await res.json();
+      try {
 
-      setAssemblies(data);
-      setLoading(false);
+        const res = await fetch(`/api/assemblies?modelId=${modelId}`);
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch assemblies");
+        }
+
+        const data = await res.json();
+
+        setAssemblies(data);
+        setVisibleAssemblies(data);
+
+      } catch {
+
+        setAssemblies([]);
+        setVisibleAssemblies([]);
+
+      } finally {
+
+        setLoading(false);
+
+      }
 
     };
 
     fetchAssemblies();
 
-  }, [searchState]);
+  }, [modelId]);
+
+  useEffect(() => {
+
+    const trimmedTerm = searchTerm.trim();
+
+    if (!trimmedTerm) {
+      setVisibleAssemblies(assemblies);
+      setSearchLoading(false);
+      return;
+    }
+
+    if (!Number.isFinite(modelId)) {
+      setVisibleAssemblies([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    setSearchLoading(true);
+
+    const timeoutId = window.setTimeout(async () => {
+
+      try {
+
+        const data = await commonSearch<Assembly>("assemblies", trimmedTerm);
+
+        if (cancelled) {
+          return;
+        }
+
+        setVisibleAssemblies(
+          data.filter((assembly) => Number(assembly.modelId) === modelId)
+        );
+
+      } catch {
+
+        if (!cancelled) {
+          setVisibleAssemblies([]);
+        }
+
+      } finally {
+
+        if (!cancelled) {
+          setSearchLoading(false);
+        }
+
+      }
+
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+
+  }, [assemblies, modelId, searchTerm]);
 
   useEffect(() => {
 
@@ -102,17 +187,6 @@ const AssemblyCatalogue = () => {
     });
 
   };
-
-  const filteredAssemblies = assemblies.filter((assembly) => {
-
-    const term = searchTerm.toLowerCase();
-
-    return (
-      assembly.assemblyName?.toLowerCase().includes(term) ||
-      assembly.id?.toString().includes(term)
-    );
-
-  });
 
   return (
 
@@ -165,6 +239,13 @@ const AssemblyCatalogue = () => {
       <main className="assembly-content">
 
         <h2>Assembly Catalogue</h2>
+        <p className="assembly-status">
+          {loading
+            ? "Loading assemblies..."
+            : searchLoading
+              ? "Searching assemblies..."
+              : `${visibleAssemblies.length} assemblies found`}
+        </p>
 
         {loading ? (
 
@@ -174,13 +255,13 @@ const AssemblyCatalogue = () => {
 
           <div className="assembly-grid">
 
-            {filteredAssemblies.length === 0 ? (
+            {visibleAssemblies.length === 0 ? (
 
               <p>No assemblies found</p>
 
             ) : (
 
-              filteredAssemblies.map((assembly) => (
+              visibleAssemblies.map((assembly) => (
 
                 <button
                   key={assembly.id}

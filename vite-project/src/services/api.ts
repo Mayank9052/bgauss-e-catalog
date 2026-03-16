@@ -50,6 +50,7 @@ export interface Part {
   imagePath: string;
   categoryName: string;
   stockQuantity: number;
+  modelId?: number | null;
   assemblyId?: number | null;
   subParts?: Part[];
 }

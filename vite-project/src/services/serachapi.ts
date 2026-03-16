@@ -1,14 +1,23 @@
 import axios from "axios";
 
-const API_BASE = "http://localhost:5053/api/CommonSearch";
-
-export const commonSearch = async (
+export const commonSearch = async <T>(
   entity: string,
   query: string
-) => {
+): Promise<T[]> => {
 
-  const response = await axios.get(
-    `${API_BASE}/${entity}?query=${query}`
+  const trimmedQuery = query.trim();
+
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  const response = await axios.get<T[]>(
+    `/commonsearch/${entity}`,
+    {
+      params: {
+        query: trimmedQuery
+      }
+    }
   );
 
   return response.data;

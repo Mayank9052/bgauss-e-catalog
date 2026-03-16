@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import axios from "axios"
 import AccountMenu from "./components/AccountMenu"
 import type { Part } from "./services/api"
+import { commonSearch } from "./services/serachapi"
 
 import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa"
 
@@ -27,14 +28,49 @@ const SearchParts = () => {
     partPosition
   } = location.state || {}
 
-  const [parts, setParts] = useState<Part[]>([])
+  const [allParts, setAllParts] = useState<Part[]>([])
+  const [visibleParts, setVisibleParts] = useState<Part[]>([])
   const [selectedParts, setSelectedParts] = useState<number[]>([])
   const [quantities, setQuantities] = useState<Record<number, number>>({})
   const [remarks, setRemarks] = useState<Record<number, string>>({})
   const [cartCount, setCartCount] = useState(0)
   const [cartPartQuantities, setCartPartQuantities] = useState<Record<number, number>>({})
+  const [partsLoading, setPartsLoading] = useState(true)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [activeImageNumber, setActiveImageNumber] = useState("")
 
-  const [zoomImage, setZoomImage] = useState<string | null>(null)
+  const hydratePartState = (items: Part[]) => {
+
+    setQuantities(prev => {
+
+      const next = { ...prev }
+
+      items.forEach((part) => {
+        if (next[part.id] == null) {
+          next[part.id] = 1
+        }
+      })
+
+      return next
+
+    })
+
+    setRemarks(prev => {
+
+      const next = { ...prev }
+
+      items.forEach((part) => {
+        if (next[part.id] == null) {
+          next[part.id] = part.remarks ?? ""
+        }
+      })
+
+      return next
+
+    })
+
+  }
 
   const fetchCart = async () => {
 
@@ -64,7 +100,16 @@ const SearchParts = () => {
 
     const fetchParts = async () => {
 
+      if (modelId == null || assemblyId == null) {
+        setAllParts([])
+        setVisibleParts([])
+        setPartsLoading(false)
+        return
+      }
+
       try {
+
+        setPartsLoading(true)
 
         const positionFilter = partPosition != null
           ? `&partPosition=${encodeURIComponent(String(partPosition))}`
@@ -76,22 +121,18 @@ const SearchParts = () => {
 
         const data = await res.json()
 
-        setParts(data)
-
-        const qty: Record<number, number> = {}
-        const rem: Record<number, string> = {}
-
-        data.forEach((part: Part) => {
-          qty[part.id] = 1
-          rem[part.id] = ""
-        })
-
-        setQuantities(qty)
-        setRemarks(rem)
+        setAllParts(data)
+        setVisibleParts(data)
+        hydratePartState(data)
 
       } catch {
 
-        setParts([])
+        setAllParts([])
+        setVisibleParts([])
+
+      } finally {
+
+        setPartsLoading(false)
 
       }
 
@@ -102,8 +143,88 @@ const SearchParts = () => {
 
   }, [assemblyId, modelId, partPosition])
 
+  useEffect(() => {
+
+    const trimmedTerm = searchTerm.trim()
+
+    if (!trimmedTerm) {
+      setVisibleParts(allParts)
+      setSearchLoading(false)
+      return
+    }
+
+    if (modelId == null || assemblyId == null) {
+      setVisibleParts([])
+      setSearchLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    setSearchLoading(true)
+
+    const timeoutId = window.setTimeout(async () => {
+
+      try {
+
+        const data = await commonSearch<Part>("parts", trimmedTerm)
+        const filteredParts = data.filter((part) =>
+          Number(part.modelId) === Number(modelId) &&
+          Number(part.assemblyId) === Number(assemblyId)
+        )
+
+        if (cancelled) {
+          return
+        }
+
+        hydratePartState(filteredParts)
+        setVisibleParts(filteredParts)
+
+      } catch {
+
+        if (!cancelled) {
+          setVisibleParts([])
+        }
+
+      } finally {
+
+        if (!cancelled) {
+          setSearchLoading(false)
+        }
+
+      }
+
+    }, 300)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+    }
+
+  }, [allParts, assemblyId, modelId, searchTerm])
+
+  useEffect(() => {
+
+    setActiveImageNumber("")
+
+  }, [assemblyId, modelId])
+
   const getAvailableStock = (part: Part) =>
     Math.max(0, part.stockQuantity - (cartPartQuantities[part.id] ?? 0))
+
+  const hotspotNumbers = Array.from(
+    new Set(
+      allParts
+        .map((part) => part.imageNumber?.trim())
+        .filter((imageNumber): imageNumber is string => Boolean(imageNumber))
+    )
+  ).sort((left, right) =>
+    left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" })
+  )
+
+  const displayParts = activeImageNumber
+    ? visibleParts.filter((part) => part.imageNumber?.trim() === activeImageNumber)
+    : visibleParts
 
   const toggleSelect = (part: Part) => {
 
@@ -125,7 +246,7 @@ const SearchParts = () => {
 
   const changeQty = (id: number, delta: number) => {
 
-    const part = parts.find(p => p.id === id)
+    const part = allParts.find(p => p.id === id) || visibleParts.find(p => p.id === id)
     if (!part) return
 
     const availableStock = getAvailableStock(part)
@@ -236,11 +357,49 @@ const SearchParts = () => {
 
           {assemblyImage ? (
 
-            <img
-              src={assemblyImage}
-              className="assembly-large-image"
-              onClick={() => setZoomImage(assemblyImage)}
-            />
+            <>
+
+              <div className="assembly-image-frame">
+
+                <img
+                  src={assemblyImage}
+                  className="assembly-large-image"
+                />
+
+              </div>
+
+              {hotspotNumbers.length > 0 && (
+
+                <div className="image-number-panel">
+
+                  <span className="image-number-label">Image No.</span>
+
+                  <div className="image-number-list">
+
+                    {hotspotNumbers.map((imageNumber) => (
+
+                      <button
+                        key={imageNumber}
+                        type="button"
+                        className={`image-number-chip${activeImageNumber === imageNumber ? " active" : ""}`}
+                        onClick={() =>
+                          setActiveImageNumber((current) =>
+                            current === imageNumber ? "" : imageNumber
+                          )
+                        }
+                      >
+                        {imageNumber}
+                      </button>
+
+                    ))}
+
+                  </div>
+
+                </div>
+
+              )}
+
+            </>
 
           ) : (
 
@@ -256,6 +415,14 @@ const SearchParts = () => {
 
           <div className="parts-actions">
 
+            <input
+              type="text"
+              className="parts-search"
+              placeholder="Search parts by name, number, or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+
             <button
               disabled={!selectedParts.length}
               onClick={addSelectedToCart}
@@ -263,6 +430,16 @@ const SearchParts = () => {
               Add Selected To Cart
             </button>
 
+          </div>
+
+          <div className="parts-search-status">
+            {partsLoading
+              ? "Loading parts..."
+              : searchLoading
+                ? "Searching parts..."
+                : activeImageNumber
+                  ? `${displayParts.length} parts found for image no ${activeImageNumber}`
+                  : `${displayParts.length} parts found`}
           </div>
 
           <div className="parts-table-scroll">
@@ -291,7 +468,21 @@ const SearchParts = () => {
 
               <tbody>
 
-                {parts.map(part => {
+                {displayParts.length === 0 ? (
+
+                  <tr>
+                    <td className="parts-empty-state" colSpan={5}>
+                      {partsLoading
+                        ? "Loading parts..."
+                        : searchLoading
+                          ? "Searching parts..."
+                          : activeImageNumber
+                            ? `No parts found for image no ${activeImageNumber}`
+                            : "No parts found"}
+                    </td>
+                  </tr>
+
+                ) : displayParts.map(part => {
 
                   const qty = quantities[part.id] || 1
                   const availableStock = getAvailableStock(part)
@@ -300,7 +491,7 @@ const SearchParts = () => {
 
                     <tr
                       key={part.id}
-                      className={availableStock === 0 ? "row-out-stock" : ""}
+                      className={`${availableStock === 0 ? "row-out-stock" : ""}${activeImageNumber && part.imageNumber?.trim() === activeImageNumber ? " row-hotspot-match" : ""}`}
                     >
 
                       <td>
@@ -371,22 +562,6 @@ const SearchParts = () => {
         </div>
 
       </div>
-
-      {zoomImage && (
-
-        <div
-          className="image-modal"
-          onClick={() => setZoomImage(null)}
-        >
-
-          <img
-            src={zoomImage}
-            className="zoomed-image"
-          />
-
-        </div>
-
-      )}
 
     </div>
 

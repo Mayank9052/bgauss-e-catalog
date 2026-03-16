@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import axios from "axios"
 import AccountMenu from "./components/AccountMenu"
 import type { Part } from "./services/api"
-import { updatePartRemark } from "./services/api"
+import { commonSearch } from "./services/serachapi"
 
 import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa"
 
@@ -20,19 +20,57 @@ const SearchParts = () => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const { modelId, assemblyId, assemblyName, partPosition } = location.state || {}
+  const {
+    modelId,
+    assemblyId,
+    assemblyName,
+    assemblyImage,
+    partPosition
+  } = location.state || {}
 
-  const [parts, setParts] = useState<Part[]>([])
+  const [allParts, setAllParts] = useState<Part[]>([])
+  const [visibleParts, setVisibleParts] = useState<Part[]>([])
   const [selectedParts, setSelectedParts] = useState<number[]>([])
   const [quantities, setQuantities] = useState<Record<number, number>>({})
   const [remarks, setRemarks] = useState<Record<number, string>>({})
   const [cartCount, setCartCount] = useState(0)
   const [cartPartQuantities, setCartPartQuantities] = useState<Record<number, number>>({})
-
-  /* 🔎 SEARCH STATE */
+  const [partsLoading, setPartsLoading] = useState(true)
+  const [searchLoading, setSearchLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [activeImageNumber, setActiveImageNumber] = useState("")
 
-  /* ================= FETCH CART ================= */
+  const hydratePartState = (items: Part[]) => {
+
+    setQuantities(prev => {
+
+      const next = { ...prev }
+
+      items.forEach((part) => {
+        if (next[part.id] == null) {
+          next[part.id] = 1
+        }
+      })
+
+      return next
+
+    })
+
+    setRemarks(prev => {
+
+      const next = { ...prev }
+
+      items.forEach((part) => {
+        if (next[part.id] == null) {
+          next[part.id] = part.remarks ?? ""
+        }
+      })
+
+      return next
+
+    })
+
+  }
 
   const fetchCart = async () => {
 
@@ -42,6 +80,7 @@ const SearchParts = () => {
       const cartItems: CartItemSummary[] = res.data?.items || []
 
       setCartCount(cartItems.length)
+
       setCartPartQuantities(
         Object.fromEntries(
           cartItems.map((item) => [item.partId, item.quantity])
@@ -57,48 +96,43 @@ const SearchParts = () => {
 
   }
 
-  /* ================= FETCH PARTS ================= */
-
   useEffect(() => {
 
     const fetchParts = async () => {
 
+      if (modelId == null || assemblyId == null) {
+        setAllParts([])
+        setVisibleParts([])
+        setPartsLoading(false)
+        return
+      }
+
       try {
 
-        const positionFilter =
-          partPosition != null
-            ? `&partPosition=${encodeURIComponent(String(partPosition))}`
-            : ""
+        setPartsLoading(true)
+
+        const positionFilter = partPosition != null
+          ? `&partPosition=${encodeURIComponent(String(partPosition))}`
+          : ""
 
         const res = await fetch(
           `/api/parts/by-assembly?modelId=${modelId}&assemblyId=${assemblyId}${positionFilter}`
         )
 
-        if (!res.ok) {
-          console.error("API error:", res.status)
-          setParts([])
-          return
-        }
+        const data = await res.json()
 
-        const data: Part[] = await res.json()
+        setAllParts(data)
+        setVisibleParts(data)
+        hydratePartState(data)
 
-        setParts(data)
+      } catch {
 
-        const qty: Record<number, number> = {}
-        const rem: Record<number, string> = {}
+        setAllParts([])
+        setVisibleParts([])
 
-        data.forEach((part: Part) => {
-          qty[part.id] = 1
-          rem[part.id] = part.remarks || ""
-        })
+      } finally {
 
-        setQuantities(qty)
-        setRemarks(rem)
-
-      } catch (err) {
-
-        console.error("Fetch error:", err)
-        setParts([])
+        setPartsLoading(false)
 
       }
 
@@ -109,20 +143,88 @@ const SearchParts = () => {
 
   }, [assemblyId, modelId, partPosition])
 
-  /* ================= SEARCH FILTER ================= */
+  useEffect(() => {
 
-  const filteredParts = parts.filter((part) =>
-    part.partName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    part.partNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    String(part.imageNumber).includes(searchTerm)
-  )
+    const trimmedTerm = searchTerm.trim()
 
-  /* ================= STOCK ================= */
+    if (!trimmedTerm) {
+      setVisibleParts(allParts)
+      setSearchLoading(false)
+      return
+    }
+
+    if (modelId == null || assemblyId == null) {
+      setVisibleParts([])
+      setSearchLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    setSearchLoading(true)
+
+    const timeoutId = window.setTimeout(async () => {
+
+      try {
+
+        const data = await commonSearch<Part>("parts", trimmedTerm)
+        const filteredParts = data.filter((part) =>
+          Number(part.modelId) === Number(modelId) &&
+          Number(part.assemblyId) === Number(assemblyId)
+        )
+
+        if (cancelled) {
+          return
+        }
+
+        hydratePartState(filteredParts)
+        setVisibleParts(filteredParts)
+
+      } catch {
+
+        if (!cancelled) {
+          setVisibleParts([])
+        }
+
+      } finally {
+
+        if (!cancelled) {
+          setSearchLoading(false)
+        }
+
+      }
+
+    }, 300)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+    }
+
+  }, [allParts, assemblyId, modelId, searchTerm])
+
+  useEffect(() => {
+
+    setActiveImageNumber("")
+
+  }, [assemblyId, modelId])
 
   const getAvailableStock = (part: Part) =>
     Math.max(0, part.stockQuantity - (cartPartQuantities[part.id] ?? 0))
 
-  /* ================= SELECT PART ================= */
+  const hotspotNumbers = Array.from(
+    new Set(
+      allParts
+        .map((part) => part.imageNumber?.trim())
+        .filter((imageNumber): imageNumber is string => Boolean(imageNumber))
+    )
+  ).sort((left, right) =>
+    left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" })
+  )
+
+  const displayParts = activeImageNumber
+    ? visibleParts.filter((part) => part.imageNumber?.trim() === activeImageNumber)
+    : visibleParts
 
   const toggleSelect = (part: Part) => {
 
@@ -142,11 +244,9 @@ const SearchParts = () => {
 
   }
 
-  /* ================= QUANTITY ================= */
-
   const changeQty = (id: number, delta: number) => {
 
-    const part = parts.find(p => p.id === id)
+    const part = allParts.find(p => p.id === id) || visibleParts.find(p => p.id === id)
     if (!part) return
 
     const availableStock = getAvailableStock(part)
@@ -172,8 +272,6 @@ const SearchParts = () => {
 
   }
 
-  /* ================= ADD TO CART ================= */
-
   const addSelectedToCart = async () => {
 
     if (selectedParts.length === 0) {
@@ -185,25 +283,7 @@ const SearchParts = () => {
 
       for (const partId of selectedParts) {
 
-        const part = parts.find((item) => item.id === partId)
-        if (!part) continue
-
         const qty = quantities[partId] || 1
-        const remark = remarks[partId] || ""
-        const availableStock = getAvailableStock(part)
-
-        if (availableStock <= 0) {
-          alert(`${part.partName} is out of stock`)
-          return
-        }
-
-        if (qty > availableStock) {
-          alert(`Only ${availableStock} items available for ${part.partName}`)
-          return
-        }
-        /* UPDATE REMARK IN BACKEND */
-        await updatePartRemark(partId, remark)
-        /* ADD TO CART */
 
         await axios.post("/cart/add", {
           PartId: partId,
@@ -217,8 +297,7 @@ const SearchParts = () => {
 
     } catch (error: any) {
 
-      console.error("Cart error", error)
-      alert(error.response?.data || "Failed to add items to cart")
+      alert(error.response?.data || "Failed to add items")
 
     }
 
@@ -227,8 +306,6 @@ const SearchParts = () => {
   return (
 
     <div className="catalog-wrapper">
-
-      {/* NAVBAR */}
 
       <nav className="catalog-navbar">
 
@@ -244,42 +321,26 @@ const SearchParts = () => {
         </div>
 
         <div className="nav-actions">
-          {/* 🔎 SEARCH BAR IN NAVBAR */}
-
-        <div className="navbar-search">
-
-          <input
-            type="text"
-            placeholder="Search parts..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-
-        </div>
 
           <button
             className="nav-icon-btn"
-            title="Home"
             onClick={() => navigate("/dashboard")}
           >
             <FaHome />
           </button>
 
-          <button className="nav-icon-btn" title="Contact">
+          <button className="nav-icon-btn">
             <FaPhoneAlt />
           </button>
 
           <button
-            className="nav-icon-btn cart-btn"
+            className="nav-icon-btn"
             onClick={() => navigate("/checkout")}
           >
-
             <FaShoppingCart />
-
             {cartCount > 0 && (
               <span className="cart-badge">{cartCount}</span>
             )}
-
           </button>
 
           <AccountMenu />
@@ -288,132 +349,217 @@ const SearchParts = () => {
 
       </nav>
 
-      {/* TITLE */}
+      <h2 className="assembly-title">{assemblyName}</h2>
 
-      <h2 className="assembly-title">
-        {assemblyName}
-        {partPosition != null ? ` - Hotspot ${partPosition}` : ""}
-      </h2>
+      <div className="parts-layout">
 
-      {/* ACTION BUTTON */}
+        <div className="assembly-image-panel">
 
-      <div className="parts-actions">
+          {assemblyImage ? (
 
-        <button
-          disabled={!selectedParts.length}
-          onClick={addSelectedToCart}
-        >
-          Add Selected To Cart
-        </button>
+            <>
 
-      </div>
+              <div className="assembly-image-frame">
 
-      {/* TABLE */}
+                <img
+                  src={assemblyImage}
+                  className="assembly-large-image"
+                />
 
-      <div className="parts-table">
+              </div>
 
-        <table>
+              {hotspotNumbers.length > 0 && (
 
-          <thead>
+                <div className="image-number-panel">
 
-            <tr>
-              <th>Select</th>
-              <th>Part Number</th>
-              <th>Part Name</th>
-              <th>Image Number</th>
-              <th>Available Stock</th>
-              <th>Remarks</th>
-              <th>Quantity</th>
-            </tr>
+                  <span className="image-number-label">Image No.</span>
 
-          </thead>
+                  <div className="image-number-list">
 
-          <tbody>
-
-            {filteredParts.length === 0 && (
-              <tr>
-                <td colSpan={7} className="no-data">
-                  No parts found
-                </td>
-              </tr>
-            )}
-
-            {filteredParts.map(part => {
-
-              const qty = quantities[part.id] || 1
-              const availableStock = getAvailableStock(part)
-
-              return (
-
-                <tr key={part.id} className={availableStock === 0 ? "row-out-stock" : ""}>
-
-                  <td>
-
-                    <input
-                      type="checkbox"
-                      checked={selectedParts.includes(part.id)}
-                      disabled={availableStock === 0}
-                      onChange={() => toggleSelect(part)}
-                    />
-
-                  </td>
-
-                  <td>{part.partNumber}</td>
-
-                  <td>{part.partName}</td>
-
-                  <td>{part.imageNumber}</td>
-
-                  <td>{availableStock}</td>
-
-                  <td>
-
-                    <input
-                      className="remarks-input"
-                      value={remarks[part.id] || ""}
-                      onChange={(e) =>
-                        setRemarks(prev => ({
-                          ...prev,
-                          [part.id]: e.target.value
-                        }))
-                      }
-                    />
-
-                  </td>
-
-                  <td>
-
-                    <div className="qty-control">
+                    {hotspotNumbers.map((imageNumber) => (
 
                       <button
-                        onClick={() => changeQty(part.id, -1)}
-                        disabled={qty <= 1 || availableStock === 0}
+                        key={imageNumber}
+                        type="button"
+                        className={`image-number-chip${activeImageNumber === imageNumber ? " active" : ""}`}
+                        onClick={() =>
+                          setActiveImageNumber((current) =>
+                            current === imageNumber ? "" : imageNumber
+                          )
+                        }
                       >
-                        -
+                        {imageNumber}
                       </button>
 
-                      <span>{qty}</span>
+                    ))}
 
-                      <button
-                        onClick={() => changeQty(part.id, 1)}
-                        disabled={qty >= availableStock || availableStock === 0}
-                      >
-                        +
-                      </button>
+                  </div>
 
-                    </div>
+                </div>
 
-                  </td>
+              )}
 
+            </>
+
+          ) : (
+
+            <div className="assembly-image-empty">
+              Image not available
+            </div>
+
+          )}
+
+        </div>
+
+        <div className="parts-table">
+
+          <div className="parts-actions">
+
+            <input
+              type="text"
+              className="parts-search"
+              placeholder="Search parts by name, number, or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+
+            <button
+              disabled={!selectedParts.length}
+              onClick={addSelectedToCart}
+            >
+              Add Selected To Cart
+            </button>
+
+          </div>
+
+          <div className="parts-search-status">
+            {partsLoading
+              ? "Loading parts..."
+              : searchLoading
+                ? "Searching parts..."
+                : activeImageNumber
+                  ? `${displayParts.length} parts found for image no ${activeImageNumber}`
+                  : `${displayParts.length} parts found`}
+          </div>
+
+          <div className="parts-table-scroll">
+
+            <table className="parts-data-table">
+
+              <colgroup>
+                <col className="col-select" />
+                <col className="col-part-number" />
+                <col className="col-part-name" />
+                <col className="col-remarks" />
+                <col className="col-qty" />
+              </colgroup>
+
+              <thead>
+
+                <tr>
+                  <th>Select</th>
+                  <th>Part Number</th>
+                  <th>Part Name</th>
+                  <th>Remarks</th>
+                  <th>Qty</th>
                 </tr>
 
-              )
+              </thead>
 
-            })}
+              <tbody>
 
-          </tbody>
+                {displayParts.length === 0 ? (
 
-        </table>
+                  <tr>
+                    <td className="parts-empty-state" colSpan={5}>
+                      {partsLoading
+                        ? "Loading parts..."
+                        : searchLoading
+                          ? "Searching parts..."
+                          : activeImageNumber
+                            ? `No parts found for image no ${activeImageNumber}`
+                            : "No parts found"}
+                    </td>
+                  </tr>
+
+                ) : displayParts.map(part => {
+
+                  const qty = quantities[part.id] || 1
+                  const availableStock = getAvailableStock(part)
+
+                  return (
+
+                    <tr
+                      key={part.id}
+                      className={`${availableStock === 0 ? "row-out-stock" : ""}${activeImageNumber && part.imageNumber?.trim() === activeImageNumber ? " row-hotspot-match" : ""}`}
+                    >
+
+                      <td>
+
+                        <input
+                          type="checkbox"
+                          checked={selectedParts.includes(part.id)}
+                          disabled={availableStock === 0}
+                          onChange={() => toggleSelect(part)}
+                        />
+
+                      </td>
+
+                      <td className="part-number-cell">{part.partNumber}</td>
+                      <td className="part-name-cell">{part.partName}</td>
+
+                      <td>
+
+                        <input
+                          className="remarks-input"
+                          value={remarks[part.id] || ""}
+                          onChange={(e) =>
+                            setRemarks(prev => ({
+                              ...prev,
+                              [part.id]: e.target.value
+                            }))
+                          }
+                        />
+
+                      </td>
+
+                      <td>
+
+                        <div className="qty-control">
+
+                          <button
+                            onClick={() => changeQty(part.id, -1)}
+                            disabled={qty <= 1}
+                          >
+                            -
+                          </button>
+
+                          <span>{qty}</span>
+
+                          <button
+                            onClick={() => changeQty(part.id, 1)}
+                            disabled={qty >= availableStock}
+                          >
+                            +
+                          </button>
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+
+                  )
+
+                })}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
 
       </div>
 

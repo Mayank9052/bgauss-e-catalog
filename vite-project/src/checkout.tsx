@@ -72,7 +72,24 @@ const CheckoutPage = () => {
     return `${baseUrl}/${normalized}`;
   };
 
-  const normalizeOrderSummary = (rawOrder: any): OrderSummary => ({
+  const buildOrderItemsFromCart = (): OrderSummaryItem[] =>
+    items.map((item) => {
+      const quantity = quantities[item.id] ?? item.quantity;
+
+      return {
+        id: item.partId,
+        partName: item.partName,
+        partNumber: item.partNumber,
+        price: item.price,
+        quantity,
+        subTotal: item.price * quantity
+      };
+    });
+
+  const normalizeOrderSummary = (
+    rawOrder: any,
+    fallbackItems: OrderSummaryItem[] = []
+  ): OrderSummary => ({
     orderId: rawOrder.orderId ?? rawOrder.OrderId ?? null,
     totalAmount: Number(
       rawOrder.totalAmount ?? rawOrder.TotalAmount ?? rawOrder.total ?? rawOrder.Total ?? 0
@@ -81,7 +98,7 @@ const CheckoutPage = () => {
       ? rawOrder.items
       : Array.isArray(rawOrder.Items)
         ? rawOrder.Items
-        : [],
+        : fallbackItems,
     message: rawOrder.message ?? rawOrder.Message
   });
 
@@ -308,8 +325,9 @@ const CheckoutPage = () => {
         return;
       }
 
+      const orderItems = buildOrderItemsFromCart();
       const res = await axios.post("/cart/checkout");
-      const orderData = normalizeOrderSummary(res.data);
+      const orderData = normalizeOrderSummary(res.data, orderItems);
 
       sessionStorage.setItem(
         "latestOrder",
@@ -404,14 +422,29 @@ const CheckoutPage = () => {
 
         <h1>Cart</h1>
 
-        <div className="checkout-table-wrap">
+        <div className="checkout-table-panel">
 
-          <table className="checkout-cart-table">
+          <div className="checkout-table-actions">
+            <span className="checkout-table-title">Cart Items</span>
+          </div>
+
+          <div className="checkout-table-wrap">
+
+            <table className="checkout-cart-table">
+
+            <colgroup>
+              <col className="checkout-col-action" />
+              <col className="checkout-col-product" />
+              <col className="checkout-col-part-number" />
+              <col className="checkout-col-price" />
+              <col className="checkout-col-qty" />
+              <col className="checkout-col-total" />
+            </colgroup>
 
             <thead>
               <tr>
-                <th></th>
-                <th>Product Name</th>
+                <th>Action</th>
+                <th>Product</th>
                 <th>Product No.</th>
                 <th>Price</th>
                 <th>Quantity</th>
@@ -441,13 +474,43 @@ const CheckoutPage = () => {
 
                     </td>
 
-                    <td>{item.partName}</td>
+                    <td className="checkout-product-cell">
 
-                    <td>{item.partNumber}</td>
+                      <div className="checkout-product-info">
 
-                    <td>Rs. {item.price.toFixed(2)}</td>
+                        {imageSrc ? (
 
-                    <td>
+                          <img
+                            src={imageSrc}
+                            alt={item.partName}
+                            className="checkout-product-img"
+                          />
+
+                        ) : (
+
+                          <div className="checkout-product-placeholder">
+                            No Image
+                          </div>
+
+                        )}
+
+                        <div className="checkout-product-meta">
+                          <span className="checkout-product-name">
+                            {item.partName}
+                          </span>
+                        </div>
+
+                      </div>
+
+                    </td>
+
+                    <td className="checkout-part-number">{item.partNumber}</td>
+
+                    <td className="checkout-money">
+                      Rs. {item.price.toFixed(2)}
+                    </td>
+
+                    <td className="checkout-qty-cell">
 
                       <input
                         type="number"
@@ -471,7 +534,9 @@ const CheckoutPage = () => {
 
                     </td>
 
-                    <td>Rs. {(item.price * qty).toFixed(2)}</td>
+                    <td className="checkout-money checkout-subtotal">
+                      Rs. {(item.price * qty).toFixed(2)}
+                    </td>
 
                   </tr>
 
@@ -479,9 +544,21 @@ const CheckoutPage = () => {
 
               })}
 
+              {filteredItems.length === 0 && (
+
+                <tr>
+                  <td colSpan={6} className="checkout-empty-row">
+                    No products found in cart
+                  </td>
+                </tr>
+
+              )}
+
             </tbody>
 
-          </table>
+            </table>
+
+          </div>
 
         </div>
 

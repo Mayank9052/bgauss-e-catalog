@@ -13,7 +13,6 @@ QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 // ================= CONTROLLERS =================
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -31,9 +30,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // ================= JWT AUTH =================
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-string jwtKey = jwtSettings["Key"] ?? throw new InvalidOperationException("JwtSettings:Key is missing");
-string jwtIssuer = jwtSettings["Issuer"] ?? "BGAUSS.Api";
-string jwtAudience = jwtSettings["Audience"] ?? "BGAUSS.Client";
+string jwtKey     = jwtSettings["Key"]      ?? throw new InvalidOperationException("JwtSettings:Key is missing");
+string jwtIssuer  = jwtSettings["Issuer"]   ?? "BGAUSS.Api";
+string jwtAudience= jwtSettings["Audience"] ?? "BGAUSS.Client";
 var key = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication("Bearer")
@@ -42,13 +41,13 @@ builder.Services.AddAuthentication("Bearer")
         options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(key)
+            ValidIssuer              = jwtIssuer,
+            ValidAudience            = jwtAudience,
+            IssuerSigningKey         = new SymmetricSecurityKey(key)
         };
     });
 
@@ -56,19 +55,17 @@ builder.Services.AddAuthorization();
 
 // ================= SWAGGER =================
 builder.Services.AddEndpointsApiExplorer();
-
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
+        Name        = "Authorization",
+        Type        = SecuritySchemeType.Http,
+        Scheme      = "bearer",
+        BearerFormat= "JWT",
+        In          = ParameterLocation.Header,
         Description = "Enter: Bearer {your token}"
     });
-
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -77,7 +74,7 @@ builder.Services.AddSwaggerGen(options =>
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
+                    Id   = "Bearer"
                 }
             },
             new string[] {}
@@ -90,35 +87,39 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactPolicy", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "http://192.168.68.54:5173"
-            )
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
 // ================= SERVICES =================
 builder.Services.AddScoped<ISearchService, SearchService>();
 
+// ================= BUILD APP =================
 var app = builder.Build();
 
 // ================= MIDDLEWARE ORDER =================
+// CORS must be first
 app.UseCors("ReactPolicy");
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-app.UseHttpsRedirection();
+// Swagger — available in all environments for easy testing
+app.UseSwagger();
+app.UseSwaggerUI();
 
-app.UseAuthentication();   // MUST come before Authorization
+// Do NOT use HTTPS redirection — running plain HTTP on IIS port 5000
+// app.UseHttpsRedirection();
+
+app.UseAuthentication();
 app.UseAuthorization();
 
+// Serve static files from wwwroot (images, CSS, JS)
 app.UseStaticFiles();
 
+// API controllers
 app.MapControllers();
+
+// SPA fallback — serves index.html for all non-API routes
+app.MapFallbackToFile("index.html");
 
 app.Run();

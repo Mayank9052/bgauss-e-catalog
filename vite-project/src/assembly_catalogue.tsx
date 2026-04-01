@@ -14,14 +14,16 @@ interface VehicleSearchState {
   modelId?: number | string;
 }
 
+// ── FIX: use relative URL so images work on any host (localhost OR live IP)
 const resolveAssemblyImage = (imagePath?: string | null): string => {
   if (!imagePath) return "";
 
   const normalized = imagePath
-    .replace(/\\/g, "/")
-    .replace(/^\/+/, "");
+    .replace(/\\/g, "/")   // backslash → forward slash
+    .replace(/^\/+/, "");  // remove leading slashes
 
-  return `http://localhost:5053/${normalized}`;
+  //return `/${normalized}`;  // relative URL — works on localhost:5053 AND 13.223.206.251:5000
+  return `http://localhost:5053/${normalized}`;  // absolute URL — works only on localhost:5053, breaks on
 };
 
 const AssemblyCatalogue = () => {
@@ -32,129 +34,76 @@ const AssemblyCatalogue = () => {
   const searchState = location.state as VehicleSearchState;
   const modelId = Number(searchState?.modelId);
 
-  const [assemblies, setAssemblies] = useState<Assembly[]>([]);
+  const [assemblies, setAssemblies]             = useState<Assembly[]>([]);
   const [visibleAssemblies, setVisibleAssemblies] = useState<Assembly[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchLoading, setSearchLoading] = useState(false);
-
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const [zoomImage, setZoomImage] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
-  const [origin, setOrigin] = useState("center center");
+  const [loading, setLoading]                   = useState(true);
+  const [searchLoading, setSearchLoading]       = useState(false);
+  const [searchTerm, setSearchTerm]             = useState("");
+  const [zoomImage, setZoomImage]               = useState<string | null>(null);
+  const [scale, setScale]                       = useState(1);
+  const [origin, setOrigin]                     = useState("center center");
 
   useEffect(() => {
-
     const fetchAssemblies = async () => {
-
       if (!Number.isFinite(modelId)) {
         setAssemblies([]);
         setVisibleAssemblies([]);
         setLoading(false);
         return;
       }
-
       setLoading(true);
-
       try {
-
         const res = await fetch(`/api/assemblies?modelId=${modelId}`);
-
-        if (!res.ok) {
-          throw new Error("Failed to fetch assemblies");
-        }
-
+        if (!res.ok) throw new Error("Failed to fetch assemblies");
         const data = await res.json();
-
         setAssemblies(data);
         setVisibleAssemblies(data);
-
       } catch {
-
         setAssemblies([]);
         setVisibleAssemblies([]);
-
       } finally {
-
         setLoading(false);
-
       }
-
     };
-
     fetchAssemblies();
-
   }, [modelId]);
 
   useEffect(() => {
-
     const trimmedTerm = searchTerm.trim();
-
     if (!trimmedTerm) {
       setVisibleAssemblies(assemblies);
       setSearchLoading(false);
       return;
     }
-
     if (!Number.isFinite(modelId)) {
       setVisibleAssemblies([]);
       setSearchLoading(false);
       return;
     }
-
     let cancelled = false;
-
     setSearchLoading(true);
-
     const timeoutId = window.setTimeout(async () => {
-
       try {
-
         const data = await commonSearch<Assembly>("assemblies", trimmedTerm);
-
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         setVisibleAssemblies(
           data.filter((assembly) => Number(assembly.modelId) === modelId)
         );
-
       } catch {
-
-        if (!cancelled) {
-          setVisibleAssemblies([]);
-        }
-
+        if (!cancelled) setVisibleAssemblies([]);
       } finally {
-
-        if (!cancelled) {
-          setSearchLoading(false);
-        }
-
+        if (!cancelled) setSearchLoading(false);
       }
-
     }, 300);
-
     return () => {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-
   }, [assemblies, modelId, searchTerm]);
 
   useEffect(() => {
-
-    if (zoomImage) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "auto";
-    }
-
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-
+    document.body.style.overflow = zoomImage ? "hidden" : "auto";
+    return () => { document.body.style.overflow = "auto"; };
   }, [zoomImage]);
 
   const openZoom = (image: string) => {
@@ -163,50 +112,29 @@ const AssemblyCatalogue = () => {
   };
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-
     e.preventDefault();
-
     const rect = e.currentTarget.getBoundingClientRect();
-
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
+    const x = ((e.clientX - rect.left) / rect.width)  * 100;
+    const y = ((e.clientY - rect.top)  / rect.height) * 100;
     setOrigin(`${x}% ${y}%`);
-
     setScale(prev => {
-
-      const zoomAmount = e.deltaY < 0 ? 0.2 : -0.2;
-
-      let next = prev + zoomAmount;
-
-      if (next < 1) next = 1;
-      if (next > 4) next = 4;
-
-      return next;
-
+      const next = prev + (e.deltaY < 0 ? 0.2 : -0.2);
+      return Math.min(Math.max(next, 1), 4);
     });
-
   };
 
   return (
-
     <div className="assembly-page">
 
       <nav className="epc-navbar">
-
         <div className="brand">
-
-          <img src={logo} className="nav-logo"/>
-
+          <img src={logo} className="nav-logo" />
           <div className="brand-text">
             <span className="logo-text">BGAUSS</span>
             <span className="sub-title">Electronic Parts Catalog</span>
           </div>
-
         </div>
-
         <div className="nav-actions">
-
           <input
             type="text"
             placeholder="Search assembly..."
@@ -214,30 +142,16 @@ const AssemblyCatalogue = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-
-          <button
-            className="nav-icon-btn active"
-            onClick={() => navigate("/dashboard")}
-          >
+          <button className="nav-icon-btn active" onClick={() => navigate("/dashboard")}>
             <FaHome />
           </button>
-
-          <button className="nav-icon-btn">
-            <FaPhoneAlt />
-          </button>
-
-          <button className="nav-icon-btn">
-            <FaShoppingCart />
-          </button>
-
-          <AccountMenu/>
-
+          <button className="nav-icon-btn"><FaPhoneAlt /></button>
+          <button className="nav-icon-btn"><FaShoppingCart /></button>
+          <AccountMenu />
         </div>
-
       </nav>
 
       <main className="assembly-content">
-
         <h2>Assembly Catalogue</h2>
         <p className="assembly-status">
           {loading
@@ -248,92 +162,61 @@ const AssemblyCatalogue = () => {
         </p>
 
         {loading ? (
-
           <p>Loading assemblies...</p>
-
         ) : (
-
           <div className="assembly-grid">
-
             {visibleAssemblies.length === 0 ? (
-
               <p>No assemblies found</p>
-
             ) : (
-
               visibleAssemblies.map((assembly) => (
-
                 <button
                   key={assembly.id}
                   className="assembly-card"
                   onClick={() =>
                     navigate("/parts", {
-                      state:{
-                        modelId: searchState?.modelId,
-                        assemblyId: assembly.id,
-                        assemblyName: assembly.assemblyName,
-                        assemblyImage: resolveAssemblyImage(assembly.imagePath)
-                      }
+                      state: {
+                        modelId:       searchState?.modelId,
+                        assemblyId:    assembly.id,
+                        assemblyName:  assembly.assemblyName,
+                        assemblyImage: resolveAssemblyImage(assembly.imagePath),
+                      },
                     })
                   }
                 >
-
                   <img
                     src={resolveAssemblyImage(assembly.imagePath)}
                     className="assembly-image"
-                    onClick={(e)=>{
+                    onClick={(e) => {
                       e.stopPropagation();
                       openZoom(resolveAssemblyImage(assembly.imagePath));
                     }}
                   />
-
-                  <div className="assembly-name">
-                    {assembly.assemblyName}
-                  </div>
-
+                  <div className="assembly-name">{assembly.assemblyName}</div>
                 </button>
-
               ))
             )}
-
           </div>
-
         )}
-
       </main>
 
       {zoomImage && (
-
-        <div
-          className="image-modal"
-          onClick={()=>setZoomImage(null)}
-        >
-
+        <div className="image-modal" onClick={() => setZoomImage(null)}>
           <div
             className="zoom-container"
-            onClick={(e)=>e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             onWheel={handleWheel}
           >
-
             <img
               src={zoomImage}
               className="zoomed-image"
-              style={{
-                transform:`scale(${scale})`,
-                transformOrigin:origin
-              }}
+              style={{ transform: `scale(${scale})`, transformOrigin: origin }}
             />
-
           </div>
-
         </div>
-
       )}
 
     </div>
-
   );
-
 };
 
 export default AssemblyCatalogue;

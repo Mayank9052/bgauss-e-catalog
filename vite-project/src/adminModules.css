@@ -1,507 +1,645 @@
-.admin-modules-shell{
-min-height:100vh;
-background:#e9e9e9;
-font-family:"Segoe UI",Tahoma;
+/* ================================================= */
+/* ADMIN MODULES SHELL                               */
+/* ================================================= */
+
+.admin-modules-shell {
+  min-height: 100vh;
+  background: #e9e9e9;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  isolation: auto;
+  transform: none;
+  filter: none;
 }
 
-/* NAVBAR */
+/* ================================================= */
+/* NAVBAR                                            */
+/* ================================================= */
 
-.modules-navbar{
-width:100%;
-height:72px;
-background:linear-gradient(90deg,#0e4f67,#0b3d52);
-display:flex;
-align-items:center;
-justify-content:space-between;
-padding:0 60px;
-color:white;
-box-shadow:0 6px 18px rgba(0,0,0,.25);
+.modules-navbar {
+  width: 100%;
+  height: 72px;
+  background: linear-gradient(90deg, #0e4f67, #0b3d52);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 60px;
+  color: white;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 100;
 }
 
 /* LEFT SIDE */
 
-.modules-navbar-left{
-display:flex;
-align-items:center;
-gap:16px;
+.modules-navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.modules-logo{
-height:42px;
+.modules-logo {
+  height: 42px;
 }
 
-.modules-title{
-display:flex;
-flex-direction:column;
+.modules-title {
+  display: flex;
+  flex-direction: column;
 }
 
-.logo-text{
-font-size:22px;
-font-weight:700;
-letter-spacing:.5px;
+.logo-text {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
-.sub-title{
-font-size:13px;
-opacity:.9;
+.sub-title {
+  font-size: 13px;
+  opacity: 0.9;
 }
 
 /* RIGHT SIDE */
 
-.modules-navbar-right{
-display:flex;
-align-items:center;
-gap:16px;
+.modules-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 /* ICON BUTTON */
 
-.modules-nav-icon{
-display:flex;
-align-items:center;
-justify-content:center;
-width:42px;
-height:42px;
-border:none;
-border-radius:12px;
-background:rgba(255,255,255,0.15);
-color:white;
-font-size:18px;
-cursor:pointer;
-transition:all .25s ease;
+.modules-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
 
-.modules-nav-icon:hover{
-background:rgba(255,255,255,0.28);
-transform:translateY(-2px);
+.modules-nav-icon:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
 }
 
-/* PAGE CONTAINER */
+/* ================================================= */
+/* PAGE CONTAINER                                    */
+/* ================================================= */
 
-.admin-modules-page{
-max-width:1200px;
-margin:30px auto;
-background:#efefef;
-border:1px solid #c8c8c8;
-box-shadow:0 2px 8px rgba(0,0,0,0.08);
-padding:30px;
+.admin-modules-page {
+  max-width: 1200px;
+  margin: 30px auto;
+  background: #efefef;
+  border: 1px solid #c8c8c8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 30px;
+  box-sizing: border-box;
+  isolation: auto;
+  transform: none;
 }
 
-/* CONTENT */
+/* ================================================= */
+/* CONTENT                                           */
+/* ================================================= */
 
-.modules-content{
-max-width:720px;
-margin:auto;
+.modules-content {
+  max-width: 720px;
+  margin: auto;
 }
 
-/* HEADER */
-
-.modules-content h2{
-font-size:32px;
-margin-bottom:20px;
+.modules-content h2 {
+  font-size: 32px;
+  margin-bottom: 20px;
 }
 
-/* INPUT AREA */
+/* ================================================= */
+/* HEADER / INPUT AREA                               */
+/* ================================================= */
 
-.modules-header{
-display:flex;
-align-items:center;
-gap:12px;
-margin-bottom:20px;
+.modules-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
-.modules-input{
-height:40px;
-padding:8px 12px;
-border:1px solid #ccc;
-border-radius:6px;
-width:260px;
-font-size:14px;
+.modules-input {
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 260px;
+  font-size: 14px;
+  box-sizing: border-box;
 }
 
-/* BUTTONS */
+/* ================================================= */
+/* BUTTONS                                           */
+/* ================================================= */
 
-.modules-create-btn{
-background:#28a745;
-border:none;
-color:white;
-padding:9px 18px;
-border-radius:6px;
-cursor:pointer;
-font-size:14px;
+.modules-create-btn {
+  background: #28a745;
+  border: none;
+  color: white;
+  padding: 9px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-.modules-create-btn:hover{
-background:#218838;
+.modules-create-btn:hover {
+  background: #218838;
 }
 
-.modules-back-btn{
-background:#0c81b5;
-border:none;
-color:white;
-padding:9px 18px;
-border-radius:6px;
-cursor:pointer;
-font-size:14px;
+.modules-back-btn {
+  background: #0c81b5;
+  border: none;
+  color: white;
+  padding: 9px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-.modules-back-btn:hover{
-background:#096c97;
+.modules-back-btn:hover {
+  background: #096c97;
 }
 
-/* TABLE */
+/* ================================================= */
+/* TABLE                                             */
+/* ================================================= */
 
-.modules-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
+.modules-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
 }
 
-.modules-table th{
-background:#1e7fa6;
-color:white;
-padding:12px;
-border:1px solid #c4c4c4;
-font-size:16px;
+.modules-table th {
+  background: #1e7fa6;
+  color: white;
+  padding: 12px;
+  border: 1px solid #c4c4c4;
+  font-size: 16px;
 }
 
-.modules-table td{
-background:white;
-padding:12px;
-border:1px solid #cfcfcf;
-text-align:center;
+.modules-table td {
+  background: white;
+  padding: 12px;
+  border: 1px solid #cfcfcf;
+  text-align: center;
 }
 
-/* DELETE BUTTON */
+/* TABLE ACTION BUTTONS */
 
-.modules-delete-btn{
-border:none;
-background:transparent;
-font-size:18px;
-cursor:pointer;
-color:#f53131;
+.modules-delete-btn {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: #f53131;
+  transition: transform 0.15s ease;
 }
 
-.modules-delete-btn:hover{
-transform:scale(1.1);
+.modules-delete-btn:hover {
+  transform: scale(1.1);
 }
 
-.modules-update-btn{
-border:none;
-background:transparent;
-font-size:18px;
-cursor:pointer;
-color:#0c81b5;
-margin-right:10px;
+.modules-update-btn {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: #0c81b5;
+  margin-right: 10px;
+  transition: transform 0.15s ease;
 }
 
-.modules-update-btn:hover{
-transform:scale(1.1);
+.modules-update-btn:hover {
+  transform: scale(1.1);
 }
 
-/* IMPORT MODAL */
+/* ================================================= */
+/* CUSTOM DROPDOWN (replaces native select)          */
+/* ================================================= */
 
-.import-modal{
-position:fixed;
-inset:0;
-background:rgba(0,0,0,0.45);
-display:flex;
-align-items:center;
-justify-content:center;
-z-index:1000;
+.custom-select-wrapper {
+  position: relative;
+  width: 100%;
 }
 
-.import-modal-content{ 
-background:white;
-padding:22px;
-border-radius:10px;
-width:420px;
-max-height:80vh;
-display:flex;
-flex-direction:column;
-gap:12px;
-overflow-y:auto;
-box-shadow:0 10px 25px rgba(0,0,0,.25);
+.custom-select-trigger {
+  width: 100%;
+  height: 44px;
+  padding: 0 40px 0 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  user-select: none;
+  transition: border-color 0.2s ease;
 }
 
-/* MODAL TITLE */
-
-.import-modal-content h3{
-text-align:center;
-font-size:22px;
-margin-bottom:6px;
-font-weight:600;
-color:#222;
+.custom-select-trigger:hover,
+.custom-select-trigger.open {
+  border-color: #0c81b5;
 }
-/* inputs */
+
+.custom-select-arrow {
+  font-size: 12px;
+  color: #555;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.custom-select-arrow.open {
+  transform: rotate(180deg);
+}
+
+.custom-select-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  overflow: hidden;
+  display: none;
+}
+
+.custom-select-options.open {
+  display: block;
+}
+
+.custom-select-option {
+  padding: 12px 14px;
+  font-size: 15px;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.custom-select-option:last-child {
+  border-bottom: none;
+}
+
+.custom-select-option:hover {
+  background: #e8f4fb;
+  color: #0c81b5;
+}
+
+.custom-select-option.selected {
+  background: #0c81b5;
+  color: white;
+  font-weight: 600;
+}
+
+.custom-select-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-label.placeholder {
+  color: #999;
+}
+
+
+
+
+.import-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.import-modal-content {
+  background: white;
+  padding: 22px;
+  border-radius: 10px;
+  width: 420px;
+  max-width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+.import-modal-content h3 {
+  text-align: center;
+  font-size: 22px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #222;
+}
 
 .import-modal-content select,
-.import-modal-content input{
-height:36px;
-border:1px solid #ccc;
-border-radius:6px;
-padding:6px 10px;
-font-size:14px;
+.import-modal-content input {
+  height: 36px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* buttons */
+/* MODAL BUTTONS */
 
-.template-btn{
-background:#0c81b5;
-color:white;
-border:none;
-padding:8px 12px;
-border-radius:6px;
-cursor:pointer;
+.template-btn {
+  background: #0c81b5;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-.import-btn{
-background:#28a745;
-color:white;
-border:none;
-padding:8px 12px;
-border-radius:6px;
-cursor:pointer;
+.import-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-.cancel-btn{
-background:#ccc;
-border:none;
-padding:8px 12px;
-border-radius:6px;
-cursor:pointer;
+.cancel-btn {
+  background: #ccc;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-.modal-buttons{
-display:flex;
-justify-content:flex-end;
-margin-top:10px;
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
 }
 
-/* ASSEMBLY FORM */
+/* ================================================= */
+/* ASSEMBLY FORM                                     */
+/* ================================================= */
 
-.assembly-form{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:8px;
-margin-top:14px;
+.assembly-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
 }
 
-.assembly-form input{
-padding:7px;
-border:1px solid #ccc;
-border-radius:4px;
+.assembly-form input {
+  padding: 7px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
 }
 
-.assembly-form button{
-grid-column:span 2;
-padding:8px;
-background:#1e88e5;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
+.assembly-form button {
+  grid-column: span 2;
+  padding: 8px;
+  background: #1e88e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-/* ASSEMBLY TABLE */
+/* ================================================= */
+/* ASSEMBLY TABLE                                    */
+/* ================================================= */
 
-.assembly-table{
-width:100%;
-margin-top:14px;
-border-collapse:collapse;
-font-size:13px;
+.assembly-table {
+  width: 100%;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-size: 13px;
 }
 
 .assembly-table th,
-.assembly-table td{
-border:1px solid #ddd;
-padding:6px;
-text-align:center;
+.assembly-table td {
+  border: 1px solid #ddd;
+  padding: 6px;
+  text-align: center;
 }
 
-.assembly-table th{
-background:#f3f3f3;
+.assembly-table th {
+  background: #f3f3f3;
 }
 
 /* ================================================= */
-/* RESPONSIVE MEDIA QUERIES                          */
+/* RESPONSIVE — TABLETS (max-width: 768px)           */
 /* ================================================= */
 
-/* TABLETS AND SMALLER (Max 768px) */
 @media (max-width: 768px) {
-  .admin-navbar, 
   .modules-navbar {
-    padding: 0 15px; /* Tighter padding for mobile */
+    padding: 10px 15px;
     height: auto;
-    min-height: 60px; /* Ensures enough space for two lines */
-    padding-top: 10px;
-    padding-bottom: 10px;
-    flex-wrap: wrap; /* Allows icons to wrap if brand is too wide */
+    min-height: 60px;
+    flex-wrap: wrap;
     justify-content: space-between;
   }
 
-  /* Ensure the container is a column to stack text vertically */
-  .admin-title-wrap, 
-  .modules-title {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start; /* Keeps text left-aligned */
-  }
-
-  .logo-text {
-    font-size: 18px; /* Slightly smaller for mobile */
-    line-height: 1.2;
-  }
-
-  .sub-title {
-    display: block !important; /* Forces it to show */
-    font-size: 10px; /* Small but legible */
-    opacity: 0.85;
-    margin-top: -2px; /* Pulls it closer to the brand name */
-    white-space: nowrap; /* Prevents the subtitle from breaking into 3 lines */
-  }
-
-  .admin-navbar-left, 
   .modules-navbar-left {
     gap: 10px;
   }
 
-  .admin-logo, 
   .modules-logo {
-    height: 32px; /* Scale logo down slightly */
+    height: 32px;
   }
 
-  .admin-navbar-right, 
+  .modules-title {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .logo-text {
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .sub-title {
+    display: block;
+    font-size: 10px;
+    opacity: 0.85;
+    margin-top: -2px;
+    white-space: nowrap;
+  }
+
   .modules-navbar-right {
     gap: 6px;
   }
 
-  .nav-icon-btn, 
   .modules-nav-icon {
     width: 36px;
     height: 36px;
     font-size: 16px;
   }
 
-  .admin-header {
-  display: flex;
-  flex-direction: column; /* Stacks the back button group and the action group */
-  gap: 12px;
-  align-items: stretch;
-  margin-bottom: 25px;
-}
-
-.back-btn {
-  width: 100%;
-  padding: 12px;
-  font-weight: 600;
-  text-align: center;
-  /* Ensure it looks like a primary distinct action */
-  background: #0c81b5; 
-  border-radius: 8px;
-
   .modules-header {
-  display: flex;
-  flex-direction: row; /* Keeps them side-by-side */
-  gap: 10px;
-  width: 100%;
-  margin-bottom: 20px;
-}
-
-.modules-create-btn, 
-.modules-back-btn {
-  flex: 1; /* Makes both buttons equal width */
-  padding: 12px 5px;
-  font-size: 14px;
-  font-weight: 600;
-  border-radius: 8px;
-  text-align: center;
-}
-}
-
-.admin-actions {
-  display: flex;
-  flex-direction: row; /* Keeps "Open Module" and "Create User" side-by-side */
-  gap: 10px;
-  width: 100%;
-}
-
-.admin-actions button {
-  flex: 1; /* Makes both buttons exactly 50% width */
-  padding: 12px 5px;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap; /* Prevents text from breaking into two lines */
-  justify-content: center;
-  border-radius: 8px;
-}   
-}
-
-/* TABLE RESPONSIVENESS (The "Card" Flip) */
-@media (max-width: 600px) {
-  /* Force table to not behave like a table anymore */
-  .admin-table, 
-  .admin-table thead, 
-  .admin-table tbody, 
-  .admin-table th, 
-  .admin-table td, 
-  .admin-table tr { 
-    display: block; 
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 20px;
   }
 
-  /* Hide table headers (but keep for screen readers) */
-  .admin-table thead tr { 
+  .modules-input {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+  }
+
+  .modules-create-btn,
+  .modules-back-btn {
+    flex: 1;
+    padding: 12px 5px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    text-align: center;
+  }
+}
+
+/* ================================================= */
+/* RESPONSIVE — SMALL SCREENS (max-width: 600px)     */
+/* ================================================= */
+
+@media (max-width: 600px) {
+  .import-modal-content {
+    width: 90%;
+    max-width: 400px;
+    padding: 15px;
+    box-sizing: border-box;
+  }
+
+  .import-modal-content select,
+  .import-modal-content input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    font-size: 14px;
+    height: 40px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px auto;
+    padding-right: 30px;
+  }
+
+  .assembly-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .assembly-form input,
+  .assembly-form button {
+    width: 100%;
+  }
+
+  .assembly-form button {
+    grid-column: span 1;
+  }
+
+  .assembly-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  /* ADMIN TABLE — CARD VIEW */
+
+  .admin-table,
+  .admin-table thead,
+  .admin-table tbody,
+  .admin-table th,
+  .admin-table td,
+  .admin-table tr {
+    display: block;
+  }
+
+  .admin-table thead tr {
     position: absolute;
     top: -9999px;
     left: -9999px;
   }
 
-  .admin-table tr { 
+  .admin-table tr {
     border: 1px solid #ccc;
     margin-bottom: 10px;
     border-radius: 8px;
     overflow: hidden;
   }
 
-  .admin-table td { 
+  .admin-table td {
     border: none;
-    border-bottom: 1px solid #eee; 
+    border-bottom: 1px solid #eee;
     position: relative;
-    padding-left: 50% !important; 
-    text-align: right !important;
+    padding-left: 50%;
+    text-align: right;
     min-height: 40px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    box-sizing: border-box;
   }
 
-  /* Label the data using pseudo-elements */
-  .admin-table td:before { 
+  .admin-table td::before {
     position: absolute;
     left: 12px;
-    width: 45%; 
-    padding-right: 10px; 
+    width: 45%;
+    padding-right: 10px;
     white-space: nowrap;
     text-align: left;
     font-weight: bold;
     color: #1e7fa6;
   }
 
-  /* Add Labels back in since we hid the <thead> */
-  .admin-table td:nth-of-type(1):before { content: "Username"; }
-  .admin-table td:nth-of-type(2):before { content: "Role"; }
-  .admin-table td:nth-of-type(3):before { content: "Actions"; }
-
-  .admin-table td:last-child {
-    border-bottom: none;
-    background: #f9f9f9;
-  }
+  .admin-table td:nth-of-type(1)::before { content: "Username"; }
+  .admin-table td:nth-of-type(2)::before { content: "Role"; }
+  .admin-table td:nth-of-type(3)::before { content: "Actions"; }
 }
 
-/* MODAL RESPONSIVENESS */
+/* ================================================= */
+/* RESPONSIVE — MOBILE (max-width: 480px)            */
+/* ================================================= */
+
 @media (max-width: 480px) {
-  .modal-content {
+  .import-modal-content {
     width: 90%;
     margin: 0 10px;
   }

@@ -295,10 +295,6 @@ cursor:pointer;
 .modal-cancel:hover{
 background:#b5b5b5;
 }
-
-/* --- Existing styles remain, add/update these specific sections --- */
-
-/* NAVBAR RESPONSIVENESS */
 /* COMBINED NAVBAR RESPONSIVENESS */
 @media (max-width: 768px) {
   .admin-navbar, 

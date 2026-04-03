@@ -91,7 +91,6 @@ const CheckoutPage = () => {
     message: rawOrder.message ?? rawOrder.Message,
   });
 
-  /* ── Fetch cart ── */
   const fetchCart = async (showSyncAlert = false) => {
     try {
       const res = await axios.get("/cart/my-cart");
@@ -121,7 +120,6 @@ const CheckoutPage = () => {
 
   useEffect(() => { fetchCart(true); }, []);
 
-  /* ── Update quantity ── */
   const updateQuantity = async (id: number, value: number) => {
     const item = items.find((c) => c.id === id);
     if (!item || value < 1) return;
@@ -140,7 +138,6 @@ const CheckoutPage = () => {
     }
   };
 
-  /* ── Remove item ── */
   const removeItemDraft = async (id: number) => {
     try {
       await axios.delete(`/cart/remove/${id}`);
@@ -150,7 +147,6 @@ const CheckoutPage = () => {
     }
   };
 
-  /* ── Clear cart ── */
   const clearCheckoutItems = async () => {
     try {
       await axios.delete("/cart/empty");
@@ -161,20 +157,17 @@ const CheckoutPage = () => {
     }
   };
 
-  /* ── Total ── */
   const totalSum = items.reduce(
     (sum, item) => sum + item.price * (quantities[item.id] ?? item.quantity),
     0
   );
 
-  /* ── Search ── */
   const filteredItems = items.filter(
     (item) =>
       item.partName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.partNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  /* ── Shop more ── */
   const handleShopMore = () => {
     const storedSearchState = sessionStorage.getItem("partsSearchState");
     if (storedSearchState) {
@@ -184,7 +177,6 @@ const CheckoutPage = () => {
     navigate("/dashboard");
   };
 
-  /* ── Download CSV ── */
   const downloadCSV = async () => {
     try {
       const res = await axios.get("/cart/download/csv");
@@ -199,7 +191,6 @@ const CheckoutPage = () => {
     }
   };
 
-  /* ── Download PDF ── */
   const downloadPDF = async () => {
     try {
       const res = await axios.get("/cart/download/pdf");
@@ -214,7 +205,6 @@ const CheckoutPage = () => {
     }
   };
 
-  /* ── Place order ── */
   const placeOrder = async () => {
     if (items.length === 0) { alert("Your cart is empty"); return; }
     if (isSyncingCart) { alert("Cart is syncing with latest stock. Please wait."); return; }
@@ -240,10 +230,8 @@ const CheckoutPage = () => {
 
     <div className="checkout-page">
 
-      {/* ── Navbar ── */}
+      {/* ── Navbar: brand left, icons right, NO search ── */}
       <nav className="checkout-topbar">
-
-        {/* Row 1: brand + icon buttons */}
         <div className="checkout-topbar-row">
 
           <div className="checkout-topbar-left">
@@ -255,7 +243,6 @@ const CheckoutPage = () => {
           </div>
 
           <div className="checkout-topbar-right">
-
             <button
               className="nav-icon-btn"
               onClick={() => navigate("/dashboard")}
@@ -280,24 +267,9 @@ const CheckoutPage = () => {
             </div>
 
             <AccountMenu />
-
           </div>
 
         </div>
-
-        {/* Row 2: search strip */}
-        <div className="checkout-search-bar">
-          <div className="checkout-search">
-            <span className="search-icon"><FaSearch /></span>
-            <input
-              type="text"
-              placeholder="Search parts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-
       </nav>
 
       {/* ── Main content ── */}
@@ -307,12 +279,21 @@ const CheckoutPage = () => {
 
         <div className="checkout-table-panel">
 
+          {/* Table header with title + search */}
           <div className="checkout-table-actions">
             <span className="checkout-table-title">Cart Items</span>
+            <div className="checkout-search">
+              <span className="search-icon"><FaSearch /></span>
+              <input
+                type="text"
+                placeholder="Search parts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="checkout-table-wrap">
-
             <table className="checkout-cart-table">
 
               <colgroup>
@@ -336,7 +317,6 @@ const CheckoutPage = () => {
               </thead>
 
               <tbody>
-
                 {filteredItems.map((item) => {
                   const qty = quantities[item.id] ?? item.quantity;
                   const imageSrc = resolvePartImage(item);
@@ -344,7 +324,6 @@ const CheckoutPage = () => {
                   return (
                     <tr key={item.id}>
 
-                      {/* Action */}
                       <td data-label="Action">
                         <button
                           className="checkout-remove-btn"
@@ -355,7 +334,6 @@ const CheckoutPage = () => {
                         </button>
                       </td>
 
-                      {/* Product */}
                       <td className="checkout-product-cell" data-label="Product">
                         <div className="checkout-product-info">
                           {imageSrc ? (
@@ -373,17 +351,14 @@ const CheckoutPage = () => {
                         </div>
                       </td>
 
-                      {/* Part number */}
                       <td className="checkout-part-number" data-label="Part No.">
                         {item.partNumber}
                       </td>
 
-                      {/* Price */}
                       <td className="checkout-money" data-label="Price">
                         Rs. {item.price.toFixed(2)}
                       </td>
 
-                      {/* Quantity */}
                       <td className="checkout-qty-cell" data-label="Quantity">
                         <input
                           type="number"
@@ -398,7 +373,6 @@ const CheckoutPage = () => {
                         )}
                       </td>
 
-                      {/* Subtotal */}
                       <td className="checkout-money checkout-subtotal" data-label="Subtotal">
                         Rs. {(item.price * qty).toFixed(2)}
                       </td>
@@ -414,11 +388,9 @@ const CheckoutPage = () => {
                     </td>
                   </tr>
                 )}
-
               </tbody>
 
             </table>
-
           </div>
 
         </div>
@@ -426,10 +398,7 @@ const CheckoutPage = () => {
         {/* ── Footer ── */}
         <div className="checkout-footer">
 
-          {/* Desktop: text buttons | Mobile: icon buttons */}
           <div className="checkout-footer-buttons">
-
-            {/* Desktop text buttons */}
             <button className="checkout-page-btn" onClick={clearCheckoutItems}>
               <FaTrashAlt /> Empty Cart
             </button>
@@ -446,7 +415,6 @@ const CheckoutPage = () => {
               <FaCheckCircle /> Place Order
             </button>
 
-            {/* Mobile icon-only buttons */}
             <button className="checkout-icon-btn danger" onClick={clearCheckoutItems} title="Empty Cart">
               <FaTrashAlt />
               <span className="icon-label">Empty</span>
@@ -467,10 +435,8 @@ const CheckoutPage = () => {
               <FaCheckCircle />
               <span className="icon-label">Order</span>
             </button>
-
           </div>
 
-          {/* Summary */}
           <div className="checkout-summary">
             <div className="summary-row">
               <span>Items</span>

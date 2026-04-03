@@ -1,17 +1,19 @@
 /* ===== BACKGROUND ===== */
 .login-wrapper {
-  height: 100vh;
+  min-height: 100vh; /* changed from height to min-height */
   width: 100%;
   background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
   display: flex;
   justify-content: center;
   align-items: center;
   font-family: "Segoe UI", sans-serif;
+  padding: 20px; /* breathing room on small screens */
 }
 
 /* ===== CARD ===== */
 .login-card {
-  width: 1100px;
+  width: 100%;
+  max-width: 1100px; /* fluid, not fixed */
   height: 600px;
   display: flex;
   border-radius: 20px;
@@ -62,15 +64,11 @@
   color: white;
   font-size: 15px;
   outline: none;
+  -webkit-appearance: none; /* removes iOS default styling */
 }
 
-.form-group input::placeholder {
-  color: #d1d1d1;
-}
-
-.form-group input:focus {
-  background: rgba(255, 255, 255, 0.25);
-}
+.form-group input::placeholder { color: #d1d1d1; }
+.form-group input:focus { background: rgba(255, 255, 255, 0.25); }
 
 /* ERROR */
 .error {
@@ -80,6 +78,7 @@
 
 /* BUTTON */
 .login-btn {
+  width: 100%; /* ensures full-width tap target */
   padding: 15px;
   border-radius: 30px;
   border: none;
@@ -112,25 +111,84 @@
   animation: float 4s ease-in-out infinite;
 }
 
-/* FLOAT ANIMATION */
 @keyframes float {
-  0% { transform: translateY(0px); }
+  0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-12px); }
-  100% { transform: translateY(0px); }
 }
 
-/* RESPONSIVE */
-@media (max-width: 768px) {
+/* ===== TABLET (768px – 1024px) ===== */
+@media (max-width: 1024px) {
   .login-card {
-    flex-direction: column;
     height: auto;
-  }
-
-  .login-right {
-    display: none;
+    min-height: 560px;
   }
 
   .login-left {
-    padding: 40px;
+    padding: 50px 40px;
+  }
+
+  .login-right {
+    flex: 0 0 260px; /* shrinks but stays visible */
+  }
+}
+
+/* ===== MOBILE (≤768px) ===== */
+@media (max-width: 768px) {
+  .login-wrapper {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .login-card {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    border-radius: 0;
+    max-width: 100%;
+  }
+
+  /* Slim accent strip at top instead of hiding entirely */
+  .login-right {
+    flex: 0 0 180px;
+    order: -1; /* moves image above the form */
+  }
+
+  .ev-image {
+    width: 160px;
+    max-width: none;
+  }
+
+  .login-left {
+    flex: 1;
+    padding: 40px 28px;
+    justify-content: flex-start;
+  }
+
+  .logo-section {
+    margin-bottom: 28px;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-group input {
+    font-size: 16px; /* critical: prevents iOS auto-zoom on focus */
+    padding: 14px 12px;
+  }
+
+  .login-btn {
+    border-radius: 12px;
+  }
+}
+
+/* ===== SMALL MOBILE (≤375px) ===== */
+@media (max-width: 375px) {
+  .login-left {
+    padding: 32px 20px;
+  }
+
+  .login-right {
+    flex: 0 0 140px;
   }
 }

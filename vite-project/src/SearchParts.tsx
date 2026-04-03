@@ -43,57 +43,35 @@ const SearchParts = () => {
   const hydratePartState = (items: Part[]) => {
 
     setQuantities(prev => {
-
       const next = { ...prev }
-
       items.forEach((part) => {
-        if (next[part.id] == null) {
-          next[part.id] = 1
-        }
+        if (next[part.id] == null) next[part.id] = 1
       })
-
       return next
-
     })
 
     setRemarks(prev => {
-
       const next = { ...prev }
-
       items.forEach((part) => {
-        if (next[part.id] == null) {
-          next[part.id] = part.remarks ?? ""
-        }
+        if (next[part.id] == null) next[part.id] = part.remarks ?? ""
       })
-
       return next
-
     })
 
   }
 
   const fetchCart = async () => {
-
     try {
-
       const res = await axios.get("/cart/my-cart")
       const cartItems: CartItemSummary[] = res.data?.items || []
-
       setCartCount(cartItems.length)
-
       setCartPartQuantities(
-        Object.fromEntries(
-          cartItems.map((item) => [item.partId, item.quantity])
-        )
+        Object.fromEntries(cartItems.map((item) => [item.partId, item.quantity]))
       )
-
     } catch {
-
       setCartCount(0)
       setCartPartQuantities({})
-
     }
-
   }
 
   useEffect(() => {
@@ -108,32 +86,22 @@ const SearchParts = () => {
       }
 
       try {
-
         setPartsLoading(true)
-
         const positionFilter = partPosition != null
           ? `&partPosition=${encodeURIComponent(String(partPosition))}`
           : ""
-
         const res = await fetch(
           `/api/parts/by-assembly?modelId=${modelId}&assemblyId=${assemblyId}${positionFilter}`
         )
-
         const data = await res.json()
-
         setAllParts(data)
         setVisibleParts(data)
         hydratePartState(data)
-
       } catch {
-
         setAllParts([])
         setVisibleParts([])
-
       } finally {
-
         setPartsLoading(false)
-
       }
 
     }
@@ -160,40 +128,23 @@ const SearchParts = () => {
     }
 
     let cancelled = false
-
     setSearchLoading(true)
 
     const timeoutId = window.setTimeout(async () => {
-
       try {
-
         const data = await commonSearch<Part>("parts", trimmedTerm)
         const filteredParts = data.filter((part) =>
           Number(part.modelId) === Number(modelId) &&
           Number(part.assemblyId) === Number(assemblyId)
         )
-
-        if (cancelled) {
-          return
-        }
-
+        if (cancelled) return
         hydratePartState(filteredParts)
         setVisibleParts(filteredParts)
-
       } catch {
-
-        if (!cancelled) {
-          setVisibleParts([])
-        }
-
+        if (!cancelled) setVisibleParts([])
       } finally {
-
-        if (!cancelled) {
-          setSearchLoading(false)
-        }
-
+        if (!cancelled) setSearchLoading(false)
       }
-
     }, 300)
 
     return () => {
@@ -204,9 +155,7 @@ const SearchParts = () => {
   }, [allParts, assemblyId, modelId, searchTerm])
 
   useEffect(() => {
-
     setActiveImageNumber("")
-
   }, [assemblyId, modelId])
 
   const getAvailableStock = (part: Part) =>
@@ -216,91 +165,55 @@ const SearchParts = () => {
     new Set(
       allParts
         .map((part) => part.imageNumber?.trim())
-        .filter((imageNumber): imageNumber is string => Boolean(imageNumber))
+        .filter((n): n is string => Boolean(n))
     )
-  ).sort((left, right) =>
-    left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" })
-  )
+  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }))
 
   const displayParts = activeImageNumber
     ? visibleParts.filter((part) => part.imageNumber?.trim() === activeImageNumber)
     : visibleParts
 
   const toggleSelect = (part: Part) => {
-
     if (getAvailableStock(part) === 0) {
       alert(`${part.partName} is out of stock`)
       return
     }
-
-    setSelectedParts(prev => {
-
-      if (prev.includes(part.id))
-        return prev.filter(x => x !== part.id)
-
-      return [...prev, part.id]
-
-    })
-
+    setSelectedParts(prev =>
+      prev.includes(part.id) ? prev.filter(x => x !== part.id) : [...prev, part.id]
+    )
   }
 
   const changeQty = (id: number, delta: number) => {
-
     const part = allParts.find(p => p.id === id) || visibleParts.find(p => p.id === id)
     if (!part) return
-
     const availableStock = getAvailableStock(part)
-
     setQuantities(prev => {
-
       const currentQty = prev[id] || 1
       const newQty = currentQty + delta
-
       if (newQty < 1) return prev
-
       if (newQty > availableStock) {
         alert(`Only ${availableStock} items available`)
         return prev
       }
-
-      return {
-        ...prev,
-        [id]: newQty
-      }
-
+      return { ...prev, [id]: newQty }
     })
-
   }
 
   const addSelectedToCart = async () => {
-
     if (selectedParts.length === 0) {
       alert("Please select parts")
       return
     }
-
     try {
-
       for (const partId of selectedParts) {
-
         const qty = quantities[partId] || 1
-
-        await axios.post("/cart/add", {
-          PartId: partId,
-          Quantity: qty
-        })
-
+        await axios.post("/cart/add", { PartId: partId, Quantity: qty })
       }
-
       await fetchCart()
       navigate("/checkout")
-
     } catch (error: any) {
-
       alert(error.response?.data || "Failed to add items")
-
     }
-
   }
 
   return (
@@ -310,22 +223,16 @@ const SearchParts = () => {
       <nav className="catalog-navbar">
 
         <div className="brand">
-
-          <img src={logo} className="nav-logo" />
-
+          <img src={logo} className="nav-logo" alt="BGAUSS Logo" />
           <div className="brand-text">
             <span className="logo-text">BGAUSS</span>
             <span className="sub-title">Electronic Parts Catalog</span>
           </div>
-
         </div>
 
         <div className="nav-actions">
 
-          <button
-            className="nav-icon-btn"
-            onClick={() => navigate("/dashboard")}
-          >
+          <button className="nav-icon-btn" onClick={() => navigate("/dashboard")}>
             <FaHome />
           </button>
 
@@ -333,14 +240,9 @@ const SearchParts = () => {
             <FaPhoneAlt />
           </button>
 
-          <button
-            className="nav-icon-btn"
-            onClick={() => navigate("/checkout")}
-          >
+          <button className="nav-icon-btn" onClick={() => navigate("/checkout")}>
             <FaShoppingCart />
-            {cartCount > 0 && (
-              <span className="cart-badge">{cartCount}</span>
-            )}
+            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
           </button>
 
           <AccountMenu />
@@ -353,68 +255,49 @@ const SearchParts = () => {
 
       <div className="parts-layout">
 
+        {/* ── Left: assembly image ── */}
         <div className="assembly-image-panel">
 
           {assemblyImage ? (
 
             <>
-
               <div className="assembly-image-frame">
-
-                <img
-                  src={assemblyImage}
-                  className="assembly-large-image"
-                />
-
+                <img src={assemblyImage} className="assembly-large-image" alt={assemblyName} />
               </div>
 
               {hotspotNumbers.length > 0 && (
-
                 <div className="image-number-panel">
-
                   <span className="image-number-label">Image No.</span>
-
                   <div className="image-number-list">
-
                     {hotspotNumbers.map((imageNumber) => (
-
                       <button
                         key={imageNumber}
                         type="button"
                         className={`image-number-chip${activeImageNumber === imageNumber ? " active" : ""}`}
                         onClick={() =>
-                          setActiveImageNumber((current) =>
-                            current === imageNumber ? "" : imageNumber
-                          )
+                          setActiveImageNumber((cur) => cur === imageNumber ? "" : imageNumber)
                         }
                       >
                         {imageNumber}
                       </button>
-
                     ))}
-
                   </div>
-
                 </div>
-
               )}
-
             </>
 
           ) : (
 
-            <div className="assembly-image-empty">
-              Image not available
-            </div>
+            <div className="assembly-image-empty">Image not available</div>
 
           )}
 
         </div>
 
+        {/* ── Right: parts table ── */}
         <div className="parts-table">
 
           <div className="parts-actions">
-
             <input
               type="text"
               className="parts-search"
@@ -422,14 +305,9 @@ const SearchParts = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-
-            <button
-              disabled={!selectedParts.length}
-              onClick={addSelectedToCart}
-            >
+            <button disabled={!selectedParts.length} onClick={addSelectedToCart}>
               Add Selected To Cart
             </button>
-
           </div>
 
           <div className="parts-search-status">
@@ -455,7 +333,6 @@ const SearchParts = () => {
               </colgroup>
 
               <thead>
-
                 <tr>
                   <th>Select</th>
                   <th>Part Number</th>
@@ -463,7 +340,6 @@ const SearchParts = () => {
                   <th>Remarks</th>
                   <th>Qty</th>
                 </tr>
-
               </thead>
 
               <tbody>
@@ -471,7 +347,11 @@ const SearchParts = () => {
                 {displayParts.length === 0 ? (
 
                   <tr>
-                    <td className="parts-empty-state" colSpan={5}>
+                    <td
+                      className="parts-empty-state"
+                      colSpan={5}
+                      data-label=""
+                    >
                       {partsLoading
                         ? "Loading parts..."
                         : searchLoading
@@ -491,60 +371,56 @@ const SearchParts = () => {
 
                     <tr
                       key={part.id}
-                      className={`${availableStock === 0 ? "row-out-stock" : ""}${activeImageNumber && part.imageNumber?.trim() === activeImageNumber ? " row-hotspot-match" : ""}`}
+                      className={[
+                        availableStock === 0 ? "row-out-stock" : "",
+                        activeImageNumber && part.imageNumber?.trim() === activeImageNumber
+                          ? "row-hotspot-match"
+                          : ""
+                      ].filter(Boolean).join(" ")}
                     >
 
-                      <td>
-
+                      {/* Select */}
+                      <td data-label="Select">
                         <input
                           type="checkbox"
                           checked={selectedParts.includes(part.id)}
                           disabled={availableStock === 0}
                           onChange={() => toggleSelect(part)}
                         />
-
                       </td>
 
-                      <td className="part-number-cell">{part.partNumber}</td>
-                      <td className="part-name-cell">{part.partName}</td>
+                      {/* Part Number */}
+                      <td className="part-number-cell" data-label="Part Number">
+                        {part.partNumber}
+                      </td>
 
-                      <td>
+                      {/* Part Name */}
+                      <td className="part-name-cell" data-label="Part Name">
+                        {part.partName}
+                      </td>
 
+                      {/* Remarks */}
+                      <td data-label="Remarks">
                         <input
                           className="remarks-input"
                           value={remarks[part.id] || ""}
                           onChange={(e) =>
-                            setRemarks(prev => ({
-                              ...prev,
-                              [part.id]: e.target.value
-                            }))
+                            setRemarks(prev => ({ ...prev, [part.id]: e.target.value }))
                           }
                         />
-
                       </td>
 
-                      <td>
-
+                      {/* Qty */}
+                      <td data-label="Qty">
                         <div className="qty-control">
-
-                          <button
-                            onClick={() => changeQty(part.id, -1)}
-                            disabled={qty <= 1}
-                          >
-                            -
+                          <button onClick={() => changeQty(part.id, -1)} disabled={qty <= 1}>
+                            −
                           </button>
-
                           <span>{qty}</span>
-
-                          <button
-                            onClick={() => changeQty(part.id, 1)}
-                            disabled={qty >= availableStock}
-                          >
+                          <button onClick={() => changeQty(part.id, 1)} disabled={qty >= availableStock}>
                             +
                           </button>
-
                         </div>
-
                       </td>
 
                     </tr>

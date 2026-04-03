@@ -194,22 +194,62 @@ const VehiclePreview = () => {
 
     <div className="vehicle-page">
 
-      <nav className="epc-navbar">
+      <nav
+        className="epc-navbar"
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          flexWrap: "nowrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
 
-        <div className="brand">
+        <div
+          className="brand"
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            flexShrink: 1,
+            flexGrow: 1,
+            gap: "10px",
+          }}
+        >
 
-          <img src={logo} alt="BGAUSS Logo" className="nav-logo" />
+          <img
+            src={logo}
+            alt="BGAUSS Logo"
+            className="nav-logo"
+            style={{ flexShrink: 0, width: "36px", height: "auto" }}
+          />
 
-          <div className="brand-text">
-
-            <span className="logo-text">BGAUSS</span>
-            <span className="sub-title">Electronic Parts Catalog</span>
-
+          <div
+            className="brand-text"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
+            <span style={{ color: "#ffffff", fontWeight: "bold", fontSize: "18px", whiteSpace: "nowrap", lineHeight: "1.2" }}>
+              BGAUSS
+            </span>
+            <span style={{ color: "#ffffff", fontSize: "11px", whiteSpace: "nowrap", lineHeight: "1.2" }}>
+              Electronic Parts Catalog
+            </span>
           </div>
 
         </div>
 
-        <div className="nav-actions">
+        <div
+          className="nav-actions"
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            flexWrap: "nowrap",
+            alignItems: "center",
+            flexShrink: 0,
+            gap: "6px",
+            marginLeft: "auto",
+          }}
+        >
 
           <button
             className="nav-icon-btn active"

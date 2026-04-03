@@ -14,14 +14,16 @@ interface VehicleSearchState {
   modelId?: number | string;
 }
 
+// ── FIX: use relative URL so images work on any host (localhost OR live IP)
 const resolveAssemblyImage = (imagePath?: string | null): string => {
   if (!imagePath) return "";
 
   const normalized = imagePath
-    .replace(/\\/g, "/")
-    .replace(/^\/+/, "");
+    .replace(/\\/g, "/")   // backslash → forward slash
+    .replace(/^\/+/, "");  // remove leading slashes
 
-  return `http://localhost:5053/${normalized}`;
+  //return `/${normalized}`;  // relative URL — works on localhost:5053 AND 13.223.206.251:5000
+  return `http://localhost:5053/${normalized}`;  // absolute URL — works only on localhost:5053, breaks on
 };
 
 const AssemblyCatalogue = () => {
@@ -32,16 +34,14 @@ const AssemblyCatalogue = () => {
   const searchState = location.state as VehicleSearchState;
   const modelId = Number(searchState?.modelId);
 
-  const [assemblies, setAssemblies] = useState<Assembly[]>([]);
+  const [assemblies, setAssemblies]             = useState<Assembly[]>([]);
   const [visibleAssemblies, setVisibleAssemblies] = useState<Assembly[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchLoading, setSearchLoading] = useState(false);
-
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const [zoomImage, setZoomImage] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
-  const [origin, setOrigin] = useState("center center");
+  const [loading, setLoading]                   = useState(true);
+  const [searchLoading, setSearchLoading]       = useState(false);
+  const [searchTerm, setSearchTerm]             = useState("");
+  const [zoomImage, setZoomImage]               = useState<string | null>(null);
+  const [scale, setScale]                       = useState(1);
+  const [origin, setOrigin]                     = useState("center center");
 
   useEffect(() => {
     const fetchAssemblies = async () => {
@@ -102,12 +102,17 @@ const AssemblyCatalogue = () => {
   }, [assemblies, modelId, searchTerm]);
 
   useEffect(() => {
+
     if (zoomImage) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "auto";
     }
-    return () => { document.body.style.overflow = "auto"; };
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+
   }, [zoomImage]);
 
   const openZoom = (image: string) => {
@@ -118,16 +123,24 @@ const AssemblyCatalogue = () => {
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     const rect = e.currentTarget.getBoundingClientRect();
+
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
+
     setOrigin(`${x}% ${y}%`);
     setScale(prev => {
+
       const zoomAmount = e.deltaY < 0 ? 0.2 : -0.2;
+
       let next = prev + zoomAmount;
+
       if (next < 1) next = 1;
       if (next > 4) next = 4;
+
       return next;
+
     });
+
   };
 
   return (
@@ -135,36 +148,46 @@ const AssemblyCatalogue = () => {
 
       {/* ── Navbar: brand left, icons right ── */}
       <nav className="epc-navbar">
-
         <div className="brand">
-          <img src={logo} className="nav-logo" alt="BGAUSS Logo" />
+
+          <img src={logo} className="nav-logo"/>
+
           <div className="brand-text">
             <span className="logo-text">BGAUSS</span>
             <span className="sub-title">Electronic Parts Catalog</span>
           </div>
         </div>
-
         <div className="nav-actions">
+
+          <input
+            type="text"
+            placeholder="Search assembly..."
+            className="nav-search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+
           <button
             className="nav-icon-btn active"
-            title="Home"
             onClick={() => navigate("/dashboard")}
           >
             <FaHome />
           </button>
-          <button className="nav-icon-btn" title="Contact">
+
+          <button className="nav-icon-btn">
             <FaPhoneAlt />
           </button>
-          <button className="nav-icon-btn" title="Cart">
+
+          <button className="nav-icon-btn">
             <FaShoppingCart />
           </button>
-          <AccountMenu />
-        </div>
 
+          <AccountMenu/>
+
+        </div>
       </nav>
 
       <main className="assembly-content">
-
         <h2>Assembly Catalogue</h2>
 
         {/* Search bar in content area */}
@@ -199,7 +222,7 @@ const AssemblyCatalogue = () => {
                   className="assembly-card"
                   onClick={() =>
                     navigate("/parts", {
-                      state: {
+                      state:{
                         modelId: searchState?.modelId,
                         assemblyId: assembly.id,
                         assemblyName: assembly.assemblyName,
@@ -211,21 +234,21 @@ const AssemblyCatalogue = () => {
                   <img
                     src={resolveAssemblyImage(assembly.imagePath)}
                     className="assembly-image"
-                    alt={assembly.assemblyName}
-                    onClick={(e) => {
+                    onClick={(e)=>{
                       e.stopPropagation();
                       openZoom(resolveAssemblyImage(assembly.imagePath));
                     }}
                   />
+
                   <div className="assembly-name">
                     {assembly.assemblyName}
                   </div>
+
                 </button>
               ))
             )}
           </div>
         )}
-
       </main>
 
       {zoomImage && (
@@ -238,8 +261,10 @@ const AssemblyCatalogue = () => {
             <img
               src={zoomImage}
               className="zoomed-image"
-              alt="Zoomed assembly"
-              style={{ transform: `scale(${scale})`, transformOrigin: origin }}
+              style={{
+                transform:`scale(${scale})`,
+                transformOrigin:origin
+              }}
             />
           </div>
         </div>

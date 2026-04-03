@@ -322,3 +322,187 @@ text-align:center;
 .assembly-table th{
 background:#f3f3f3;
 }
+
+/* ================================================= */
+/* RESPONSIVE MEDIA QUERIES                          */
+/* ================================================= */
+
+/* TABLETS AND SMALLER (Max 768px) */
+@media (max-width: 768px) {
+  .admin-navbar, 
+  .modules-navbar {
+    padding: 0 15px; /* Tighter padding for mobile */
+    height: auto;
+    min-height: 60px; /* Ensures enough space for two lines */
+    padding-top: 10px;
+    padding-bottom: 10px;
+    flex-wrap: wrap; /* Allows icons to wrap if brand is too wide */
+    justify-content: space-between;
+  }
+
+  /* Ensure the container is a column to stack text vertically */
+  .admin-title-wrap, 
+  .modules-title {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start; /* Keeps text left-aligned */
+  }
+
+  .logo-text {
+    font-size: 18px; /* Slightly smaller for mobile */
+    line-height: 1.2;
+  }
+
+  .sub-title {
+    display: block !important; /* Forces it to show */
+    font-size: 10px; /* Small but legible */
+    opacity: 0.85;
+    margin-top: -2px; /* Pulls it closer to the brand name */
+    white-space: nowrap; /* Prevents the subtitle from breaking into 3 lines */
+  }
+
+  .admin-navbar-left, 
+  .modules-navbar-left {
+    gap: 10px;
+  }
+
+  .admin-logo, 
+  .modules-logo {
+    height: 32px; /* Scale logo down slightly */
+  }
+
+  .admin-navbar-right, 
+  .modules-navbar-right {
+    gap: 6px;
+  }
+
+  .nav-icon-btn, 
+  .modules-nav-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .admin-header {
+  display: flex;
+  flex-direction: column; /* Stacks the back button group and the action group */
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 25px;
+}
+
+.back-btn {
+  width: 100%;
+  padding: 12px;
+  font-weight: 600;
+  text-align: center;
+  /* Ensure it looks like a primary distinct action */
+  background: #0c81b5; 
+  border-radius: 8px;
+
+  .modules-header {
+  display: flex;
+  flex-direction: row; /* Keeps them side-by-side */
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.modules-create-btn, 
+.modules-back-btn {
+  flex: 1; /* Makes both buttons equal width */
+  padding: 12px 5px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  text-align: center;
+}
+}
+
+.admin-actions {
+  display: flex;
+  flex-direction: row; /* Keeps "Open Module" and "Create User" side-by-side */
+  gap: 10px;
+  width: 100%;
+}
+
+.admin-actions button {
+  flex: 1; /* Makes both buttons exactly 50% width */
+  padding: 12px 5px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap; /* Prevents text from breaking into two lines */
+  justify-content: center;
+  border-radius: 8px;
+}   
+}
+
+/* TABLE RESPONSIVENESS (The "Card" Flip) */
+@media (max-width: 600px) {
+  /* Force table to not behave like a table anymore */
+  .admin-table, 
+  .admin-table thead, 
+  .admin-table tbody, 
+  .admin-table th, 
+  .admin-table td, 
+  .admin-table tr { 
+    display: block; 
+  }
+
+  /* Hide table headers (but keep for screen readers) */
+  .admin-table thead tr { 
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .admin-table tr { 
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .admin-table td { 
+    border: none;
+    border-bottom: 1px solid #eee; 
+    position: relative;
+    padding-left: 50% !important; 
+    text-align: right !important;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  /* Label the data using pseudo-elements */
+  .admin-table td:before { 
+    position: absolute;
+    left: 12px;
+    width: 45%; 
+    padding-right: 10px; 
+    white-space: nowrap;
+    text-align: left;
+    font-weight: bold;
+    color: #1e7fa6;
+  }
+
+  /* Add Labels back in since we hid the <thead> */
+  .admin-table td:nth-of-type(1):before { content: "Username"; }
+  .admin-table td:nth-of-type(2):before { content: "Role"; }
+  .admin-table td:nth-of-type(3):before { content: "Actions"; }
+
+  .admin-table td:last-child {
+    border-bottom: none;
+    background: #f9f9f9;
+  }
+}
+
+/* MODAL RESPONSIVENESS */
+@media (max-width: 480px) {
+  .modal-content {
+    width: 90%;
+    margin: 0 10px;
+  }
+}

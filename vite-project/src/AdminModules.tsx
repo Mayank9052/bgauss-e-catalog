@@ -375,12 +375,6 @@ const AdminModules = () => {
     finally { setConfirm(null); }
   });
 
-  /* ═══════════ INLINE EDIT HANDLERS (FIX 7) ═══════════
-     All setEditX spread calls now use the non-null assertion
-     AFTER the early-return guard, so TypeScript knows the
-     value is never null at the call site.
-  ══════════════════════════════════════════════════════ */
-
   // variant inline
   const onEditVariantName = (v: string) => {
     if (!editVariant) return;
@@ -413,8 +407,8 @@ const AdminModules = () => {
   );
 
   const modelOpts   = models.map(m => ({ id: m.id!, label: m.modelName }));
-  const variantOpts = variants.map(v => ({ id: v.id!, label: v.variantName }));
-  const asmOpts     = assemblies.map(a => ({ id: a.id!, label: a.assemblyName }));
+  const filteredAssemblies = assemblies.filter(a => a.modelId === colourForm.modelId);
+  const filteredAsmOpts = filteredAssemblies.map(a => ({id: a.id!,label: a.assemblyName}));
 
   const modelName   = (id: number | null | undefined) => models.find(m => m.id === id)?.modelName     ?? String(id ?? "—");
   const variantName = (id: number | null | undefined) => variants.find(v => v.id === id)?.variantName ?? String(id ?? "—");
@@ -428,6 +422,14 @@ const AdminModules = () => {
     { key: "parts",      label: "Parts" },
   ];
 
+  const filteredVariants = variants.filter(
+  v => v.modelId === colourForm.modelId
+);
+
+  const filteredVariantOpts = filteredVariants.map(v => ({
+  id: v.id!,
+  label: v.variantName
+}));
   /* ═══════════════════════════════════════════════════
      RENDER
   ═══════════════════════════════════════════════════ */
@@ -646,8 +648,20 @@ const AdminModules = () => {
                     <div className="am-form-card__title">Add New Colour</div>
                     <div className="am-form-grid">
                       <Field label="Colour Name" value={colourForm.colourName} onChange={v => setColourForm(p => ({ ...p, colourName: v }))} />
-                      <SelectField label="Model"   value={colourForm.modelId}   onChange={v => setColourForm(p => ({ ...p, modelId: +v }))}   options={modelOpts} />
-                      <SelectField label="Variant" value={colourForm.variantId} onChange={v => setColourForm(p => ({ ...p, variantId: +v }))} options={variantOpts} />
+                      <SelectField 
+                        label="Model"   
+                        value={colourForm.modelId}   
+                        onChange={v => setColourForm(p => 
+                          ({ 
+                            ...p, 
+                              modelId: +v,
+                              variantId: 0 
+
+                          }))}   
+                        options={modelOpts}
+                         />
+
+                      <SelectField label="Variant" value={colourForm.variantId} onChange={v => setColourForm(p => ({ ...p, variantId: +v }))} options={filteredVariantOpts} />
                       <Field label="Image Path" value={colourForm.imagePath} onChange={v => setColourForm(p => ({ ...p, imagePath: v }))} />
                     </div>
                     <button className="am-btn am-btn--success am-btn--icon" style={{ marginTop: 10 }} onClick={createColour}><FaPlus /> Add Colour</button>
@@ -678,7 +692,13 @@ const AdminModules = () => {
                               <td>
                                 <select className="am-inline-select" value={editColour?.variantId ?? ""} onChange={e => onEditColourVariant(e.target.value)}>
                                   <option value="">—</option>
-                                  {variants.map(v => <option key={v.id} value={v.id}>{v.variantName}</option>)}
+                                  {variants
+                                      .filter(v => v.modelId === editColour?.modelId)
+                                      .map(v => (
+                                        <option key={v.id} value={v.id}>
+                                          {v.variantName}
+                                        </option>
+                                    ))}
                                 </select>
                               </td>
                               <td><input className="am-inline-input" value={editColour?.imagePath}    onChange={e => onEditColourImage(e.target.value)} /></td>
@@ -794,9 +814,18 @@ const AdminModules = () => {
                         <Field label="Stock Qty"     value={partForm.stockQuantity} onChange={v => setPartForm(p => ({ ...p, stockQuantity: +v }))} type="number" />
                         <Field label="Torque Nm"     value={partForm.torqueNm}      onChange={v => setPartForm(p => ({ ...p, torqueNm: +v }))}      type="number" />
                         <Field label="Colour IDs (CSV)" value={partForm.colourIds} onChange={v => setPartForm(p => ({ ...p, colourIds: v }))} />
-                        <SelectField label="Model"    value={partForm.modelId ?? ""}    onChange={v => setPartForm(p => ({ ...p, modelId:    +v || null }))} options={modelOpts} />
-                        <SelectField label="Variant"  value={partForm.variantId ?? ""}  onChange={v => setPartForm(p => ({ ...p, variantId:  +v || null }))} options={variantOpts} />
-                        <SelectField label="Assembly" value={partForm.assemblyId ?? ""} onChange={v => setPartForm(p => ({ ...p, assemblyId: +v || null }))} options={asmOpts} />
+                        <SelectField 
+                          label="Model"    
+                          value={partForm.modelId ?? ""}    
+                          onChange={v => setPartForm(p => ({  
+                                  ...p, modelId: +v || null, 
+                                  variantId: null, 
+                                  assemblyId: null 
+                            }))} 
+                                options={modelOpts} 
+                          />
+                        <SelectField label="Variant"  value={partForm.variantId ?? ""}  onChange={v => setPartForm(p => ({ ...p, variantId:  +v || null }))} options={filteredVariantOpts} />
+                        <SelectField label="Assembly" value={partForm.assemblyId ?? ""} onChange={v => setPartForm(p => ({ ...p, assemblyId: +v || null }))} options={filteredAsmOpts} />
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                         <button className="am-btn am-btn--success" onClick={createPart}><FaCheck /> Save Part</button>
@@ -822,8 +851,8 @@ const AdminModules = () => {
                         <Field label="Torque Nm"     value={editPart.torqueNm}      onChange={v => setEditPart(p => p && ({ ...p, torqueNm: +v }))}      type="number" />
                         <Field label="Colour IDs"    value={editPart.colourIds}     onChange={v => setEditPart(p => p && ({ ...p, colourIds: v }))} />
                         <SelectField label="Model"    value={editPart.modelId ?? ""}    onChange={v => setEditPart(p => p && ({ ...p, modelId:    +v || null }))} options={modelOpts} />
-                        <SelectField label="Variant"  value={editPart.variantId ?? ""}  onChange={v => setEditPart(p => p && ({ ...p, variantId:  +v || null }))} options={variantOpts} />
-                        <SelectField label="Assembly" value={editPart.assemblyId ?? ""} onChange={v => setEditPart(p => p && ({ ...p, assemblyId: +v || null }))} options={asmOpts} />
+                        <SelectField label="Variant"  value={editPart.variantId ?? ""}  onChange={v => setEditPart(p => p && ({ ...p, variantId:  +v || null }))} options={filteredVariantOpts} />
+                        <SelectField label="Assembly" value={editPart.assemblyId ?? ""} onChange={v => setEditPart(p => p && ({ ...p, assemblyId: +v || null }))} options={filteredAsmOpts} />
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                         <button className="am-btn am-btn--success" onClick={savePart}><FaCheck /> Update Part</button>

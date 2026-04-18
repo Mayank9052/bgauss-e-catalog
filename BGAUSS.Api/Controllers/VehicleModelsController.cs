@@ -49,15 +49,27 @@ public class VehicleModelsController : ControllerBase
     }
 
     // ================= DELETE =================
-    [HttpDelete("{id}")]
+  [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var model = await _context.VehicleModels.FindAsync(id);
+        var model = await _context.VehicleModels
+            .Include(m => m.VehicleVariants)
+            .Include(m => m.VehicleColours)
+            .Include(m => m.Assemblies)
+            .Include(m => m.ModelParts)
+            .Include(m => m.Vehicles)
+            .FirstOrDefaultAsync(m => m.Id == id);
+
         if (model == null) return NotFound();
+
+        // Option A — Block if any children exist
+        if (model.VehicleVariants.Any() || model.VehicleColours.Any() || 
+            model.Assemblies.Any() || model.ModelParts.Any() || model.Vehicles.Any())
+            return BadRequest("Cannot delete: this model has related variants, colours, assemblies, parts, or vehicles. Remove those first.");
 
         _context.VehicleModels.Remove(model);
         await _context.SaveChangesAsync();
-        return Ok("Deleted successfully");
+        return Ok("Model deleted successfully");
     }
 
     // ================= DOWNLOAD BLANK EXCEL =================

@@ -232,148 +232,200 @@ const AdminModules = () => {
   }, [fetchModels, fetchVariants, fetchColours, fetchAssemblies, fetchParts]);
 
   /* ═══════════ MODEL CRUD ═══════════ */
-  const createModel = async () => {
-    if (!modelForm.modelName.trim()) return err("Model name is required");
-    try {
-      await axios.post("/VehicleModels", modelForm);
-      setModelForm({ modelName: "" });
-      fetchModels();
-      ok("Model created successfully");
-    } catch { err("Failed to create model"); }
-  };
+const createModel = async () => {
+  if (!modelForm.modelName.trim()) return err("Model name is required");
+  try {
+    await axios.post("/VehicleModels", modelForm);
+    setModelForm({ modelName: "" });
+    fetchModels();
+    ok("Model created successfully");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const saveModel = async () => {
-    // FIX 6: guard with early return — editModel is VehicleModel (not null) below this point
-    if (!editModel) return;
-    try {
-      await axios.put(`/VehicleModels/${editModel.id}`, editModel);
-      setEditModel(null);
-      fetchModels();
-      ok("Model updated");
-    } catch { err("Failed to update model"); }
-  };
+const saveModel = async () => {
+  if (!editModel?.id) {
+    err("No model selected for update");
+    return;
+  }
+  try {
+    await axios.put(`/VehicleModels/${editModel.id}`, editModel);
+    setEditModel(null);
+    fetchModels();
+    ok("Model updated successfully");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const deleteModel = (id: number) => ask("Delete this model? This may affect related variants and colours.", async () => {
-    try { await axios.delete(`/VehicleModels/${id}`); fetchModels(); ok("Model deleted"); }
-    catch { err("Failed to delete model"); }
-    finally { setConfirm(null); }
-  });
+const deleteModel = (id: number) => ask("Delete this model? This may affect related variants and colours.", async () => {
+  try {
+    await axios.delete(`/VehicleModels/${id}`);
+    fetchModels();
+    ok("Model deleted");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  } finally {
+    setConfirm(null);
+  }
+});
 
-  /* ═══════════ VARIANT CRUD ═══════════ */
-  const createVariant = async () => {
-    if (!variantForm.variantName.trim() || !variantForm.modelId) return err("Variant name and model are required");
-    try {
-      await axios.post("/VehicleVariants", variantForm);
-      setVariantForm({ variantName: "", modelId: 0 });
-      fetchVariants();
-      ok("Variant created successfully");
-    } catch { err("Failed to create variant"); }
-  };
+/* ═══════════ VARIANT CRUD ═══════════ */
+const createVariant = async () => {
+  if (!variantForm.variantName.trim() || !variantForm.modelId) return err("Variant name and model are required");
+  try {
+    await axios.post("/VehicleVariants", variantForm);
+    setVariantForm({ variantName: "", modelId: 0 });
+    fetchVariants();
+    ok("Variant created successfully");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const saveVariant = async () => {
-    if (!editVariant) return;
-    try {
-      await axios.put(`/VehicleVariants/${editVariant.id}`, editVariant);
-      setEditVariant(null);
-      fetchVariants();
-      ok("Variant updated");
-    } catch { err("Failed to update variant"); }
-  };
+const saveVariant = async () => {
+  if (!editVariant) return;
+  try {
+    await axios.put(`/VehicleVariants/${editVariant.id}`, editVariant);
+    setEditVariant(null);
+    fetchVariants();
+    ok("Variant updated");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const deleteVariant = (id: number) => ask("Delete this variant?", async () => {
-    try { await axios.delete(`/VehicleVariants/${id}`); fetchVariants(); ok("Variant deleted"); }
-    catch { err("Failed to delete variant"); }
-    finally { setConfirm(null); }
-  });
+const deleteVariant = (id: number) => ask("Delete this variant?", async () => {
+  try {
+    await axios.delete(`/VehicleVariants/${id}`);
+    fetchVariants();
+    ok("Variant deleted");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  } finally {
+    setConfirm(null);
+  }
+});
 
-  /* ═══════════ COLOUR CRUD ═══════════ */
-  const createColour = async () => {
-    if (!colourForm.colourName.trim()) return err("Colour name is required");
-    try {
-      await axios.post("/VehicleColours", {
-        ...colourForm,
-        modelId:   colourForm.modelId   || null,
-        variantId: colourForm.variantId || null,
-      });
-      setColourForm({ colourName: "", modelId: 0, variantId: 0, imagePath: "" });
-      fetchColours();
-      ok("Colour created successfully");
-    } catch { err("Failed to create colour"); }
-  };
+/* ═══════════ COLOUR CRUD ═══════════ */
+const createColour = async () => {
+  if (!colourForm.colourName.trim()) return err("Colour name is required");
+  try {
+    await axios.post("/VehicleColours", {
+      ...colourForm,
+      modelId:   colourForm.modelId   || null,
+      variantId: colourForm.variantId || null,
+    });
+    setColourForm({ colourName: "", modelId: 0, variantId: 0, imagePath: "" });
+    fetchColours();
+    ok("Colour created successfully");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const saveColour = async () => {
-    if (!editColour) return;
-    try {
-      await axios.put(`/VehicleColours/${editColour.id}`, editColour);
-      setEditColour(null);
-      fetchColours();
-      ok("Colour updated");
-    } catch { err("Failed to update colour"); }
-  };
+const saveColour = async () => {
+  if (!editColour) return;
+  try {
+    await axios.put(`/VehicleColours/${editColour.id}`, editColour);
+    setEditColour(null);
+    fetchColours();
+    ok("Colour updated");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const deleteColour = (id: number) => ask("Delete this colour?", async () => {
-    try { await axios.delete(`/VehicleColours/${id}`); fetchColours(); ok("Colour deleted"); }
-    catch { err("Failed to delete colour"); }
-    finally { setConfirm(null); }
-  });
+const deleteColour = (id: number) => ask("Delete this colour?", async () => {
+  try {
+    await axios.delete(`/VehicleColours/${id}`);
+    fetchColours();
+    ok("Colour deleted");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  } finally {
+    setConfirm(null);
+  }
+});
 
-  /* ═══════════ ASSEMBLY CRUD ═══════════ */
-  const createAssembly = async () => {
-    if (!asmForm.assemblyName.trim() || !asmForm.modelId) return err("Assembly name and model are required");
-    try {
-      await axios.post("/Assemblies", asmForm);
-      setAsmForm({ assemblyName: "", imagePath: "", modelId: 0 });
-      fetchAssemblies();
-      ok("Assembly created successfully");
-    } catch { err("Failed to create assembly"); }
-  };
+/* ═══════════ ASSEMBLY CRUD ═══════════ */
+const createAssembly = async () => {
+  if (!asmForm.assemblyName.trim() || !asmForm.modelId) return err("Assembly name and model are required");
+  try {
+    await axios.post("/Assemblies", asmForm);
+    setAsmForm({ assemblyName: "", imagePath: "", modelId: 0 });
+    fetchAssemblies();
+    ok("Assembly created successfully");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const saveAssembly = async () => {
-    if (!editAsm) return;
-    try {
-      await axios.put(`/Assemblies/${editAsm.id}`, editAsm);
-      setEditAsm(null);
-      fetchAssemblies();
-      ok("Assembly updated");
-    } catch { err("Failed to update assembly"); }
-  };
+const saveAssembly = async () => {
+  if (!editAsm) return;
+  try {
+    await axios.put(`/Assemblies/${editAsm.id}`, editAsm);
+    setEditAsm(null);
+    fetchAssemblies();
+    ok("Assembly updated");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const deleteAssembly = (id: number) => ask("Delete this assembly?", async () => {
-    try { await axios.delete(`/Assemblies/${id}`); fetchAssemblies(); ok("Assembly deleted"); }
-    catch { err("Failed to delete assembly"); }
-    finally { setConfirm(null); }
-  });
+const deleteAssembly = (id: number) => ask("Delete this assembly?", async () => {
+  try {
+    await axios.delete(`/Assemblies/${id}`);
+    fetchAssemblies();
+    ok("Assembly deleted");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  } finally {
+    setConfirm(null);
+  }
+});
 
-  /* ═══════════ PART CRUD ═══════════ */
-  const createPart = async () => {
-    if (!partForm.partNumber.trim()) return err("Part number is required");
-    try {
-      await axios.post("/Parts", {
-        ...partForm,
-        colourId: partForm.colourIds ? parseInt(partForm.colourIds) : null,
-      });
-      setPartForm(blankPart());
-      setShowPartForm(false);
-      fetchParts();
-      ok("Part created successfully");
-    } catch { err("Failed to create part"); }
-  };
+/* ═══════════ PART CRUD ═══════════ */
+const createPart = async () => {
+  if (!partForm.partNumber.trim()) return err("Part number is required");
+  try {
+    await axios.post("/Parts", {
+      ...partForm,
+      colourId: partForm.colourIds ? parseInt(partForm.colourIds) : null,
+    });
+    setPartForm(blankPart());
+    setShowPartForm(false);
+    fetchParts();
+    ok("Part created successfully");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const savePart = async () => {
-    if (!editPart) return;
-    try {
-      await axios.put(`/Parts/${editPart.id}`, editPart);
-      setEditPart(null);
-      fetchParts();
-      ok("Part updated");
-    } catch { err("Failed to update part"); }
-  };
+const savePart = async () => {
+  if (!editPart) return;
+  try {
+    await axios.put(`/Parts/${editPart.id}`, editPart);
+    setEditPart(null);
+    fetchParts();
+    ok("Part updated");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  }
+};
 
-  const deletePart = (id: number) => ask("Delete this part?", async () => {
-    try { await axios.delete(`/Parts/${id}`); fetchParts(); ok("Part deleted"); }
-    catch { err("Failed to delete part"); }
-    finally { setConfirm(null); }
-  });
+const deletePart = (id: number) => ask("Delete this part?", async () => {
+  try {
+    await axios.delete(`/Parts/${id}`);
+    fetchParts();
+    ok("Part deleted");
+  } catch (error: unknown) {
+    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+  } finally {
+    setConfirm(null);
+  }
+});
 
   // variant inline
   const onEditVariantName = (v: string) => {
@@ -550,31 +602,57 @@ const AdminModules = () => {
                       <tbody>
                         {fModels.length === 0 && <tr><td colSpan={3} className="am-empty">No models found</td></tr>}
                         {fModels.map(m => (
-                          editModel?.id === m.id ? (
-                            <tr key={m.id} className="am-table__edit-row">
-                              <td>{m.id}</td>
-                              <td>
-                                {/* FIX 8: editModel is guaranteed non-null here (same id match above) */}
-                                <input className="am-inline-input" value={editModel?.modelName}
-                                  onChange={e => setEditModel({ ...editModel, modelName: e.target.value })} />
-                              </td>
-                              <td className="am-table__actions">
-                                <button className="am-btn am-btn--success am-btn--xs" onClick={saveModel}><FaCheck /> Save</button>
-                                <button className="am-btn am-btn--ghost am-btn--xs" onClick={() => setEditModel(null)}><FaTimes /></button>
-                              </td>
-                            </tr>
-                          ) : (
-                            <tr key={m.id}>
-                              <td><span className="am-id">#{m.id}</span></td>
-                              <td><strong>{m.modelName}</strong></td>
-                              <td className="am-table__actions">
-                                <button className="am-btn am-btn--edit am-btn--xs" onClick={() => setEditModel({ ...m })}><FaEdit /> Edit</button>
-                                <button className="am-btn am-btn--danger am-btn--xs" onClick={() => deleteModel(m.id!)}><FaTrash /></button>
-                              </td>
-                            </tr>
-                          )
-                        ))}
-                      </tbody>
+                        editModel?.id === m.id ? (
+                          <tr key={m.id} className="am-table__edit-row">
+                            <td>{m.id}</td>
+                            <td>
+                              <input 
+                                className="am-inline-input" 
+                                value={editModel?.modelName || ""}
+                                onChange={e => {
+                                  if (editModel) {
+                                    setEditModel({ ...editModel, modelName: e.target.value });
+                                  }
+                                }} 
+                              />
+                            </td>
+                            <td className="am-table__actions">
+                              <button 
+                                className="am-btn am-btn--success am-btn--xs" 
+                                onClick={saveModel}
+                              >
+                                <FaCheck /> Save
+                              </button>
+                              <button 
+                                className="am-btn am-btn--ghost am-btn--xs" 
+                                onClick={() => setEditModel(null)}
+                              >
+                                <FaTimes />
+                              </button>
+                            </td>
+                          </tr>
+                        ) : (
+                          <tr key={m.id}>
+                            <td><span className="am-id">#{m.id}</span></td>
+                            <td><strong>{m.modelName}</strong></td>
+                            <td className="am-table__actions">
+                              <button 
+                                className="am-btn am-btn--edit am-btn--xs" 
+                                onClick={() => setEditModel({ ...m })}
+                              >
+                                <FaEdit /> Edit
+                              </button>
+                              <button 
+                                className="am-btn am-btn--danger am-btn--xs" 
+                                onClick={() => deleteModel(m.id!)}
+                              >
+                                <FaTrash />
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      ))}
+                                            </tbody>
                     </table>
                   </div>
                 </div>

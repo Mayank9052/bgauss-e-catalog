@@ -22,18 +22,25 @@ public class PartsController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var parts = await _context.Parts
-            .Select(p => new PartResponse
+        .Include(p => p.PartColours)
+        .Select(p => new
             {
-                Id = p.Id,
-                PartNumber = p.PartNumber ?? "",
-                PartName = p.PartName ?? "",
-                Description = p.Description ?? "",
-                Remarks = p.Remarks ?? "",
-                Bdp = p.Bdp ?? 0,
-                Mrp = p.Mrp ?? 0,
-                TaxPercent = p.TaxPercent ?? 0,
-                ImagePath = "",
-                ImageNumber = p.ImageNumber ?? ""
+                    id             = p.Id,
+            partNumber     = p.PartNumber ?? "",
+            partName       = p.PartName ?? "",
+            description    = p.Description ?? "",
+            remarks        = p.Remarks ?? "",
+            price          = p.Price ?? 0,
+            bdp            = p.Bdp ?? 0,
+            mrp            = p.Mrp ?? 0,
+            taxPercent     = p.TaxPercent ?? 0,
+            stockQuantity  = p.StockQuantity,
+            assemblyId     = p.AssemblyId,
+            modelId        = p.ModelId,
+            variantId      = p.VariantId,
+            torqueNm       = p.TorqueNm ?? 0,
+            imageNumber    = p.ImageNumber ?? "",
+            colourIds      = string.Join(",", p.PartColours.Select(pc => pc.ColourId))
             })
             .ToListAsync();
 
@@ -156,29 +163,35 @@ public class PartsController : ControllerBase
     [HttpGet("search")]
     public async Task<IActionResult> Search(string? name, string? partNumber)
     {
-        var query = _context.Parts.AsQueryable();
+        var query = _context.Parts.Include(p => p.PartColours).AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(name))
-            query = query.Where(p => p.PartName!.Contains(name));
+    if (!string.IsNullOrWhiteSpace(name))
+        query = query.Where(p => p.PartName!.Contains(name));
 
-        if (!string.IsNullOrWhiteSpace(partNumber))
-            query = query.Where(p => p.PartNumber!.Contains(partNumber));
+    if (!string.IsNullOrWhiteSpace(partNumber))
+        query = query.Where(p => p.PartNumber!.Contains(partNumber));
 
-        var result = await query
-            .Select(p => new PartResponse
-            {
-                Id = p.Id,
-                PartNumber = p.PartNumber ?? "",
-                PartName = p.PartName ?? "",
-                Description = p.Description ?? "",
-                Remarks = p.Remarks ?? "",
-                Bdp = p.Bdp ?? 0,
-                Mrp = p.Mrp ?? 0,
-                TaxPercent = p.TaxPercent ?? 0,
-                ImagePath = "",
-                ImageNumber = p.ImageNumber ?? ""
-            })
-            .ToListAsync();
+    var result = await query
+        .Select(p => new
+        {
+            id             = p.Id,
+            partNumber     = p.PartNumber ?? "",
+            partName       = p.PartName ?? "",
+            description    = p.Description ?? "",
+            remarks        = p.Remarks ?? "",
+            price          = p.Price ?? 0,
+            bdp            = p.Bdp ?? 0,
+            mrp            = p.Mrp ?? 0,
+            taxPercent     = p.TaxPercent ?? 0,
+            stockQuantity  = p.StockQuantity,
+            assemblyId     = p.AssemblyId,
+            modelId        = p.ModelId,
+            variantId      = p.VariantId,
+            torqueNm       = p.TorqueNm ?? 0,
+            imageNumber    = p.ImageNumber ?? "",
+            colourIds      = string.Join(",", p.PartColours.Select(pc => pc.ColourId))
+        })            
+        .ToListAsync();
 
         return Ok(result);
     }

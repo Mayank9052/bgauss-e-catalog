@@ -5,12 +5,11 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
-import logo from "./assets/logo.jpg"
 import "./order_details.css"
 import "./order_history.css"
-import AccountMenu from "./components/AccountMenu"
 import BreadcrumbPath from "./components/BreadcrumbPath"
-import { FaHome, FaPhoneAlt, FaShoppingCart, FaBoxOpen, FaChevronRight } from "react-icons/fa"
+import { FaBoxOpen, FaChevronRight } from "react-icons/fa"
+import AppNavbar from "./components/AppNavbar"
 
 interface OrderItem {
   id:         number
@@ -142,23 +141,7 @@ export default function OrderHistory() {
 
   return (
     <div className="oh-wrapper">
-
-      {/* Navbar */}
-      <nav className="od-navbar">
-        <div className="od-brand">
-          <img src={logo} alt="BGAUSS" className="od-brand__logo" />
-          <div className="od-brand__text">
-            <span className="od-brand__name">BGAUSS</span>
-            <span className="od-brand__sub">Electronic Parts Catalog</span>
-          </div>
-        </div>
-        <div className="od-navbar__actions">
-          <button className="od-nav-btn" onClick={() => navigate("/dashboard")} title="Home"><FaHome /></button>
-          <button className="od-nav-btn" title="Contact"><FaPhoneAlt /></button>
-          <button className="od-nav-btn" onClick={() => navigate("/checkout")} title="Cart"><FaShoppingCart /></button>
-          <AccountMenu />
-        </div>
-      </nav>
+      <AppNavbar cartCount={0} showOrders={false} />
 
       {/* Breadcrumb */}
       <BreadcrumbPath

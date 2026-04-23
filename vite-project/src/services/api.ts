@@ -1,3 +1,4 @@
+// services/api.ts
 export interface LoginResponse {
   username: string;
   token: string;
@@ -40,19 +41,22 @@ export interface Assembly {
 }
 
 export interface Part {
-  id: number;
-  partNumber: string;
-  partName: string;
-  imageNumber: string;
-  remarks?: string
-  description: string;
-  price: number;
-  imagePath: string;
-  categoryName: string;
+  id:            number;
+  partNumber:    string;
+  partName:      string;
+  imageNumber:   string;
+  remarks?:      string;
+  description:   string;
+  price:         number;       // legacy price field
+  bdp?:          number;       // Basic Dealer Price ← NEW
+  mrp?:          number;       // Maximum Retail Price ← NEW
+  taxPercent?:   number;       // Tax % ← NEW
+  imagePath:     string;
+  categoryName:  string;
   stockQuantity: number;
-  modelId?: number | null;
-  assemblyId?: number | null;
-  subParts?: Part[];
+  modelId?:      number | null;
+  assemblyId?:   number | null;
+  subParts?:     Part[];
 }
 
 export async function login(

@@ -416,6 +416,32 @@
   color: #074765;
 }
 
+.checkout-qty-input::-webkit-outer-spin-button,
+.checkout-qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.checkout-qty-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* My Orders nav button */
+.checkout-orders-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; border-radius: 8px;
+    padding: 6px 12px; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .checkout-orders-btn:hover { background: rgba(255,255,255,0.22); }
+  @media (max-width: 600px) {
+    .checkout-orders-btn span { display: none; }
+    .checkout-orders-btn { padding: 6px 10px; }
+  }
+
+
 /* ========================= */
 /* RESPONSIVE — 1024px       */
 /* ========================= */

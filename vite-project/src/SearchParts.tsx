@@ -6,6 +6,7 @@
 //  ✅ Contact modal → sends email to sachin.raut@bgauss.com & prasad.kurawade@bgauss.com
 //  ✅ Zoom image (wheel scroll to zoom, click drag to pan)
 //  ✅ Full responsive layout
+//  ✅ BreadcrumbPath added
 
 import "./searchparts.css"
 import logo from "./assets/logo.jpg"
@@ -13,6 +14,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import { useState, useEffect, useRef, useCallback } from "react"
 import axios from "axios"
 import AccountMenu from "./components/AccountMenu"
+import BreadcrumbPath from "./components/BreadcrumbPath"
 import type { Part } from "./services/api"
 import { commonSearch } from "./services/serachapi"
 import {
@@ -67,7 +69,6 @@ function ContactModal({ onClose }: ContactModalProps) {
         email:      form.email,
         phone:      form.phone,
         message:    form.message,
-        // backend will send to both recipients
         recipients: ["sachin.raut@bgauss.com", "prasad.kurawade@bgauss.com"],
       })
       setSent(true)
@@ -410,6 +411,13 @@ const SearchParts = () => {
     return ""
   }
 
+  // Build stateMap for breadcrumb back-navigation
+  const assemblyState = {
+    searchType: undefined as string | undefined,
+    vin: undefined as string | undefined,
+    modelId,
+  }
+
   // ── Render ────────────────────────────────────────────────────
   return (
     <div className="sp-wrapper">
@@ -436,6 +444,16 @@ const SearchParts = () => {
           <AccountMenu />
         </div>
       </nav>
+
+      {/* Breadcrumb */}
+      <BreadcrumbPath
+        current="parts"
+        stateMap={{
+          dashboard:           null,
+          vehicle_preview:     null,
+          assembly_catalogue:  assemblyState,
+        }}
+      />
 
       <h2 className="sp-assembly-title">{assemblyName as string}</h2>
 

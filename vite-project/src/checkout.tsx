@@ -1,9 +1,10 @@
-// checkout.tsx — updated to use shared AppNavbar
+// checkout.tsx — updated with BreadcrumbPath
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import "./checkout.css";
 import { useNavigate } from "react-router-dom";
 import AppNavbar from "./components/AppNavbar";
+import BreadcrumbPath from "./components/BreadcrumbPath";
 import {
   FaSearch, FaTrashAlt, FaStore, FaFilePdf, FaFileCsv, FaCheckCircle,
 } from "react-icons/fa";
@@ -141,8 +142,8 @@ const CheckoutPage = () => {
       const res  = await axios.get<DownloadResponse>("/cart/download/csv");
       const link = document.createElement("a");
       // Dev: use localhost:5053; Production: use relative path below
-      //link.href = `http://localhost:5053${res.data.path}`;
-      link.href = res.data.path.startsWith("/") ? res.data.path : `/${res.data.path}`;
+      link.href = `http://localhost:5053${res.data.path}`;
+      //link.href = res.data.path.startsWith("/") ? res.data.path : `/${res.data.path}`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
     } catch (err) { console.error("CSV download failed:", err); }
   };
@@ -152,8 +153,8 @@ const CheckoutPage = () => {
       const res  = await axios.get<DownloadResponse>("/cart/download/pdf");
       const link = document.createElement("a");
       // Dev: use localhost:5053; Production: use relative path below
-      //link.href = `http://localhost:5053${res.data.path}`;
-      link.href = res.data.path.startsWith("/") ? res.data.path : `/${res.data.path}`;
+      link.href = `http://localhost:5053${res.data.path}`;
+      //link.href = res.data.path.startsWith("/") ? res.data.path : `/${res.data.path}`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
     } catch (err) { console.error("PDF download failed:", err); }
   };
@@ -179,11 +180,28 @@ const CheckoutPage = () => {
     }
   };
 
+  // Restore back-nav state for breadcrumb
+  const storedPartsState = (() => {
+    try { return JSON.parse(sessionStorage.getItem("partsSearchState") ?? "null"); }
+    catch { return null; }
+  })();
+
   return (
     <div className="checkout-page">
 
-      {/* Shared navbar — contact + cart + My Orders all work */}
+      {/* Shared navbar */}
       <AppNavbar cartCount={items.length} showOrders />
+
+      {/* Breadcrumb */}
+      <BreadcrumbPath
+        current="checkout"
+        stateMap={{
+          dashboard:           null,
+          vehicle_preview:     storedPartsState,
+          assembly_catalogue:  storedPartsState,
+          parts:               storedPartsState,
+        }}
+      />
 
       <main className="checkout-content">
         <h1>Cart</h1>

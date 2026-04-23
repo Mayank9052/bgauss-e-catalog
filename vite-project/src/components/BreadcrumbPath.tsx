@@ -31,7 +31,7 @@ interface StepDef {
 
 const ALL_STEPS: StepDef[] = [
   { key: "dashboard",           label: "Dashboard",          short: "Home",       route: "/dashboard" },
-  { key: "vehicle_preview",     label: "Vehicle Preview",    short: "Vehicle",    route: "/vehicle_preview" },
+  { key: "vehicle_preview",     label: "Vehicle Preview",    short: "Vehicle",    route: "/V_Priview" },
   { key: "assembly_catalogue",  label: "Assembly Catalogue", short: "Assemblies", route: "/assembly_catalogue" },
   { key: "parts",               label: "Parts",              short: "Parts",      route: "/parts" },
   { key: "checkout",            label: "Cart",               short: "Cart",       route: "/checkout" },

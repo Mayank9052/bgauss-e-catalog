@@ -9,6 +9,7 @@ import logo from "./assets/logo.jpg"
 import "./order_details.css"
 import "./order_history.css"
 import AccountMenu from "./components/AccountMenu"
+import BreadcrumbPath from "./components/BreadcrumbPath"
 import { FaHome, FaPhoneAlt, FaShoppingCart, FaBoxOpen, FaChevronRight } from "react-icons/fa"
 
 interface OrderItem {
@@ -133,6 +134,12 @@ export default function OrderHistory() {
     navigate("/order_details", { state: { order: orderData } })
   }
 
+  // Restore stored parts state for back-nav
+  const storedPartsState = (() => {
+    try { return JSON.parse(sessionStorage.getItem("partsSearchState") ?? "null"); }
+    catch { return null; }
+  })()
+
   return (
     <div className="oh-wrapper">
 
@@ -152,6 +159,18 @@ export default function OrderHistory() {
           <AccountMenu />
         </div>
       </nav>
+
+      {/* Breadcrumb */}
+      <BreadcrumbPath
+        current="order_history"
+          stateMap={{
+              dashboard:           null,
+              vehicle_preview:     storedPartsState,
+              assembly_catalogue:  storedPartsState,
+              parts:               storedPartsState,
+              checkout:            null,
+          }}
+      />
 
       <main className="oh-content">
         <div className="oh-page-header">

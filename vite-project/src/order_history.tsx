@@ -9,6 +9,7 @@ import logo from "./assets/logo.jpg"
 import "./order_details.css"
 import "./order_history.css"
 import AccountMenu from "./components/AccountMenu"
+import BreadcrumbPath from "./components/BreadcrumbPath"
 import { FaHome, FaPhoneAlt, FaShoppingCart, FaBoxOpen, FaChevronRight } from "react-icons/fa"
 
 interface OrderItem {
@@ -84,7 +85,7 @@ const statusColor = (s: string) => {
   if (l === "delivered")  return { bg: "#dcfce7", color: "#166534", border: "#86efac" }
   if (l === "cancelled")  return { bg: "#fee2e2", color: "#b91c1c", border: "#fca5a5" }
   if (l === "confirmed")  return { bg: "#dbeafe", color: "#1e40af", border: "#93c5fd" }
-  return                         { bg: "#fef9c3", color: "#854d0e", border: "#fde047" } // pending
+  return                         { bg: "#fef9c3", color: "#854d0e", border: "#fde047" }
 }
 
 const fmtDate = (d?: string) => {
@@ -133,6 +134,12 @@ export default function OrderHistory() {
     navigate("/order_details", { state: { order: orderData } })
   }
 
+  // Restore stored parts state for back-nav
+  const storedPartsState = (() => {
+    try { return JSON.parse(sessionStorage.getItem("partsSearchState") ?? "null"); }
+    catch { return null; }
+  })()
+
   return (
     <div className="oh-wrapper">
 
@@ -152,6 +159,18 @@ export default function OrderHistory() {
           <AccountMenu />
         </div>
       </nav>
+
+      {/* Breadcrumb */}
+      <BreadcrumbPath
+        current="order_history"
+        stateMap={{
+          dashboard:           null,
+          vehicle_preview:     storedPartsState,
+          assembly_catalogue:  storedPartsState,
+          parts:               storedPartsState,
+          checkout:            null,
+        }}
+      />
 
       <main className="oh-content">
         <div className="oh-page-header">

@@ -1,0 +1,165 @@
+/* order_history.css — BGAUSS My Orders page */
+
+.oh-wrapper {
+  background: #f1f3f6;
+  min-height: 100vh;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.oh-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+.oh-page-header { margin-bottom: 24px; }
+
+.oh-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin: 0 0 4px;
+}
+
+.oh-subtitle { font-size: 13px; color: #64748b; margin: 0; }
+
+/* Loading */
+.oh-loading {
+  display: flex; align-items: center; gap: 12px;
+  padding: 40px 0; font-size: 14px; color: #64748b;
+  justify-content: center;
+}
+
+.oh-spinner {
+  width: 22px; height: 22px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0b3c4d;
+  border-radius: 50%;
+  animation: ohSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes ohSpin { to { transform: rotate(360deg); } }
+
+/* Error */
+.oh-error {
+  background: #fef2f2; border: 1px solid #fca5a5;
+  color: #b91c1c; border-radius: 10px;
+  padding: 14px 18px; font-size: 14px; font-weight: 600;
+}
+
+/* Empty state */
+.oh-empty {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 80px 20px; text-align: center; gap: 12px;
+}
+.oh-empty__icon { font-size: 56px; margin-bottom: 4px; }
+.oh-empty h2    { font-size: 20px; color: #1a1a2e; margin: 0; }
+.oh-empty p     { font-size: 14px; color: #64748b; margin: 0; max-width: 340px; }
+
+.oh-btn {
+  margin-top: 8px; padding: 11px 24px;
+  background: #0b3c4d; color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.oh-btn:hover { opacity: 0.85; }
+
+/* Orders list */
+.oh-orders-list { display: flex; flex-direction: column; gap: 14px; }
+
+/* Order card */
+.oh-order-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: box-shadow 0.18s, border-color 0.18s, transform 0.12s;
+  overflow: hidden;
+}
+.oh-order-card:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+.oh-order-card:active { transform: scale(0.995); }
+
+/* Card header */
+.oh-order-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+  flex-wrap: wrap; gap: 8px;
+}
+
+.oh-order-meta { display: flex; flex-direction: column; gap: 2px; }
+.oh-order-id   { font-size: 14px; font-weight: 800; color: #1a1a2e; }
+.oh-order-date { font-size: 12px; color: #64748b; }
+
+.oh-order-right { display: flex; align-items: center; gap: 10px; }
+
+.oh-status-badge {
+  font-size: 11px; font-weight: 800;
+  padding: 4px 12px; border-radius: 20px;
+  border: 1.5px solid; white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+.oh-chevron { color: #94a3b8; font-size: 13px; }
+
+/* Items preview */
+.oh-order-items { padding: 12px 18px; display: flex; flex-direction: column; gap: 8px; }
+
+.oh-order-item {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.oh-item-thumb {
+  width: 36px; height: 36px;
+  background: #f1f5f9; border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+
+.oh-item-info { flex: 1; min-width: 0; }
+
+.oh-item-name {
+  font-size: 13px; font-weight: 600; color: #1a1a2e;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.oh-item-num { font-size: 11px; color: #94a3b8; font-family: monospace; }
+
+.oh-item-price { font-size: 13px; font-weight: 700; color: #1e40af; white-space: nowrap; flex-shrink: 0; }
+
+.oh-order-more {
+  font-size: 12px; color: #64748b;
+  background: #f8fafc; border-radius: 6px;
+  padding: 4px 10px; text-align: center;
+  border: 1px dashed #e2e8f0;
+}
+
+/* Card footer */
+.oh-order-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 18px;
+  border-top: 1px solid #f1f5f9;
+  background: #fdfefe;
+}
+
+.oh-order-count { font-size: 12px; color: #64748b; }
+.oh-order-total { font-size: 14px; font-weight: 800; color: #0b3c4d; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .oh-content { padding: 16px 10px 40px; }
+  .oh-title { font-size: 20px; }
+  .oh-order-header { padding: 12px 14px; }
+  .oh-order-items  { padding: 10px 14px; }
+  .oh-order-footer { padding: 8px 14px; }
+  .oh-item-name { font-size: 12px; }
+}

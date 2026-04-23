@@ -1,0 +1,162 @@
+/* src/components/BreadcrumbPath.css */
+
+.bc-bar {
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 24px;
+  box-sizing: border-box;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.bc-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.bc-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: max-content;
+}
+
+/* ── Item Wrap (step + connector) ── */
+.bc-item-wrap {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Connector line ── */
+.bc-connector {
+  width: 32px;
+  height: 2px;
+  background: #cbd5e1;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.bc-connector--done {
+  background: #0e4f67;
+}
+
+/* ── Step button ── */
+.bc-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  outline: none;
+  white-space: nowrap;
+}
+
+.bc-step:not(:disabled):hover {
+  background: #f0f9ff;
+}
+
+.bc-step:disabled {
+  cursor: default;
+}
+
+/* ── Circle ── */
+.bc-step__circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  border: 2px solid #cbd5e1;
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+/* Active step */
+.bc-step--active .bc-step__circle {
+  background: #0e4f67;
+  border-color: #0e4f67;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(14, 79, 103, 0.12);
+}
+
+/* Visited step */
+.bc-step--visited .bc-step__circle {
+  background: #0e4f67;
+  border-color: #0e4f67;
+  color: #ffffff;
+}
+
+.bc-step--visited:not(:disabled):hover .bc-step__circle {
+  background: #0c3f54;
+  border-color: #0c3f54;
+}
+
+/* ── Label ── */
+.bc-step__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  transition: color 0.2s;
+}
+
+.bc-step--active .bc-step__label {
+  color: #0e4f67;
+  font-weight: 700;
+}
+
+.bc-step--visited .bc-step__label {
+  color: #0e4f67;
+}
+
+.bc-step--visited:not(:disabled):hover .bc-step__label {
+  color: #0c3f54;
+  text-decoration: underline;
+}
+
+/* ── Responsive: short labels on small screens ── */
+.bc-step__label--short {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .bc-bar {
+    padding: 8px 12px;
+  }
+
+  .bc-connector {
+    width: 16px;
+  }
+
+  .bc-step__label--full {
+    display: none;
+  }
+
+  .bc-step__label--short {
+    display: inline;
+  }
+
+  .bc-step {
+    gap: 5px;
+    padding: 3px 4px;
+  }
+
+  .bc-step__circle {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .bc-step__label {
+    font-size: 11px;
+  }
+}

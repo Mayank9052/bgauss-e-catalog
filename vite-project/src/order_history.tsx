@@ -1,4 +1,4 @@
-﻿// OrderHistory.tsx — BGAUSS My Orders page
+// OrderHistory.tsx — BGAUSS My Orders page
 // Like Amazon/Flipkart order history
 // Route: /order_history
 

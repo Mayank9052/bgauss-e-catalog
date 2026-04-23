@@ -12,5 +12,12 @@ export default defineConfig({
         changeOrigin: true
       }
     }
-  }
+  },
+
+  build: {
+    // Output to wwwroot so ASP.NET Core's MapFallbackToFile serves index.html
+    outDir: '../BGAUSS.Api/wwwroot',
+    emptyOutDir: true,
+    sourcemap: false,
+  },
 });

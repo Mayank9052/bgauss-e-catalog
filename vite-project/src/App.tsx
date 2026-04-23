@@ -10,6 +10,7 @@ import VehiclePreview from "./V_preview";
 import AssemblyCatalogue from "./assembly_catalogue";
 import AdminModules from "./AdminModules";
 import { ProtectedRoute } from "./components/RouteGuard";
+import OrderHistory from "./order_history"
 
 function ScrollToTop() {
 
@@ -127,6 +128,7 @@ function App() {
         {/* Fallback */}
 
         <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/order_history" element={<OrderHistory />} />
 
       </Routes>
 

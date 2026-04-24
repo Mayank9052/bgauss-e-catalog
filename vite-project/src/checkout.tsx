@@ -113,7 +113,8 @@ const CheckoutPage = () => {
       await axios.delete(`/cart/remove/${id}`); await fetchCart();
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 405) {
-        try { await axios.delete(`/api/cart/remove/${id}`); await fetchCart(); }
+        //try { await axios.delete(`/api/cart/remove/${id}`); await fetchCart(); }
+        try { await axios.delete(`/cart/remove/${id}`); await fetchCart(); }
         catch { alert("Could not remove item."); }
       } else { console.error("Remove item failed:", err); }
     }
@@ -142,7 +143,8 @@ const CheckoutPage = () => {
       const res  = await axios.get<DownloadResponse>("/cart/download/csv");
       const link = document.createElement("a");
       // Dev: use localhost:5053; Production: use relative path below
-      link.href = `http://localhost:5053${res.data.path}`;
+      //link.href = `http://localhost:5053${res.data.path}`;
+      link.href = `${window.location.origin}${res.data.path}`;
       //link.href = res.data.path.startsWith("/") ? res.data.path : `/${res.data.path}`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
     } catch (err) { console.error("CSV download failed:", err); }
@@ -153,7 +155,8 @@ const CheckoutPage = () => {
       const res  = await axios.get<DownloadResponse>("/cart/download/pdf");
       const link = document.createElement("a");
       // Dev: use localhost:5053; Production: use relative path below
-      link.href = `http://localhost:5053${res.data.path}`;
+      //link.href = `http://localhost:5053${res.data.path}`;
+      link.href = `${window.location.origin}${res.data.path}`;
       //link.href = res.data.path.startsWith("/") ? res.data.path : `/${res.data.path}`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
     } catch (err) { console.error("PDF download failed:", err); }

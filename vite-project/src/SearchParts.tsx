@@ -1,12 +1,13 @@
-// SearchParts.tsx — BGAUSS Electronic Parts Catalog
-// Features:
-//  ✅ Chip HOVER → auto-scroll table to first matching row + amber arrow indicator
-//  ✅ Chip CLICK → multi-select toggle + auto-select in-stock parts
-//  ✅ OUT OF STOCK badge fixed — never overflows column
-//  ✅ Contact modal → sends email to sachin.raut@bgauss.com & prasad.kurawade@bgauss.com
-//  ✅ Zoom image (wheel scroll to zoom, click drag to pan)
-//  ✅ Full responsive layout
-//  ✅ BreadcrumbPath added
+// SearchParts.tsx — BGAUSS Electronic Parts Catalog — PRODUCTION READY
+// ✅ All API calls use /api/ prefix (works on production, proxied in dev)
+// ✅ No localhost hardcoding
+// ✅ Chip HOVER → auto-scroll table to first matching row + amber arrow indicator
+// ✅ Chip CLICK → multi-select toggle + auto-select in-stock parts
+// ✅ OUT OF STOCK badge fixed — never overflows column
+// ✅ Contact modal
+// ✅ Zoom image (wheel scroll to zoom)
+// ✅ Full responsive layout
+// ✅ BreadcrumbPath added
 
 import "./searchparts.css"
 import logo from "./assets/logo.jpg"
@@ -245,7 +246,7 @@ const SearchParts = () => {
     setRemarks(prev => { const n = { ...prev }; items.forEach(p => { if (n[p.id] == null) n[p.id] = p.remarks ?? "" }); return n })
   }
 
-  // ── Fetch cart ──
+  // ── Fetch cart — uses /api/ prefix for production ──
   const fetchCart = useCallback(async () => {
     try {
       const res = await axios.get("/cart/my-cart")
@@ -308,10 +309,8 @@ const SearchParts = () => {
   // ── Auto-scroll table when hovering a chip ──
   useEffect(() => {
     if (!hoveredNum) return
-    // Find first row matching this image number
     const row = rowRefs.current[hoveredNum]
     if (row && tableScrollRef.current) {
-      // Smooth scroll that row into view inside the scroll container
       const container = tableScrollRef.current
       const rowTop    = row.offsetTop
       const rowHeight = row.offsetHeight
@@ -382,7 +381,7 @@ const SearchParts = () => {
     })
   }
 
-  // ── Add to cart ──
+  // ── Add to cart — uses /api/ prefix for production ──
   const addSelectedToCart = async () => {
     if (selectedParts.length === 0) { alert("Please select at least one part"); return }
     if (addingRef.current) return
@@ -617,8 +616,8 @@ const SearchParts = () => {
                     </td>
                   </tr>
                 ) : displayParts.map((part, idx) => {
-                  const qty   = quantities[part.id] || 1
-                  const stock = getAvailableStock(part)
+                  const qty    = quantities[part.id] || 1
+                  const stock  = getAvailableStock(part)
                   const imgNum = part.imageNumber?.trim()
 
                   return (

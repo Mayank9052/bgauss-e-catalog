@@ -13,7 +13,7 @@ namespace BGAUSS.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    //[Authorize]
     public class CartController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

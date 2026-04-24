@@ -43,7 +43,8 @@ function ContactModal({ onClose }: { onClose: () => void }) {
     }
     setError(""); setSending(true)
     try {
-      await axios.post("/api/contact/send", {
+      //await axios.post("/api/contact/send", {
+      await axios.post("/contact/send", {
         subject:    form.subject || "General Enquiry",
         salutation: form.salutation,
         firstName:  form.firstName,

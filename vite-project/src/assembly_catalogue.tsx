@@ -1,4 +1,4 @@
-// assembly_catalogue.tsx — updated with BreadcrumbPath
+// assembly_catalogue.tsx — production-ready (no localhost hardcoding)
 import { useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./assembly_catalogue.css";
@@ -16,14 +16,16 @@ interface VehicleSearchState {
   variantId?: number | string;
   colourId?: number | string;
 }
-interface CartCountResponse  { items: { id: number }[] }
+interface CartCountResponse { items: { id: number }[] }
 
+// ── FIX: no more localhost hardcoding — works on any host ──
 const resolveAssemblyImage = (imagePath?: string | null): string => {
   if (!imagePath) return "";
+  // If already absolute URL, use as-is
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) return imagePath;
+  // Normalize backslashes and leading slashes, then make relative
   const normalized = imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
-  // Dev: full URL to backend; Production: use `/${normalized}` (relative)
-  return `http://localhost:5053/${normalized}`;
-  //return `/${normalized}`;
+  return `/${normalized}`;
 };
 
 const AssemblyCatalogue = () => {
@@ -44,10 +46,10 @@ const AssemblyCatalogue = () => {
   const [scale,     setScale]     = useState(1);
   const [origin,    setOrigin]    = useState("center center");
 
-  // Fetch cart count for badge
+  // ── FIX: use /api/cart/my-cart (works in production, proxied in dev) ──
   const fetchCartCount = useCallback(async () => {
     try {
-      const res = await axios.get<CartCountResponse>("/cart/my-cart");
+      const res = await axios.get<CartCountResponse>("/api/cart/my-cart");
       setCartCount(res.data?.items?.length ?? 0);
     } catch { setCartCount(0); }
   }, []);

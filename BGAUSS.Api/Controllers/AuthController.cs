@@ -37,7 +37,7 @@ namespace BGAUSS.Api.Controllers
 
             var user = new User
             {
-                Username = request.Username,
+                Username = request.Username ?? "",
                 PasswordHash = hashedPassword,
                 Role = request.Role ?? "User",
                 IsActive = true,

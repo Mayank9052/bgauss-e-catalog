@@ -9,6 +9,7 @@ import "./AdminModules.css";
 import {
   FaHome, FaPhoneAlt, FaShoppingCart, FaPlus, FaEdit, FaTrash,
   FaDownload, FaUpload, FaSearch, FaTimes, FaCheck, FaExclamationTriangle,
+  FaImage,
 } from "react-icons/fa";
 
 /* ═══════════════════════════════════════════════════
@@ -97,16 +98,229 @@ function SelectField({ label, value, onChange, options, placeholder }: {
 }
 
 /* ═══════════════════════════════════════════════════
+   IMAGE UPLOAD FIELD
+   Uploads image to /upload/image and returns the
+   saved path. Shows a preview thumbnail after upload.
+═══════════════════════════════════════════════════ */
+function ImageUploadField({ label, value, onChange }: {
+  label: string;
+  value: string;
+  onChange: (path: string) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+
+  // Build a preview URL from the stored path
+  const resolvedPreview = value
+    ? (value.startsWith("http") ? value : `/${value.replace(/\\/g, "/").replace(/^\/+/, "")}`)
+    : "";
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Local preview immediately
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
+
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await axios.post<{ path: string }>("/upload/image", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      // Server returns the relative path e.g. "images/colours/abc.jpg"
+      onChange(res.data.path);
+    } catch {
+      alert("Image upload failed. Please try again.");
+      setPreviewUrl("");
+      onChange("");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const displayPreview = previewUrl || resolvedPreview;
+
+  return (
+    <div className="am-field">
+      <label className="am-field__label">{label}</label>
+
+      <div className="am-img-upload-box" onClick={() => !uploading && fileRef.current?.click()}>
+        {displayPreview ? (
+          <div className="am-img-upload-preview">
+            <img
+              src={displayPreview}
+              alt="preview"
+              className="am-img-thumb"
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div className="am-img-upload-overlay">
+              <FaImage />
+              <span>{uploading ? "Uploading…" : "Change Image"}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="am-img-upload-placeholder">
+            <FaImage className="am-img-upload-icon" />
+            <span className="am-img-upload-text">
+              {uploading ? "Uploading…" : "Click to upload image"}
+            </span>
+            <span className="am-img-upload-hint">JPG, PNG, WebP</span>
+          </div>
+        )}
+
+        {/* Show current path as small text below */}
+        {value && !uploading && (
+          <div className="am-img-path-display" title={value}>
+            📁 {value.length > 40 ? "…" + value.slice(-37) : value}
+          </div>
+        )}
+      </div>
+
+      {/* Clear button */}
+      {value && !uploading && (
+        <button
+          type="button"
+          className="am-btn am-btn--ghost am-btn--xs"
+          style={{ marginTop: 4, width: "100%" }}
+          onClick={e => { e.stopPropagation(); onChange(""); setPreviewUrl(""); }}
+        >
+          <FaTimes /> Clear Image
+        </button>
+      )}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handleFile}
+      />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   INLINE IMAGE UPLOAD (for table edit rows)
+═══════════════════════════════════════════════════ */
+function InlineImageUpload({ value, onChange }: {
+  value: string;
+  onChange: (path: string) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const resolvedPreview = value
+    ? (value.startsWith("http") ? value : `/${value.replace(/\\/g, "/").replace(/^\/+/, "")}`)
+    : "";
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await axios.post<{ path: string }>("/upload/image", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      onChange(res.data.path);
+    } catch {
+      alert("Image upload failed.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="am-inline-img-wrap">
+      {resolvedPreview && (
+        <img
+          src={resolvedPreview}
+          alt="img"
+          className="am-inline-img-thumb"
+          onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+      )}
+      <button
+        type="button"
+        className="am-btn am-btn--outline am-btn--xs"
+        disabled={uploading}
+        onClick={() => fileRef.current?.click()}
+        title="Upload image"
+      >
+        <FaImage /> {uploading ? "…" : (value ? "Change" : "Upload")}
+      </button>
+      {value && (
+        <button
+          type="button"
+          className="am-btn am-btn--ghost am-btn--xs"
+          onClick={() => onChange("")}
+          title="Clear image"
+        >
+          <FaTimes />
+        </button>
+      )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handleFile}
+      />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   DOWNLOAD HELPER
+═══════════════════════════════════════════════════ */
+async function downloadTemplate(apiUrl: string, fileName: string): Promise<void> {
+  try {
+    const response = await axios.get(apiUrl, { responseType: "blob" });
+    const contentType = response.headers["content-type"] ?? "";
+    if (contentType.includes("text/html")) {
+      alert("Download failed: server returned HTML. Check API routing.");
+      return;
+    }
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  } catch (error: unknown) {
+    const msg = axios.isAxiosError(error)
+      ? (error.response?.data as string | undefined) ?? error.message
+      : String(error);
+    alert("Download failed: " + msg);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
    IMPORT ROW
 ═══════════════════════════════════════════════════ */
-function ImportRow({ downloadUrl, importUrl, onDone, entity }: {
-  downloadUrl: string; importUrl: string; onDone: () => void; entity: string;
+function ImportRow({ downloadUrl, importUrl, onDone, entity, fileName }: {
+  downloadUrl: string; importUrl: string; onDone: () => void; entity: string; fileName: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
-  // FIX 1: replaced `err: any` with `unknown` and narrowed the type
-  const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDownload = async () => {
+    setDownloading(true);
+    await downloadTemplate(downloadUrl, fileName);
+    setDownloading(false);
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setBusy(true);
@@ -129,16 +343,29 @@ function ImportRow({ downloadUrl, importUrl, onDone, entity }: {
 
   return (
     <div className="am-import-row">
-      <a href={downloadUrl} download className="am-btn am-btn--outline am-btn--sm">
-        <FaDownload /> Download {entity} Template
-      </a>
-      <button className="am-btn am-btn--primary am-btn--sm" disabled={busy}
-        onClick={() => ref.current?.click()}>
+      <button className="am-btn am-btn--outline am-btn--sm" disabled={downloading} onClick={() => void handleDownload()}>
+        <FaDownload /> {downloading ? "Downloading…" : `Download ${entity} Template`}
+      </button>
+      <button className="am-btn am-btn--primary am-btn--sm" disabled={busy} onClick={() => ref.current?.click()}>
         <FaUpload /> {busy ? "Importing…" : `Import ${entity} Excel`}
       </button>
-      <input ref={ref} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handle} />
+      <input ref={ref} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleImport} />
     </div>
   );
+}
+
+/* ═══════════════════════════════════════════════════
+   SAFE ARRAY HELPER
+═══════════════════════════════════════════════════ */
+function safeArray<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    for (const key of ["data", "items", "value", "result", "results"]) {
+      if (Array.isArray(obj[key])) return obj[key] as T[];
+    }
+  }
+  return [];
 }
 
 /* ═══════════════════════════════════════════════════
@@ -149,7 +376,6 @@ const AdminModules = () => {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>("models");
 
-  /* ── toasts ── */
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastId = useRef(0);
   const addToast = useCallback((msg: string, type: "success" | "error") => {
@@ -157,57 +383,46 @@ const AdminModules = () => {
     setToasts(p => [...p, { id, msg, type }]);
     setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3500);
   }, []);
-
-  // FIX 2: ok/err defined with useCallback so they're stable references
-  // and can safely be included in useCallback dependency arrays below
   const ok  = useCallback((msg: string) => addToast(msg, "success"), [addToast]);
   const err = useCallback((msg: string) => addToast(msg, "error"),   [addToast]);
 
-  /* ── confirm ── */
   const [confirm, setConfirm] = useState<{ msg: string; fn: () => void } | null>(null);
   const ask = (msg: string, fn: () => void) => setConfirm({ msg, fn });
 
   /* ═══════════ STATE ═══════════ */
-
-  /* models */
-  const [models, setModels]           = useState<VehicleModel[]>([]);
-  const [modelForm, setModelForm]     = useState({ modelName: "" });
-  const [editModel, setEditModel]     = useState<VehicleModel | null>(null);
+  const [models,      setModels]      = useState<VehicleModel[]>([]);
+  const [modelForm,   setModelForm]   = useState({ modelName: "" });
+  const [editModel,   setEditModel]   = useState<VehicleModel | null>(null);
   const [modelSearch, setModelSearch] = useState("");
 
-  /* variants */
-  const [variants, setVariants]           = useState<VehicleVariant[]>([]);
-  const [variantForm, setVariantForm]     = useState({ variantName: "", modelId: 0 });
-  const [editVariant, setEditVariant]     = useState<VehicleVariant | null>(null);
+  const [variants,      setVariants]      = useState<VehicleVariant[]>([]);
+  const [variantForm,   setVariantForm]   = useState({ variantName: "", modelId: 0 });
+  const [editVariant,   setEditVariant]   = useState<VehicleVariant | null>(null);
   const [variantSearch, setVariantSearch] = useState("");
 
-  /* colours */
-  const [colours, setColours]             = useState<VehicleColour[]>([]);
-  const [colourForm, setColourForm]       = useState({ colourName: "", modelId: 0, variantId: 0, imagePath: "" });
-  const [editColour, setEditColour]       = useState<VehicleColour | null>(null);
-  const [colourSearch, setColourSearch]   = useState("");
+  const [colours,      setColours]      = useState<VehicleColour[]>([]);
+  const [colourForm,   setColourForm]   = useState({ colourName: "", modelId: 0, variantId: 0, imagePath: "" });
+  const [editColour,   setEditColour]   = useState<VehicleColour | null>(null);
+  const [colourSearch, setColourSearch] = useState("");
 
-  /* assemblies */
-  const [assemblies, setAssemblies]       = useState<Assembly[]>([]);
-  const [asmForm, setAsmForm]             = useState({ assemblyName: "", imagePath: "", modelId: 0 });
-  const [editAsm, setEditAsm]             = useState<Assembly | null>(null);
-  const [asmSearch, setAsmSearch]         = useState("");
+  const [assemblies, setAssemblies] = useState<Assembly[]>([]);
+  const [asmForm,    setAsmForm]    = useState({ assemblyName: "", imagePath: "", modelId: 0 });
+  const [editAsm,    setEditAsm]    = useState<Assembly | null>(null);
+  const [asmSearch,  setAsmSearch]  = useState("");
 
-  /* parts */
   const blankPart = (): Part => ({
     partNumber: "", partName: "", description: "", remarks: "",
     price: 0, bdp: 0, mrp: 0, taxPercent: 0, stockQuantity: 0,
     assemblyId: null, modelId: null, variantId: null,
     colourIds: "", torqueNm: 0, imageNumber: "",
   });
-  const [parts, setParts]               = useState<Part[]>([]);
-  const [partForm, setPartForm]         = useState<Part>(blankPart());
-  const [editPart, setEditPart]         = useState<Part | null>(null);
-  const [partSearch, setPartSearch]     = useState("");
+  const [parts,        setParts]        = useState<Part[]>([]);
+  const [partForm,     setPartForm]     = useState<Part>(blankPart());
+  const [editPart,     setEditPart]     = useState<Part | null>(null);
+  const [partSearch,   setPartSearch]   = useState("");
   const [showPartForm, setShowPartForm] = useState(false);
 
   /* ═══════════ AUTH ═══════════ */
-  // FIX 3: navigate is stable, added to dep array to satisfy exhaustive-deps
   useEffect(() => {
     const role = getRoleFromToken();
     if (!role) navigate("/", { replace: true });
@@ -215,240 +430,185 @@ const AdminModules = () => {
   }, [navigate]);
 
   /* ═══════════ FETCH ═══════════ */
-  // FIX 4: ok/err are now stable (useCallback) so safe in dep arrays
-  const fetchModels     = useCallback(async () => { try { const r = await axios.get("/VehicleModels");   setModels(r.data);     } catch { err("Failed to load models");     } }, [err]);
-  const fetchVariants   = useCallback(async () => { try { const r = await axios.get("/VehicleVariants"); setVariants(r.data);   } catch { err("Failed to load variants");   } }, [err]);
-  const fetchColours    = useCallback(async () => { try { const r = await axios.get("/VehicleColours");  setColours(r.data);    } catch { err("Failed to load colours");    } }, [err]);
-  const fetchAssemblies = useCallback(async () => { try { const r = await axios.get("/Assemblies");      setAssemblies(r.data); } catch { err("Failed to load assemblies"); } }, [err]);
-  const fetchParts      = useCallback(async () => { try { const r = await axios.get("/Parts");           setParts(r.data);      } catch { err("Failed to load parts");      } }, [err]);
+  const fetchModels = useCallback(async () => {
+    try { const r = await axios.get("/VehicleModels"); setModels(safeArray<VehicleModel>(r.data)); }
+    catch { err("Failed to load models"); }
+  }, [err]);
 
-  // FIX 5: all fetch functions included in dep array
+  const fetchVariants = useCallback(async () => {
+    try { const r = await axios.get("/VehicleVariants"); setVariants(safeArray<VehicleVariant>(r.data)); }
+    catch { err("Failed to load variants"); }
+  }, [err]);
+
+  const fetchColours = useCallback(async () => {
+    try { const r = await axios.get("/VehicleColours"); setColours(safeArray<VehicleColour>(r.data)); }
+    catch { err("Failed to load colours"); }
+  }, [err]);
+
+  const fetchAssemblies = useCallback(async () => {
+    try { const r = await axios.get("/Assemblies"); setAssemblies(safeArray<Assembly>(r.data)); }
+    catch { err("Failed to load assemblies"); }
+  }, [err]);
+
+  const fetchParts = useCallback(async () => {
+    try { const r = await axios.get("/Parts"); setParts(safeArray<Part>(r.data)); }
+    catch { err("Failed to load parts"); }
+  }, [err]);
+
   useEffect(() => {
-    fetchModels();
-    fetchVariants();
-    fetchColours();
-    fetchAssemblies();
-    fetchParts();
+    fetchModels(); fetchVariants(); fetchColours(); fetchAssemblies(); fetchParts();
   }, [fetchModels, fetchVariants, fetchColours, fetchAssemblies, fetchParts]);
 
   /* ═══════════ MODEL CRUD ═══════════ */
-const createModel = async () => {
-  if (!modelForm.modelName.trim()) return err("Model name is required");
-  try {
-    await axios.post("/VehicleModels", modelForm);
-    setModelForm({ modelName: "" });
-    fetchModels();
-    ok("Model created successfully");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const saveModel = async () => {
-  if (!editModel?.id) {
-    err("No model selected for update");
-    return;
-  }
-  try {
-    await axios.put(`/VehicleModels/${editModel.id}`, editModel);
-    setEditModel(null);
-    fetchModels();
-    ok("Model updated successfully");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const deleteModel = (id: number) => ask("Delete this model? This may affect related variants and colours.", async () => {
-  try {
-    await axios.delete(`/VehicleModels/${id}`);
-    fetchModels();
-    ok("Model deleted");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  } finally {
-    setConfirm(null);
-  }
-});
-
-/* ═══════════ VARIANT CRUD ═══════════ */
-const createVariant = async () => {
-  if (!variantForm.variantName.trim() || !variantForm.modelId) return err("Variant name and model are required");
-  try {
-    await axios.post("/VehicleVariants", variantForm);
-    setVariantForm({ variantName: "", modelId: 0 });
-    fetchVariants();
-    ok("Variant created successfully");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const saveVariant = async () => {
-  if (!editVariant) return;
-  try {
-    await axios.put(`/VehicleVariants/${editVariant.id}`, editVariant);
-    setEditVariant(null);
-    fetchVariants();
-    ok("Variant updated");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const deleteVariant = (id: number) => ask("Delete this variant?", async () => {
-  try {
-    await axios.delete(`/VehicleVariants/${id}`);
-    fetchVariants();
-    ok("Variant deleted");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  } finally {
-    setConfirm(null);
-  }
-});
-
-/* ═══════════ COLOUR CRUD ═══════════ */
-const createColour = async () => {
-  if (!colourForm.colourName.trim()) return err("Colour name is required");
-  try {
-    await axios.post("/VehicleColours", {
-      ...colourForm,
-      modelId:   colourForm.modelId   || null,
-      variantId: colourForm.variantId || null,
-    });
-    setColourForm({ colourName: "", modelId: 0, variantId: 0, imagePath: "" });
-    fetchColours();
-    ok("Colour created successfully");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const saveColour = async () => {
-  if (!editColour) return;
-  try {
-    await axios.put(`/VehicleColours/${editColour.id}`, editColour);
-    setEditColour(null);
-    fetchColours();
-    ok("Colour updated");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const deleteColour = (id: number) => ask("Delete this colour?", async () => {
-  try {
-    await axios.delete(`/VehicleColours/${id}`);
-    fetchColours();
-    ok("Colour deleted");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  } finally {
-    setConfirm(null);
-  }
-});
-
-/* ═══════════ ASSEMBLY CRUD ═══════════ */
-const createAssembly = async () => {
-  if (!asmForm.assemblyName.trim() || !asmForm.modelId) return err("Assembly name and model are required");
-  try {
-    await axios.post("/Assemblies", asmForm);
-    setAsmForm({ assemblyName: "", imagePath: "", modelId: 0 });
-    fetchAssemblies();
-    ok("Assembly created successfully");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const saveAssembly = async () => {
-  if (!editAsm) return;
-  try {
-    await axios.put(`/Assemblies/${editAsm.id}`, editAsm);
-    setEditAsm(null);
-    fetchAssemblies();
-    ok("Assembly updated");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const deleteAssembly = (id: number) => ask("Delete this assembly?", async () => {
-  try {
-    await axios.delete(`/Assemblies/${id}`);
-    fetchAssemblies();
-    ok("Assembly deleted");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  } finally {
-    setConfirm(null);
-  }
-});
-
-/* ═══════════ PART CRUD ═══════════ */
-const createPart = async () => {
-  if (!partForm.partNumber.trim()) return err("Part number is required");
-  try {
-    await axios.post("/Parts", {
-      ...partForm,
-      colourId: partForm.colourIds ? parseInt(partForm.colourIds) : null,
-    });
-    setPartForm(blankPart());
-    setShowPartForm(false);
-    fetchParts();
-    ok("Part created successfully");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const savePart = async () => {
-  if (!editPart) return;
-  try {
-    await axios.put(`/Parts/${editPart.id}`, editPart);
-    setEditPart(null);
-    fetchParts();
-    ok("Part updated");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  }
-};
-
-const deletePart = (id: number) => ask("Delete this part?", async () => {
-  try {
-    await axios.delete(`/Parts/${id}`);
-    fetchParts();
-    ok("Part deleted");
-  } catch (error: unknown) {
-    err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-  } finally {
-    setConfirm(null);
-  }
-});
-
-  // variant inline
-  const onEditVariantName = (v: string) => {
-    if (!editVariant) return;
-    setEditVariant({ ...editVariant, variantName: v });
-  };
-  const onEditVariantModel = (v: string) => {
-    if (!editVariant) return;
-    setEditVariant({ ...editVariant, modelId: +v });
+  const createModel = async () => {
+    if (!modelForm.modelName.trim()) return err("Model name is required");
+    try {
+      await axios.post("/VehicleModels", modelForm);
+      setModelForm({ modelName: "" }); fetchModels(); ok("Model created successfully");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
   };
 
-  // colour inline
+  const saveModel = async () => {
+    if (!editModel?.id) { err("No model selected for update"); return; }
+    try {
+      await axios.put(`/VehicleModels/${editModel.id}`, editModel);
+      setEditModel(null); fetchModels(); ok("Model updated successfully");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
+  };
+
+  const deleteModel = (id: number) => ask("Delete this model? This may affect related data.", async () => {
+    try { await axios.delete(`/VehicleModels/${id}`); fetchModels(); ok("Model deleted"); }
+    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    finally { setConfirm(null); }
+  });
+
+  /* ═══════════ VARIANT CRUD ═══════════ */
+  const createVariant = async () => {
+    if (!variantForm.variantName.trim() || !variantForm.modelId) return err("Variant name and model are required");
+    try {
+      await axios.post("/VehicleVariants", variantForm);
+      setVariantForm({ variantName: "", modelId: 0 }); fetchVariants(); ok("Variant created successfully");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
+  };
+
+  const saveVariant = async () => {
+    if (!editVariant) return;
+    try {
+      await axios.put(`/VehicleVariants/${editVariant.id}`, editVariant);
+      setEditVariant(null); fetchVariants(); ok("Variant updated");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
+  };
+
+  const deleteVariant = (id: number) => ask("Delete this variant?", async () => {
+    try { await axios.delete(`/VehicleVariants/${id}`); fetchVariants(); ok("Variant deleted"); }
+    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    finally { setConfirm(null); }
+  });
+
+  /* ═══════════ COLOUR CRUD ═══════════ */
+  const createColour = async () => {
+    if (!colourForm.colourName.trim()) return err("Colour name is required");
+    try {
+      await axios.post("/VehicleColours", {
+        ...colourForm,
+        modelId:   colourForm.modelId   || null,
+        variantId: colourForm.variantId || null,
+      });
+      setColourForm({ colourName: "", modelId: 0, variantId: 0, imagePath: "" });
+      fetchColours(); ok("Colour created successfully");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
+  };
+
+  const saveColour = async () => {
+    if (!editColour) return;
+    try {
+      await axios.put(`/VehicleColours/${editColour.id}`, editColour);
+      setEditColour(null); fetchColours(); ok("Colour updated");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
+  };
+
+  const deleteColour = (id: number) => ask("Delete this colour?", async () => {
+    try { await axios.delete(`/VehicleColours/${id}`); fetchColours(); ok("Colour deleted"); }
+    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    finally { setConfirm(null); }
+  });
+
+  /* ═══════════ ASSEMBLY CRUD ═══════════ */
+  const createAssembly = async () => {
+    if (!asmForm.assemblyName.trim() || !asmForm.modelId) return err("Assembly name and model are required");
+    try {
+      await axios.post("/Assemblies", asmForm);
+      setAsmForm({ assemblyName: "", imagePath: "", modelId: 0 }); fetchAssemblies(); ok("Assembly created successfully");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
+  };
+
+  const saveAssembly = async () => {
+    if (!editAsm) return;
+    try {
+      await axios.put(`/Assemblies/${editAsm.id}`, editAsm);
+      setEditAsm(null); fetchAssemblies(); ok("Assembly updated");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
+  };
+
+  const deleteAssembly = (id: number) => ask("Delete this assembly?", async () => {
+    try { await axios.delete(`/Assemblies/${id}`); fetchAssemblies(); ok("Assembly deleted"); }
+    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    finally { setConfirm(null); }
+  });
+
+  /* ═══════════ PART CRUD ═══════════ */
+  const createPart = async () => {
+    if (!partForm.partNumber.trim()) return err("Part number is required");
+    try {
+      await axios.post("/Parts", { ...partForm, colourId: partForm.colourIds ? parseInt(partForm.colourIds) : null });
+      setPartForm(blankPart()); setShowPartForm(false); fetchParts(); ok("Part created successfully");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
+  };
+
+  const savePart = async () => {
+    if (!editPart) return;
+    try {
+      await axios.put(`/Parts/${editPart.id}`, editPart);
+      setEditPart(null); fetchParts(); ok("Part updated");
+    } catch (error: unknown) {
+      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
+    }
+  };
+
+  const deletePart = (id: number) => ask("Delete this part?", async () => {
+    try { await axios.delete(`/Parts/${id}`); fetchParts(); ok("Part deleted"); }
+    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    finally { setConfirm(null); }
+  });
+
+  /* ═══════════ INLINE EDIT HANDLERS ═══════════ */
+  const onEditVariantName  = (v: string) => { if (!editVariant) return; setEditVariant({ ...editVariant, variantName: v }); };
+  const onEditVariantModel = (v: string) => { if (!editVariant) return; setEditVariant({ ...editVariant, modelId: +v }); };
   const onEditColourName    = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, colourName: v }); };
   const onEditColourModel   = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, modelId: +v || null }); };
   const onEditColourVariant = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, variantId: +v || null }); };
-  const onEditColourImage   = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, imagePath: v }); };
-
-  // assembly inline
   const onEditAsmName  = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, assemblyName: v }); };
   const onEditAsmModel = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, modelId: +v }); };
-  const onEditAsmImage = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, imagePath: v }); };
 
-  /* ═══════════ FILTER ═══════════ */
+  /* ═══════════ FILTER / DERIVED ═══════════ */
   const fModels     = models.filter(m => m.modelName?.toLowerCase().includes(modelSearch.toLowerCase()));
   const fVariants   = variants.filter(v => v.variantName?.toLowerCase().includes(variantSearch.toLowerCase()));
   const fColours    = colours.filter(c => c.colourName?.toLowerCase().includes(colourSearch.toLowerCase()));
@@ -458,33 +618,27 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
     p.partNumber?.toLowerCase().includes(partSearch.toLowerCase())
   );
 
-  const modelOpts   = models.map(m => ({ id: m.id!, label: m.modelName }));
-  const filteredAssemblies = assemblies.filter(a => a.modelId === colourForm.modelId);
-  const filteredAsmOpts = filteredAssemblies.map(a => ({id: a.id!,label: a.assemblyName}));
+  const modelOpts           = models.map(m => ({ id: m.id!, label: m.modelName }));
+  const filteredVariants    = variants.filter(v => v.modelId === colourForm.modelId);
+  const filteredVariantOpts = filteredVariants.map(v => ({ id: v.id!, label: v.variantName }));
+  const filteredAssemblies  = assemblies.filter(a => a.modelId === (partForm.modelId ?? 0));
+  const filteredAsmOpts     = filteredAssemblies.map(a => ({ id: a.id!, label: a.assemblyName }));
 
-  const modelName   = (id: number | null | undefined) => models.find(m => m.id === id)?.modelName     ?? String(id ?? "—");
-  const variantName = (id: number | null | undefined) => variants.find(v => v.id === id)?.variantName ?? String(id ?? "—");
-  const asmName     = (id: number | null | undefined) => assemblies.find(a => a.id === id)?.assemblyName ?? String(id ?? "—");
+  const modelName   = (id: number | null | undefined) => models.find(m => m.id === id)?.modelName        ?? "—";
+  const variantName = (id: number | null | undefined) => variants.find(v => v.id === id)?.variantName    ?? "—";
+  const asmName     = (id: number | null | undefined) => assemblies.find(a => a.id === id)?.assemblyName ?? "—";
 
   const TABS: { key: ActiveTab; label: string }[] = [
-    { key: "models",     label: "Models" },
-    { key: "variants",   label: "Variants" },
-    { key: "colours",    label: "Colours" },
+    { key: "models",     label: "Models"     },
+    { key: "variants",   label: "Variants"   },
+    { key: "colours",    label: "Colours"    },
     { key: "assemblies", label: "Assemblies" },
-    { key: "parts",      label: "Parts" },
+    { key: "parts",      label: "Parts"      },
   ];
 
-  const filteredVariants = variants.filter(
-  v => v.modelId === colourForm.modelId
-);
-
-  const filteredVariantOpts = filteredVariants.map(v => ({
-  id: v.id!,
-  label: v.variantName
-}));
-  /* ═══════════════════════════════════════════════════
+  /* ══════════════════════════════════════════════════
      RENDER
-  ═══════════════════════════════════════════════════ */
+  ══════════════════════════════════════════════════ */
   return (
     <div className="am-shell">
       <ToastContainer toasts={toasts} remove={id => setToasts(p => p.filter(t => t.id !== id))} />
@@ -515,16 +669,11 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
             <p className="am-page__sub">Manage vehicle data, assemblies and parts catalogue</p>
           </div>
           <div className="am-page__actions">
-            <button className="am-btn am-btn--primary" onClick={() => setShowModal(true)}>
-              <FaPlus /> Manage Module
-            </button>
-            <button className="am-btn am-btn--outline" onClick={() => navigate("/admin/users")}>
-              ← Back
-            </button>
+            <button className="am-btn am-btn--primary" onClick={() => setShowModal(true)}><FaPlus /> Manage Module</button>
+            <button className="am-btn am-btn--outline" onClick={() => navigate("/admin/users")}>← Back</button>
           </div>
         </div>
 
-        {/* Summary Cards */}
         <div className="am-cards">
           {([
             { label: "Models",     count: models.length,     color: "#0e4f67" },
@@ -548,7 +697,6 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
         <div className="am-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
           <div className="am-modal">
 
-            {/* Modal Header */}
             <div className="am-modal__header">
               <div>
                 <h2 className="am-modal__title">Module Manager</h2>
@@ -557,7 +705,6 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
               <button className="am-modal__close" onClick={() => setShowModal(false)}><FaTimes /></button>
             </div>
 
-            {/* Tabs */}
             <div className="am-tabs">
               {TABS.map(t => (
                 <button key={t.key}
@@ -565,11 +712,8 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                   onClick={() => setActiveTab(t.key)}>
                   {t.label}
                   <span className="am-tab__badge">
-                    {t.key === "models"     ? models.length     :
-                     t.key === "variants"   ? variants.length   :
-                     t.key === "colours"    ? colours.length    :
-                     t.key === "assemblies" ? assemblies.length :
-                     parts.length}
+                    {t.key === "models" ? models.length : t.key === "variants" ? variants.length :
+                     t.key === "colours" ? colours.length : t.key === "assemblies" ? assemblies.length : parts.length}
                   </span>
                 </button>
               ))}
@@ -580,8 +724,7 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
               {/* ════════════ MODELS TAB ════════════ */}
               {activeTab === "models" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/VehicleModels/download-template" importUrl="/VehicleModels/import" onDone={fetchModels} entity="Models" />
-
+                  <ImportRow downloadUrl="/VehicleModels/download-template" importUrl="/VehicleModels/import" fileName="VehicleModels_Import_Template.xlsx" onDone={fetchModels} entity="Models" />
                   <div className="am-form-card">
                     <div className="am-form-card__title">Add New Model</div>
                     <div className="am-form-row">
@@ -589,70 +732,38 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                       <button className="am-btn am-btn--success am-btn--icon" onClick={createModel}><FaPlus /> Add Model</button>
                     </div>
                   </div>
-
                   <div className="am-search-row">
                     <FaSearch className="am-search-icon" />
                     <input className="am-search" placeholder="Search models…" value={modelSearch} onChange={e => setModelSearch(e.target.value)} />
                     <span className="am-count">{fModels.length} record{fModels.length !== 1 ? "s" : ""}</span>
                   </div>
-
                   <div className="am-table-wrap">
                     <table className="am-table">
                       <thead><tr><th>ID</th><th>Model Name</th><th>Actions</th></tr></thead>
                       <tbody>
                         {fModels.length === 0 && <tr><td colSpan={3} className="am-empty">No models found</td></tr>}
                         {fModels.map(m => (
-                        editModel?.id === m.id ? (
-                          <tr key={m.id} className="am-table__edit-row">
-                            <td>{m.id}</td>
-                            <td>
-                              <input 
-                                className="am-inline-input" 
-                                value={editModel?.modelName || ""}
-                                onChange={e => {
-                                  if (editModel) {
-                                    setEditModel({ ...editModel, modelName: e.target.value });
-                                  }
-                                }} 
-                              />
-                            </td>
-                            <td className="am-table__actions">
-                              <button 
-                                className="am-btn am-btn--success am-btn--xs" 
-                                onClick={saveModel}
-                              >
-                                <FaCheck /> Save
-                              </button>
-                              <button 
-                                className="am-btn am-btn--ghost am-btn--xs" 
-                                onClick={() => setEditModel(null)}
-                              >
-                                <FaTimes />
-                              </button>
-                            </td>
-                          </tr>
-                        ) : (
-                          <tr key={m.id}>
-                            <td><span className="am-id">#{m.id}</span></td>
-                            <td><strong>{m.modelName}</strong></td>
-                            <td className="am-table__actions">
-                              <button 
-                                className="am-btn am-btn--edit am-btn--xs" 
-                                onClick={() => setEditModel({ ...m })}
-                              >
-                                <FaEdit /> Edit
-                              </button>
-                              <button 
-                                className="am-btn am-btn--danger am-btn--xs" 
-                                onClick={() => deleteModel(m.id!)}
-                              >
-                                <FaTrash />
-                              </button>
-                            </td>
-                          </tr>
-                        )
-                      ))}
-                                            </tbody>
+                          editModel?.id === m.id ? (
+                            <tr key={m.id} className="am-table__edit-row">
+                              <td>{m.id}</td>
+                              <td><input className="am-inline-input" value={editModel?.modelName} onChange={e => setEditModel({ ...editModel, modelName: e.target.value })} /></td>
+                              <td className="am-table__actions">
+                                <button className="am-btn am-btn--success am-btn--xs" onClick={saveModel}><FaCheck /> Save</button>
+                                <button className="am-btn am-btn--ghost am-btn--xs" onClick={() => setEditModel(null)}><FaTimes /></button>
+                              </td>
+                            </tr>
+                          ) : (
+                            <tr key={m.id}>
+                              <td><span className="am-id">#{m.id}</span></td>
+                              <td><strong>{m.modelName}</strong></td>
+                              <td className="am-table__actions">
+                                <button className="am-btn am-btn--edit am-btn--xs" onClick={() => setEditModel({ ...m })}><FaEdit /> Edit</button>
+                                <button className="am-btn am-btn--danger am-btn--xs" onClick={() => deleteModel(m.id!)}><FaTrash /></button>
+                              </td>
+                            </tr>
+                          )
+                        ))}
+                      </tbody>
                     </table>
                   </div>
                 </div>
@@ -661,8 +772,7 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
               {/* ════════════ VARIANTS TAB ════════════ */}
               {activeTab === "variants" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/VehicleVariants/download-template" importUrl="/VehicleVariants/import" onDone={fetchVariants} entity="Variants" />
-
+                  <ImportRow downloadUrl="/VehicleVariants/download-template" importUrl="/VehicleVariants/import" fileName="VehicleVariants_Import_Template.xlsx" onDone={fetchVariants} entity="Variants" />
                   <div className="am-form-card">
                     <div className="am-form-card__title">Add New Variant</div>
                     <div className="am-form-row">
@@ -671,13 +781,11 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                       <button className="am-btn am-btn--success am-btn--icon" onClick={createVariant}><FaPlus /> Add Variant</button>
                     </div>
                   </div>
-
                   <div className="am-search-row">
                     <FaSearch className="am-search-icon" />
                     <input className="am-search" placeholder="Search variants…" value={variantSearch} onChange={e => setVariantSearch(e.target.value)} />
                     <span className="am-count">{fVariants.length} record{fVariants.length !== 1 ? "s" : ""}</span>
                   </div>
-
                   <div className="am-table-wrap">
                     <table className="am-table">
                       <thead><tr><th>ID</th><th>Variant Name</th><th>Model</th><th>Actions</th></tr></thead>
@@ -687,7 +795,6 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                           editVariant?.id === v.id ? (
                             <tr key={v.id} className="am-table__edit-row">
                               <td>{v.id}</td>
-                              {/* FIX 9: use handler functions — null check done inside them */}
                               <td><input className="am-inline-input" value={editVariant?.variantName} onChange={e => onEditVariantName(e.target.value)} /></td>
                               <td>
                                 <select className="am-inline-select" value={editVariant?.modelId} onChange={e => onEditVariantModel(e.target.value)}>
@@ -720,27 +827,28 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
               {/* ════════════ COLOURS TAB ════════════ */}
               {activeTab === "colours" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/VehicleColours/download-template" importUrl="/VehicleColours/import" onDone={fetchColours} entity="Colours" />
+                  <ImportRow downloadUrl="/VehicleColours/download-template" importUrl="/VehicleColours/import" fileName="VehicleColours_Import_Template.xlsx" onDone={fetchColours} entity="Colours" />
 
                   <div className="am-form-card">
                     <div className="am-form-card__title">Add New Colour</div>
                     <div className="am-form-grid">
                       <Field label="Colour Name" value={colourForm.colourName} onChange={v => setColourForm(p => ({ ...p, colourName: v }))} />
-                      <SelectField 
-                        label="Model"   
-                        value={colourForm.modelId}   
-                        onChange={v => setColourForm(p => 
-                          ({ 
-                            ...p, 
-                              modelId: +v,
-                              variantId: 0 
-
-                          }))}   
+                      <SelectField
+                        label="Model" value={colourForm.modelId}
+                        onChange={v => setColourForm(p => ({ ...p, modelId: +v, variantId: 0 }))}
                         options={modelOpts}
-                         />
-
-                      <SelectField label="Variant" value={colourForm.variantId} onChange={v => setColourForm(p => ({ ...p, variantId: +v }))} options={filteredVariantOpts} />
-                      <Field label="Image Path" value={colourForm.imagePath} onChange={v => setColourForm(p => ({ ...p, imagePath: v }))} />
+                      />
+                      <SelectField
+                        label="Variant" value={colourForm.variantId}
+                        onChange={v => setColourForm(p => ({ ...p, variantId: +v }))}
+                        options={filteredVariantOpts}
+                      />
+                      {/* ✅ Image Upload instead of text input */}
+                      <ImageUploadField
+                        label="Colour Image"
+                        value={colourForm.imagePath}
+                        onChange={v => setColourForm(p => ({ ...p, imagePath: v }))}
+                      />
                     </div>
                     <button className="am-btn am-btn--success am-btn--icon" style={{ marginTop: 10 }} onClick={createColour}><FaPlus /> Add Colour</button>
                   </div>
@@ -753,16 +861,16 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
 
                   <div className="am-table-wrap">
                     <table className="am-table">
-                      <thead><tr><th>ID</th><th>Colour Name</th><th>Model</th><th>Variant</th><th>Image Path</th><th>Actions</th></tr></thead>
+                      <thead><tr><th>ID</th><th>Colour Name</th><th>Model</th><th>Variant</th><th>Image</th><th>Actions</th></tr></thead>
                       <tbody>
                         {fColours.length === 0 && <tr><td colSpan={6} className="am-empty">No colours found</td></tr>}
                         {fColours.map(c => (
                           editColour?.id === c.id ? (
                             <tr key={c.id} className="am-table__edit-row">
                               <td>{c.id}</td>
-                              <td><input className="am-inline-input" value={editColour?.colourName}    onChange={e => onEditColourName(e.target.value)} /></td>
+                              <td><input className="am-inline-input" value={editColour?.colourName} onChange={e => onEditColourName(e.target.value)} /></td>
                               <td>
-                                <select className="am-inline-select" value={editColour?.modelId ?? ""}   onChange={e => onEditColourModel(e.target.value)}>
+                                <select className="am-inline-select" value={editColour?.modelId ?? ""} onChange={e => onEditColourModel(e.target.value)}>
                                   <option value="">—</option>
                                   {models.map(m => <option key={m.id} value={m.id}>{m.modelName}</option>)}
                                 </select>
@@ -770,16 +878,18 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                               <td>
                                 <select className="am-inline-select" value={editColour?.variantId ?? ""} onChange={e => onEditColourVariant(e.target.value)}>
                                   <option value="">—</option>
-                                  {variants
-                                      .filter(v => v.modelId === editColour?.modelId)
-                                      .map(v => (
-                                        <option key={v.id} value={v.id}>
-                                          {v.variantName}
-                                        </option>
-                                    ))}
+                                  {variants.filter(v => v.modelId === editColour?.modelId).map(v => (
+                                    <option key={v.id} value={v.id}>{v.variantName}</option>
+                                  ))}
                                 </select>
                               </td>
-                              <td><input className="am-inline-input" value={editColour?.imagePath}    onChange={e => onEditColourImage(e.target.value)} /></td>
+                              {/* ✅ Inline image upload for edit row */}
+                              <td>
+                                <InlineImageUpload
+                                   value={editColour?.imagePath ?? ""}
+                                   onChange={v => setEditColour(prev => prev ? { ...prev, imagePath: v } : null)}
+                                />
+                              </td>
                               <td className="am-table__actions">
                                 <button className="am-btn am-btn--success am-btn--xs" onClick={saveColour}><FaCheck /> Save</button>
                                 <button className="am-btn am-btn--ghost am-btn--xs" onClick={() => setEditColour(null)}><FaTimes /></button>
@@ -791,7 +901,16 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                               <td><strong>{c.colourName}</strong></td>
                               <td><span className="am-badge">{modelName(c.modelId)}</span></td>
                               <td><span className="am-badge am-badge--teal">{variantName(c.variantId)}</span></td>
-                              <td><span className="am-path">{c.imagePath || "—"}</span></td>
+                              <td>
+                                {c.imagePath ? (
+                                  <img
+                                    src={`/${c.imagePath.replace(/\\/g, "/").replace(/^\/+/, "")}`}
+                                    alt={c.colourName}
+                                    className="am-table-img-thumb"
+                                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                  />
+                                ) : <span className="am-path">—</span>}
+                              </td>
                               <td className="am-table__actions">
                                 <button className="am-btn am-btn--edit am-btn--xs" onClick={() => setEditColour({ ...c })}><FaEdit /> Edit</button>
                                 <button className="am-btn am-btn--danger am-btn--xs" onClick={() => deleteColour(c.id!)}><FaTrash /></button>
@@ -808,14 +927,19 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
               {/* ════════════ ASSEMBLIES TAB ════════════ */}
               {activeTab === "assemblies" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/Assemblies/download-template" importUrl="/Assemblies/import" onDone={fetchAssemblies} entity="Assemblies" />
+                  <ImportRow downloadUrl="/Assemblies/download-template" importUrl="/Assemblies/import" fileName="Assemblies_Import_Template.xlsx" onDone={fetchAssemblies} entity="Assemblies" />
 
                   <div className="am-form-card">
                     <div className="am-form-card__title">Add New Assembly</div>
                     <div className="am-form-grid">
                       <Field label="Assembly Name" value={asmForm.assemblyName} onChange={v => setAsmForm(p => ({ ...p, assemblyName: v }))} />
-                      <SelectField label="Model"   value={asmForm.modelId}      onChange={v => setAsmForm(p => ({ ...p, modelId: +v }))}   options={modelOpts} />
-                      <Field label="Image Path"    value={asmForm.imagePath}    onChange={v => setAsmForm(p => ({ ...p, imagePath: v }))} />
+                      <SelectField label="Model" value={asmForm.modelId} onChange={v => setAsmForm(p => ({ ...p, modelId: +v }))} options={modelOpts} />
+                      {/* ✅ Image Upload instead of text input */}
+                      <ImageUploadField
+                        label="Assembly Image"
+                        value={asmForm.imagePath}
+                        onChange={v => setAsmForm(p => ({ ...p, imagePath: v }))}
+                      />
                     </div>
                     <button className="am-btn am-btn--success am-btn--icon" style={{ marginTop: 10 }} onClick={createAssembly}><FaPlus /> Add Assembly</button>
                   </div>
@@ -828,7 +952,7 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
 
                   <div className="am-table-wrap">
                     <table className="am-table">
-                      <thead><tr><th>ID</th><th>Assembly Name</th><th>Model</th><th>Image Path</th><th>Actions</th></tr></thead>
+                      <thead><tr><th>ID</th><th>Assembly Name</th><th>Model</th><th>Image</th><th>Actions</th></tr></thead>
                       <tbody>
                         {fAssemblies.length === 0 && <tr><td colSpan={5} className="am-empty">No assemblies found</td></tr>}
                         {fAssemblies.map(a => (
@@ -841,7 +965,13 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                                   {models.map(m => <option key={m.id} value={m.id}>{m.modelName}</option>)}
                                 </select>
                               </td>
-                              <td><input className="am-inline-input" value={editAsm?.imagePath} onChange={e => onEditAsmImage(e.target.value)} /></td>
+                              {/* ✅ Inline image upload for edit row */}
+                              <td>
+                                <InlineImageUpload
+                                  value={editAsm?.imagePath ?? ""}
+                                  onChange={v => setEditAsm(prev => prev ? { ...prev, imagePath: v } : null)}
+                                />
+                              </td>
                               <td className="am-table__actions">
                                 <button className="am-btn am-btn--success am-btn--xs" onClick={saveAssembly}><FaCheck /> Save</button>
                                 <button className="am-btn am-btn--ghost am-btn--xs" onClick={() => setEditAsm(null)}><FaTimes /></button>
@@ -852,7 +982,16 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                               <td><span className="am-id">#{a.id}</span></td>
                               <td><strong>{a.assemblyName}</strong></td>
                               <td><span className="am-badge">{modelName(a.modelId)}</span></td>
-                              <td><span className="am-path">{a.imagePath || "—"}</span></td>
+                              <td>
+                                {a.imagePath ? (
+                                  <img
+                                    src={`/${a.imagePath.replace(/\\/g, "/").replace(/^\/+/, "")}`}
+                                    alt={a.assemblyName}
+                                    className="am-table-img-thumb"
+                                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                  />
+                                ) : <span className="am-path">—</span>}
+                              </td>
                               <td className="am-table__actions">
                                 <button className="am-btn am-btn--edit am-btn--xs" onClick={() => setEditAsm({ ...a })}><FaEdit /> Edit</button>
                                 <button className="am-btn am-btn--danger am-btn--xs" onClick={() => deleteAssembly(a.id!)}><FaTrash /></button>
@@ -869,10 +1008,9 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
               {/* ════════════ PARTS TAB ════════════ */}
               {activeTab === "parts" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/Parts/download-template" importUrl="/Parts/import" onDone={fetchParts} entity="Parts" />
+                  <ImportRow downloadUrl="/Parts/download-template" importUrl="/Parts/import" fileName="Parts_Import_Template.xlsx" onDone={fetchParts} entity="Parts" />
 
-                  <button className="am-btn am-btn--success am-btn--icon" style={{ marginBottom: 12 }}
-                    onClick={() => setShowPartForm(p => !p)}>
+                  <button className="am-btn am-btn--success am-btn--icon" style={{ marginBottom: 12 }} onClick={() => setShowPartForm(p => !p)}>
                     <FaPlus /> {showPartForm ? "Hide Form" : "Add New Part"}
                   </button>
 
@@ -882,7 +1020,7 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                       <div className="am-form-grid am-form-grid--5">
                         <Field label="Part Number *" value={partForm.partNumber}    onChange={v => setPartForm(p => ({ ...p, partNumber: v }))} />
                         <Field label="Part Name"     value={partForm.partName}      onChange={v => setPartForm(p => ({ ...p, partName: v }))} />
-                        <Field label="Description"   value={partForm.description}  onChange={v => setPartForm(p => ({ ...p, description: v }))} />
+                        <Field label="Description"   value={partForm.description}   onChange={v => setPartForm(p => ({ ...p, description: v }))} />
                         <Field label="Remarks"       value={partForm.remarks}       onChange={v => setPartForm(p => ({ ...p, remarks: v }))} />
                         <Field label="Image Number"  value={partForm.imageNumber}   onChange={v => setPartForm(p => ({ ...p, imageNumber: v }))} />
                         <Field label="BDP"           value={partForm.bdp}           onChange={v => setPartForm(p => ({ ...p, bdp: +v }))}           type="number" />
@@ -892,17 +1030,8 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                         <Field label="Stock Qty"     value={partForm.stockQuantity} onChange={v => setPartForm(p => ({ ...p, stockQuantity: +v }))} type="number" />
                         <Field label="Torque Nm"     value={partForm.torqueNm}      onChange={v => setPartForm(p => ({ ...p, torqueNm: +v }))}      type="number" />
                         <Field label="Colour IDs (CSV)" value={partForm.colourIds} onChange={v => setPartForm(p => ({ ...p, colourIds: v }))} />
-                        <SelectField 
-                          label="Model"    
-                          value={partForm.modelId ?? ""}    
-                          onChange={v => setPartForm(p => ({  
-                                  ...p, modelId: +v || null, 
-                                  variantId: null, 
-                                  assemblyId: null 
-                            }))} 
-                                options={modelOpts} 
-                          />
-                        <SelectField label="Variant"  value={partForm.variantId ?? ""}  onChange={v => setPartForm(p => ({ ...p, variantId:  +v || null }))} options={filteredVariantOpts} />
+                        <SelectField label="Model" value={partForm.modelId ?? ""} onChange={v => setPartForm(p => ({ ...p, modelId: +v || null, variantId: null, assemblyId: null }))} options={modelOpts} />
+                        <SelectField label="Variant" value={partForm.variantId ?? ""} onChange={v => setPartForm(p => ({ ...p, variantId: +v || null }))} options={filteredVariantOpts} />
                         <SelectField label="Assembly" value={partForm.assemblyId ?? ""} onChange={v => setPartForm(p => ({ ...p, assemblyId: +v || null }))} options={filteredAsmOpts} />
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
@@ -918,7 +1047,7 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                       <div className="am-form-grid am-form-grid--5">
                         <Field label="Part Number"   value={editPart.partNumber}    onChange={v => setEditPart(p => p && ({ ...p, partNumber: v }))} />
                         <Field label="Part Name"     value={editPart.partName}      onChange={v => setEditPart(p => p && ({ ...p, partName: v }))} />
-                        <Field label="Description"   value={editPart.description}  onChange={v => setEditPart(p => p && ({ ...p, description: v }))} />
+                        <Field label="Description"   value={editPart.description}   onChange={v => setEditPart(p => p && ({ ...p, description: v }))} />
                         <Field label="Remarks"       value={editPart.remarks}       onChange={v => setEditPart(p => p && ({ ...p, remarks: v }))} />
                         <Field label="Image Number"  value={editPart.imageNumber}   onChange={v => setEditPart(p => p && ({ ...p, imageNumber: v }))} />
                         <Field label="BDP"           value={editPart.bdp}           onChange={v => setEditPart(p => p && ({ ...p, bdp: +v }))}           type="number" />
@@ -928,8 +1057,8 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                         <Field label="Stock Qty"     value={editPart.stockQuantity} onChange={v => setEditPart(p => p && ({ ...p, stockQuantity: +v }))} type="number" />
                         <Field label="Torque Nm"     value={editPart.torqueNm}      onChange={v => setEditPart(p => p && ({ ...p, torqueNm: +v }))}      type="number" />
                         <Field label="Colour IDs"    value={editPart.colourIds}     onChange={v => setEditPart(p => p && ({ ...p, colourIds: v }))} />
-                        <SelectField label="Model"    value={editPart.modelId ?? ""}    onChange={v => setEditPart(p => p && ({ ...p, modelId:    +v || null }))} options={modelOpts} />
-                        <SelectField label="Variant"  value={editPart.variantId ?? ""}  onChange={v => setEditPart(p => p && ({ ...p, variantId:  +v || null }))} options={filteredVariantOpts} />
+                        <SelectField label="Model" value={editPart.modelId ?? ""} onChange={v => setEditPart(p => p && ({ ...p, modelId: +v || null }))} options={modelOpts} />
+                        <SelectField label="Variant" value={editPart.variantId ?? ""} onChange={v => setEditPart(p => p && ({ ...p, variantId: +v || null }))} options={filteredVariantOpts} />
                         <SelectField label="Assembly" value={editPart.assemblyId ?? ""} onChange={v => setEditPart(p => p && ({ ...p, assemblyId: +v || null }))} options={filteredAsmOpts} />
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
@@ -984,7 +1113,7 @@ const deletePart = (id: number) => ask("Delete this part?", async () => {
                 </div>
               )}
 
-            </div>{/* end modal body */}
+            </div>
           </div>
         </div>
       )}

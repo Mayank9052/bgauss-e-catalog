@@ -835,3 +835,126 @@
   .am-confirm-actions { flex-direction: column; }
   .am-confirm-actions .am-btn { width: 100%; justify-content: center; }
 }
+
+/* ================================================= */
+/*  IMAGE UPLOAD FIELD                               */
+/* ================================================= */
+
+.am-img-upload-box {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color .18s, background .18s;
+  overflow: hidden;
+}
+
+.am-img-upload-box:hover {
+  border-color: var(--blue);
+  background: #f0f9ff;
+}
+
+.am-img-upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 12px;
+  min-height: 100px;
+}
+
+.am-img-upload-icon {
+  font-size: 28px;
+  color: var(--slate-lt);
+}
+
+.am-img-upload-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sm);
+}
+
+.am-img-upload-hint {
+  font-size: 10px;
+  color: var(--slate-lt);
+}
+
+.am-img-upload-preview {
+  position: relative;
+  width: 100%;
+}
+
+.am-img-thumb {
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius-sm);
+}
+
+.am-img-upload-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0;
+  transition: opacity .18s;
+  border-radius: var(--radius-sm);
+}
+
+.am-img-upload-preview:hover .am-img-upload-overlay {
+  opacity: 1;
+}
+
+.am-img-upload-overlay svg { font-size: 20px; }
+
+.am-img-path-display {
+  font-size: 10px;
+  color: var(--text-sm);
+  font-family: "Consolas", monospace;
+  padding: 4px 8px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  word-break: break-all;
+}
+
+/* ================================================= */
+/*  INLINE IMAGE UPLOAD (table edit rows)            */
+/* ================================================= */
+
+.am-inline-img-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.am-inline-img-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ================================================= */
+/*  TABLE IMAGE THUMBNAIL (read-only rows)           */
+/* ================================================= */
+
+.am-table-img-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  display: block;
+}

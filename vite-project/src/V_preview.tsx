@@ -139,14 +139,51 @@ const VehiclePreview = () => {
         {errorMessage ? (
           <p className="error-text">{errorMessage}</p>
         ) : vehicleImage ? (
-          <img
-            src={vehicleImage}
-            alt="Vehicle"
-            className="vehicle-image"
-            onClick={goToCatalogue}
-            style={{ cursor: "pointer" }}
-            onError={() => { setErrorMessage("Vehicle image not found"); setVehicleImage(null); }}
-          />
+          <>
+            <img
+              src={vehicleImage}
+              alt="Vehicle"
+              className="vehicle-image"
+              onClick={goToCatalogue}
+              style={{ cursor: "pointer" }}
+              onError={() => { setErrorMessage("Vehicle image not found"); setVehicleImage(null); }}
+            />
+
+            {/* ── Vehicle info badge below image ── */}
+            <div className="vehicle-info-badge">
+              {searchState.modelName && (
+                <div className="vib-row">
+                  <span className="vib-label">Model</span>
+                  <span className="vib-value">{searchState.modelName}</span>
+                </div>
+              )}
+              {searchState.variantName && (
+                <div className="vib-row">
+                  <span className="vib-label">Variant</span>
+                  <span className="vib-value">{searchState.variantName}</span>
+                </div>
+              )}
+              {searchState.colourName && (
+                <div className="vib-row">
+                  <span className="vib-label">Colour</span>
+                  <span className="vib-value">
+                    <span className="vib-colour-dot" style={{ background: "#888" }} />
+                    {searchState.colourName}
+                  </span>
+                </div>
+              )}
+              {searchState.vin && (
+                <div className="vib-row">
+                  <span className="vib-label">VIN</span>
+                  <span className="vib-value vib-vin">{searchState.vin}</span>
+                </div>
+              )}
+            </div>
+
+            {/* <button className="primary-btn" onClick={goToCatalogue}>
+              View Parts Catalogue →
+            </button> */}
+          </>
         ) : (
           <p>Loading vehicle image...</p>
         )}

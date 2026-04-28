@@ -203,3 +203,81 @@
   .logo-text { font-size: 13px; }
   .sub-title { font-size: 9px; }
 }
+
+/* ── Vehicle Info Badge (below image) ── */
+.vehicle-info-badge {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 24px;
+  background: #fff;
+  border: 1.5px solid #d0dce6;
+  border-radius: 12px;
+  padding: 14px 24px;
+  margin: 4px 0 18px;
+  box-shadow: 0 4px 14px rgba(14, 79, 103, 0.08);
+  max-width: 480px;
+  width: 90%;
+}
+
+.vib-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vib-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.vib-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0e4f67;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vib-colour-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,0.15);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.vib-vin {
+  font-family: monospace;
+  font-size: 12px;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: #334155;
+}
+
+/* Divider between rows */
+.vib-row + .vib-row::before {
+  content: "·";
+  color: #d0dce6;
+  font-size: 18px;
+  line-height: 1;
+}
+
+@media (max-width: 480px) {
+  .vehicle-info-badge {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    align-items: flex-start;
+  }
+
+  .vib-row + .vib-row::before { display: none; }
+  .vib-value { font-size: 13px; }
+}

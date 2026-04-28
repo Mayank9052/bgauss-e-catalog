@@ -99,8 +99,6 @@ function SelectField({ label, value, onChange, options, placeholder }: {
 
 /* ═══════════════════════════════════════════════════
    IMAGE UPLOAD FIELD
-   Uploads image to /upload/image and returns the
-   saved path. Shows a preview thumbnail after upload.
 ═══════════════════════════════════════════════════ */
 function ImageUploadField({ label, value, onChange }: {
   label: string;
@@ -111,7 +109,6 @@ function ImageUploadField({ label, value, onChange }: {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
-  // Build a preview URL from the stored path
   const resolvedPreview = value
     ? (value.startsWith("http") ? value : `/${value.replace(/\\/g, "/").replace(/^\/+/, "")}`)
     : "";
@@ -119,11 +116,8 @@ function ImageUploadField({ label, value, onChange }: {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Local preview immediately
     const localUrl = URL.createObjectURL(file);
     setPreviewUrl(localUrl);
-
     setUploading(true);
     try {
       const fd = new FormData();
@@ -131,7 +125,6 @@ function ImageUploadField({ label, value, onChange }: {
       const res = await axios.post<{ path: string }>("/upload/image", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      // Server returns the relative path e.g. "images/colours/abc.jpg"
       onChange(res.data.path);
     } catch {
       alert("Image upload failed. Please try again.");
@@ -148,16 +141,11 @@ function ImageUploadField({ label, value, onChange }: {
   return (
     <div className="am-field">
       <label className="am-field__label">{label}</label>
-
       <div className="am-img-upload-box" onClick={() => !uploading && fileRef.current?.click()}>
         {displayPreview ? (
           <div className="am-img-upload-preview">
-            <img
-              src={displayPreview}
-              alt="preview"
-              className="am-img-thumb"
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
+            <img src={displayPreview} alt="preview" className="am-img-thumb"
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
             <div className="am-img-upload-overlay">
               <FaImage />
               <span>{uploading ? "Uploading…" : "Change Image"}</span>
@@ -166,46 +154,30 @@ function ImageUploadField({ label, value, onChange }: {
         ) : (
           <div className="am-img-upload-placeholder">
             <FaImage className="am-img-upload-icon" />
-            <span className="am-img-upload-text">
-              {uploading ? "Uploading…" : "Click to upload image"}
-            </span>
+            <span className="am-img-upload-text">{uploading ? "Uploading…" : "Click to upload image"}</span>
             <span className="am-img-upload-hint">JPG, PNG, WebP</span>
           </div>
         )}
-
-        {/* Show current path as small text below */}
         {value && !uploading && (
           <div className="am-img-path-display" title={value}>
             📁 {value.length > 40 ? "…" + value.slice(-37) : value}
           </div>
         )}
       </div>
-
-      {/* Clear button */}
       {value && !uploading && (
-        <button
-          type="button"
-          className="am-btn am-btn--ghost am-btn--xs"
+        <button type="button" className="am-btn am-btn--ghost am-btn--xs"
           style={{ marginTop: 4, width: "100%" }}
-          onClick={e => { e.stopPropagation(); onChange(""); setPreviewUrl(""); }}
-        >
+          onClick={e => { e.stopPropagation(); onChange(""); setPreviewUrl(""); }}>
           <FaTimes /> Clear Image
         </button>
       )}
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={handleFile}
-      />
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════
-   INLINE IMAGE UPLOAD (for table edit rows)
+   INLINE IMAGE UPLOAD
 ═══════════════════════════════════════════════════ */
 function InlineImageUpload({ value, onChange }: {
   value: string;
@@ -240,39 +212,20 @@ function InlineImageUpload({ value, onChange }: {
   return (
     <div className="am-inline-img-wrap">
       {resolvedPreview && (
-        <img
-          src={resolvedPreview}
-          alt="img"
-          className="am-inline-img-thumb"
-          onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-        />
+        <img src={resolvedPreview} alt="img" className="am-inline-img-thumb"
+          onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
       )}
-      <button
-        type="button"
-        className="am-btn am-btn--outline am-btn--xs"
-        disabled={uploading}
-        onClick={() => fileRef.current?.click()}
-        title="Upload image"
-      >
+      <button type="button" className="am-btn am-btn--outline am-btn--xs"
+        disabled={uploading} onClick={() => fileRef.current?.click()} title="Upload image">
         <FaImage /> {uploading ? "…" : (value ? "Change" : "Upload")}
       </button>
       {value && (
-        <button
-          type="button"
-          className="am-btn am-btn--ghost am-btn--xs"
-          onClick={() => onChange("")}
-          title="Clear image"
-        >
+        <button type="button" className="am-btn am-btn--ghost am-btn--xs"
+          onClick={() => onChange("")} title="Clear image">
           <FaTimes />
         </button>
       )}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={handleFile}
-      />
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
     </div>
   );
 }
@@ -343,10 +296,12 @@ function ImportRow({ downloadUrl, importUrl, onDone, entity, fileName }: {
 
   return (
     <div className="am-import-row">
-      <button className="am-btn am-btn--outline am-btn--sm" disabled={downloading} onClick={() => void handleDownload()}>
+      <button className="am-btn am-btn--outline am-btn--sm" disabled={downloading}
+        onClick={() => void handleDownload()}>
         <FaDownload /> {downloading ? "Downloading…" : `Download ${entity} Template`}
       </button>
-      <button className="am-btn am-btn--primary am-btn--sm" disabled={busy} onClick={() => ref.current?.click()}>
+      <button className="am-btn am-btn--primary am-btn--sm" disabled={busy}
+        onClick={() => ref.current?.click()}>
         <FaUpload /> {busy ? "Importing…" : `Import ${entity} Excel`}
       </button>
       <input ref={ref} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleImport} />
@@ -603,7 +558,7 @@ const AdminModules = () => {
   const onEditVariantName  = (v: string) => { if (!editVariant) return; setEditVariant({ ...editVariant, variantName: v }); };
   const onEditVariantModel = (v: string) => { if (!editVariant) return; setEditVariant({ ...editVariant, modelId: +v }); };
   const onEditColourName    = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, colourName: v }); };
-  const onEditColourModel   = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, modelId: +v || null }); };
+  const onEditColourModel   = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, modelId: +v || null, variantId: null }); };
   const onEditColourVariant = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, variantId: +v || null }); };
   const onEditAsmName  = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, assemblyName: v }); };
   const onEditAsmModel = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, modelId: +v }); };
@@ -618,11 +573,30 @@ const AdminModules = () => {
     p.partNumber?.toLowerCase().includes(partSearch.toLowerCase())
   );
 
-  const modelOpts           = models.map(m => ({ id: m.id!, label: m.modelName }));
-  const filteredVariants    = variants.filter(v => v.modelId === colourForm.modelId);
-  const filteredVariantOpts = filteredVariants.map(v => ({ id: v.id!, label: v.variantName }));
-  const filteredAssemblies  = assemblies.filter(a => a.modelId === (partForm.modelId ?? 0));
-  const filteredAsmOpts     = filteredAssemblies.map(a => ({ id: a.id!, label: a.assemblyName }));
+  const modelOpts = models.map(m => ({ id: m.id!, label: m.modelName }));
+
+  // Colour form — variant dropdown filtered by selected model
+  const colourFormVariantOpts = variants
+    .filter(v => v.modelId === colourForm.modelId)
+    .map(v => ({ id: v.id!, label: v.variantName }));
+
+  // ── ADD part form — filtered by partForm.modelId ──────────
+  const addPartVariantOpts = variants
+    .filter(v => v.modelId === (partForm.modelId ?? 0))
+    .map(v => ({ id: v.id!, label: v.variantName }));
+
+  const addPartAsmOpts = assemblies
+    .filter(a => a.modelId === (partForm.modelId ?? 0))
+    .map(a => ({ id: a.id!, label: a.assemblyName }));
+
+  // ── EDIT part form — filtered by editPart.modelId ─────────
+  const editPartVariantOpts = variants
+    .filter(v => v.modelId === (editPart?.modelId ?? 0))
+    .map(v => ({ id: v.id!, label: v.variantName }));
+
+  const editPartAsmOpts = assemblies
+    .filter(a => a.modelId === (editPart?.modelId ?? 0))
+    .map(a => ({ id: a.id!, label: a.assemblyName }));
 
   const modelName   = (id: number | null | undefined) => models.find(m => m.id === id)?.modelName        ?? "—";
   const variantName = (id: number | null | undefined) => variants.find(v => v.id === id)?.variantName    ?? "—";
@@ -724,7 +698,8 @@ const AdminModules = () => {
               {/* ════════════ MODELS TAB ════════════ */}
               {activeTab === "models" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/VehicleModels/download-template" importUrl="/VehicleModels/import" fileName="VehicleModels_Import_Template.xlsx" onDone={fetchModels} entity="Models" />
+                  <ImportRow downloadUrl="/VehicleModels/download-template" importUrl="/VehicleModels/import"
+                    fileName="VehicleModels_Import_Template.xlsx" onDone={fetchModels} entity="Models" />
                   <div className="am-form-card">
                     <div className="am-form-card__title">Add New Model</div>
                     <div className="am-form-row">
@@ -734,7 +709,8 @@ const AdminModules = () => {
                   </div>
                   <div className="am-search-row">
                     <FaSearch className="am-search-icon" />
-                    <input className="am-search" placeholder="Search models…" value={modelSearch} onChange={e => setModelSearch(e.target.value)} />
+                    <input className="am-search" placeholder="Search models…" value={modelSearch}
+                      onChange={e => setModelSearch(e.target.value)} />
                     <span className="am-count">{fModels.length} record{fModels.length !== 1 ? "s" : ""}</span>
                   </div>
                   <div className="am-table-wrap">
@@ -746,7 +722,10 @@ const AdminModules = () => {
                           editModel?.id === m.id ? (
                             <tr key={m.id} className="am-table__edit-row">
                               <td>{m.id}</td>
-                              <td><input className="am-inline-input" value={editModel?.modelName} onChange={e => setEditModel({ ...editModel, modelName: e.target.value })} /></td>
+                              <td>
+                                <input className="am-inline-input" value={editModel?.modelName}
+                                  onChange={e => setEditModel({ ...editModel, modelName: e.target.value })} />
+                              </td>
                               <td className="am-table__actions">
                                 <button className="am-btn am-btn--success am-btn--xs" onClick={saveModel}><FaCheck /> Save</button>
                                 <button className="am-btn am-btn--ghost am-btn--xs" onClick={() => setEditModel(null)}><FaTimes /></button>
@@ -772,18 +751,22 @@ const AdminModules = () => {
               {/* ════════════ VARIANTS TAB ════════════ */}
               {activeTab === "variants" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/VehicleVariants/download-template" importUrl="/VehicleVariants/import" fileName="VehicleVariants_Import_Template.xlsx" onDone={fetchVariants} entity="Variants" />
+                  <ImportRow downloadUrl="/VehicleVariants/download-template" importUrl="/VehicleVariants/import"
+                    fileName="VehicleVariants_Import_Template.xlsx" onDone={fetchVariants} entity="Variants" />
                   <div className="am-form-card">
                     <div className="am-form-card__title">Add New Variant</div>
                     <div className="am-form-row">
-                      <Field label="Variant Name" value={variantForm.variantName} onChange={v => setVariantForm(p => ({ ...p, variantName: v }))} />
-                      <SelectField label="Model" value={variantForm.modelId} onChange={v => setVariantForm(p => ({ ...p, modelId: +v }))} options={modelOpts} />
+                      <Field label="Variant Name" value={variantForm.variantName}
+                        onChange={v => setVariantForm(p => ({ ...p, variantName: v }))} />
+                      <SelectField label="Model" value={variantForm.modelId}
+                        onChange={v => setVariantForm(p => ({ ...p, modelId: +v }))} options={modelOpts} />
                       <button className="am-btn am-btn--success am-btn--icon" onClick={createVariant}><FaPlus /> Add Variant</button>
                     </div>
                   </div>
                   <div className="am-search-row">
                     <FaSearch className="am-search-icon" />
-                    <input className="am-search" placeholder="Search variants…" value={variantSearch} onChange={e => setVariantSearch(e.target.value)} />
+                    <input className="am-search" placeholder="Search variants…" value={variantSearch}
+                      onChange={e => setVariantSearch(e.target.value)} />
                     <span className="am-count">{fVariants.length} record{fVariants.length !== 1 ? "s" : ""}</span>
                   </div>
                   <div className="am-table-wrap">
@@ -795,9 +778,13 @@ const AdminModules = () => {
                           editVariant?.id === v.id ? (
                             <tr key={v.id} className="am-table__edit-row">
                               <td>{v.id}</td>
-                              <td><input className="am-inline-input" value={editVariant?.variantName} onChange={e => onEditVariantName(e.target.value)} /></td>
                               <td>
-                                <select className="am-inline-select" value={editVariant?.modelId} onChange={e => onEditVariantModel(e.target.value)}>
+                                <input className="am-inline-input" value={editVariant?.variantName}
+                                  onChange={e => onEditVariantName(e.target.value)} />
+                              </td>
+                              <td>
+                                <select className="am-inline-select" value={editVariant?.modelId}
+                                  onChange={e => onEditVariantModel(e.target.value)}>
                                   {models.map(m => <option key={m.id} value={m.id}>{m.modelName}</option>)}
                                 </select>
                               </td>
@@ -827,38 +814,31 @@ const AdminModules = () => {
               {/* ════════════ COLOURS TAB ════════════ */}
               {activeTab === "colours" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/VehicleColours/download-template" importUrl="/VehicleColours/import" fileName="VehicleColours_Import_Template.xlsx" onDone={fetchColours} entity="Colours" />
-
+                  <ImportRow downloadUrl="/VehicleColours/download-template" importUrl="/VehicleColours/import"
+                    fileName="VehicleColours_Import_Template.xlsx" onDone={fetchColours} entity="Colours" />
                   <div className="am-form-card">
                     <div className="am-form-card__title">Add New Colour</div>
                     <div className="am-form-grid">
-                      <Field label="Colour Name" value={colourForm.colourName} onChange={v => setColourForm(p => ({ ...p, colourName: v }))} />
-                      <SelectField
-                        label="Model" value={colourForm.modelId}
+                      <Field label="Colour Name" value={colourForm.colourName}
+                        onChange={v => setColourForm(p => ({ ...p, colourName: v }))} />
+                      <SelectField label="Model" value={colourForm.modelId}
                         onChange={v => setColourForm(p => ({ ...p, modelId: +v, variantId: 0 }))}
-                        options={modelOpts}
-                      />
-                      <SelectField
-                        label="Variant" value={colourForm.variantId}
+                        options={modelOpts} />
+                      <SelectField label="Variant" value={colourForm.variantId}
                         onChange={v => setColourForm(p => ({ ...p, variantId: +v }))}
-                        options={filteredVariantOpts}
-                      />
-                      {/* ✅ Image Upload instead of text input */}
-                      <ImageUploadField
-                        label="Colour Image"
-                        value={colourForm.imagePath}
-                        onChange={v => setColourForm(p => ({ ...p, imagePath: v }))}
-                      />
+                        options={colourFormVariantOpts} />
+                      <ImageUploadField label="Colour Image" value={colourForm.imagePath}
+                        onChange={v => setColourForm(p => ({ ...p, imagePath: v }))} />
                     </div>
-                    <button className="am-btn am-btn--success am-btn--icon" style={{ marginTop: 10 }} onClick={createColour}><FaPlus /> Add Colour</button>
+                    <button className="am-btn am-btn--success am-btn--icon" style={{ marginTop: 10 }}
+                      onClick={createColour}><FaPlus /> Add Colour</button>
                   </div>
-
                   <div className="am-search-row">
                     <FaSearch className="am-search-icon" />
-                    <input className="am-search" placeholder="Search colours…" value={colourSearch} onChange={e => setColourSearch(e.target.value)} />
+                    <input className="am-search" placeholder="Search colours…" value={colourSearch}
+                      onChange={e => setColourSearch(e.target.value)} />
                     <span className="am-count">{fColours.length} record{fColours.length !== 1 ? "s" : ""}</span>
                   </div>
-
                   <div className="am-table-wrap">
                     <table className="am-table">
                       <thead><tr><th>ID</th><th>Colour Name</th><th>Model</th><th>Variant</th><th>Image</th><th>Actions</th></tr></thead>
@@ -868,27 +848,30 @@ const AdminModules = () => {
                           editColour?.id === c.id ? (
                             <tr key={c.id} className="am-table__edit-row">
                               <td>{c.id}</td>
-                              <td><input className="am-inline-input" value={editColour?.colourName} onChange={e => onEditColourName(e.target.value)} /></td>
                               <td>
-                                <select className="am-inline-select" value={editColour?.modelId ?? ""} onChange={e => onEditColourModel(e.target.value)}>
+                                <input className="am-inline-input" value={editColour?.colourName}
+                                  onChange={e => onEditColourName(e.target.value)} />
+                              </td>
+                              <td>
+                                <select className="am-inline-select" value={editColour?.modelId ?? ""}
+                                  onChange={e => onEditColourModel(e.target.value)}>
                                   <option value="">—</option>
                                   {models.map(m => <option key={m.id} value={m.id}>{m.modelName}</option>)}
                                 </select>
                               </td>
                               <td>
-                                <select className="am-inline-select" value={editColour?.variantId ?? ""} onChange={e => onEditColourVariant(e.target.value)}>
+                                {/* Variant filtered by editColour.modelId */}
+                                <select className="am-inline-select" value={editColour?.variantId ?? ""}
+                                  onChange={e => onEditColourVariant(e.target.value)}>
                                   <option value="">—</option>
-                                  {variants.filter(v => v.modelId === editColour?.modelId).map(v => (
-                                    <option key={v.id} value={v.id}>{v.variantName}</option>
-                                  ))}
+                                  {variants
+                                    .filter(v => v.modelId === editColour?.modelId)
+                                    .map(v => <option key={v.id} value={v.id}>{v.variantName}</option>)}
                                 </select>
                               </td>
-                              {/* ✅ Inline image upload for edit row */}
                               <td>
-                                <InlineImageUpload
-                                   value={editColour?.imagePath ?? ""}
-                                   onChange={v => setEditColour(prev => prev ? { ...prev, imagePath: v } : null)}
-                                />
+                                <InlineImageUpload value={editColour?.imagePath ?? ""}
+                                  onChange={v => setEditColour(prev => prev ? { ...prev, imagePath: v } : null)} />
                               </td>
                               <td className="am-table__actions">
                                 <button className="am-btn am-btn--success am-btn--xs" onClick={saveColour}><FaCheck /> Save</button>
@@ -903,12 +886,9 @@ const AdminModules = () => {
                               <td><span className="am-badge am-badge--teal">{variantName(c.variantId)}</span></td>
                               <td>
                                 {c.imagePath ? (
-                                  <img
-                                    src={`/${c.imagePath.replace(/\\/g, "/").replace(/^\/+/, "")}`}
-                                    alt={c.colourName}
-                                    className="am-table-img-thumb"
-                                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-                                  />
+                                  <img src={`/${c.imagePath.replace(/\\/g, "/").replace(/^\/+/, "")}`}
+                                    alt={c.colourName} className="am-table-img-thumb"
+                                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                                 ) : <span className="am-path">—</span>}
                               </td>
                               <td className="am-table__actions">
@@ -927,29 +907,27 @@ const AdminModules = () => {
               {/* ════════════ ASSEMBLIES TAB ════════════ */}
               {activeTab === "assemblies" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/Assemblies/download-template" importUrl="/Assemblies/import" fileName="Assemblies_Import_Template.xlsx" onDone={fetchAssemblies} entity="Assemblies" />
-
+                  <ImportRow downloadUrl="/Assemblies/download-template" importUrl="/Assemblies/import"
+                    fileName="Assemblies_Import_Template.xlsx" onDone={fetchAssemblies} entity="Assemblies" />
                   <div className="am-form-card">
                     <div className="am-form-card__title">Add New Assembly</div>
                     <div className="am-form-grid">
-                      <Field label="Assembly Name" value={asmForm.assemblyName} onChange={v => setAsmForm(p => ({ ...p, assemblyName: v }))} />
-                      <SelectField label="Model" value={asmForm.modelId} onChange={v => setAsmForm(p => ({ ...p, modelId: +v }))} options={modelOpts} />
-                      {/* ✅ Image Upload instead of text input */}
-                      <ImageUploadField
-                        label="Assembly Image"
-                        value={asmForm.imagePath}
-                        onChange={v => setAsmForm(p => ({ ...p, imagePath: v }))}
-                      />
+                      <Field label="Assembly Name" value={asmForm.assemblyName}
+                        onChange={v => setAsmForm(p => ({ ...p, assemblyName: v }))} />
+                      <SelectField label="Model" value={asmForm.modelId}
+                        onChange={v => setAsmForm(p => ({ ...p, modelId: +v }))} options={modelOpts} />
+                      <ImageUploadField label="Assembly Image" value={asmForm.imagePath}
+                        onChange={v => setAsmForm(p => ({ ...p, imagePath: v }))} />
                     </div>
-                    <button className="am-btn am-btn--success am-btn--icon" style={{ marginTop: 10 }} onClick={createAssembly}><FaPlus /> Add Assembly</button>
+                    <button className="am-btn am-btn--success am-btn--icon" style={{ marginTop: 10 }}
+                      onClick={createAssembly}><FaPlus /> Add Assembly</button>
                   </div>
-
                   <div className="am-search-row">
                     <FaSearch className="am-search-icon" />
-                    <input className="am-search" placeholder="Search assemblies…" value={asmSearch} onChange={e => setAsmSearch(e.target.value)} />
+                    <input className="am-search" placeholder="Search assemblies…" value={asmSearch}
+                      onChange={e => setAsmSearch(e.target.value)} />
                     <span className="am-count">{fAssemblies.length} record{fAssemblies.length !== 1 ? "s" : ""}</span>
                   </div>
-
                   <div className="am-table-wrap">
                     <table className="am-table">
                       <thead><tr><th>ID</th><th>Assembly Name</th><th>Model</th><th>Image</th><th>Actions</th></tr></thead>
@@ -959,18 +937,19 @@ const AdminModules = () => {
                           editAsm?.id === a.id ? (
                             <tr key={a.id} className="am-table__edit-row">
                               <td>{a.id}</td>
-                              <td><input className="am-inline-input" value={editAsm?.assemblyName} onChange={e => onEditAsmName(e.target.value)} /></td>
                               <td>
-                                <select className="am-inline-select" value={editAsm?.modelId} onChange={e => onEditAsmModel(e.target.value)}>
+                                <input className="am-inline-input" value={editAsm?.assemblyName}
+                                  onChange={e => onEditAsmName(e.target.value)} />
+                              </td>
+                              <td>
+                                <select className="am-inline-select" value={editAsm?.modelId}
+                                  onChange={e => onEditAsmModel(e.target.value)}>
                                   {models.map(m => <option key={m.id} value={m.id}>{m.modelName}</option>)}
                                 </select>
                               </td>
-                              {/* ✅ Inline image upload for edit row */}
                               <td>
-                                <InlineImageUpload
-                                  value={editAsm?.imagePath ?? ""}
-                                  onChange={v => setEditAsm(prev => prev ? { ...prev, imagePath: v } : null)}
-                                />
+                                <InlineImageUpload value={editAsm?.imagePath ?? ""}
+                                  onChange={v => setEditAsm(prev => prev ? { ...prev, imagePath: v } : null)} />
                               </td>
                               <td className="am-table__actions">
                                 <button className="am-btn am-btn--success am-btn--xs" onClick={saveAssembly}><FaCheck /> Save</button>
@@ -984,12 +963,9 @@ const AdminModules = () => {
                               <td><span className="am-badge">{modelName(a.modelId)}</span></td>
                               <td>
                                 {a.imagePath ? (
-                                  <img
-                                    src={`/${a.imagePath.replace(/\\/g, "/").replace(/^\/+/, "")}`}
-                                    alt={a.assemblyName}
-                                    className="am-table-img-thumb"
-                                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-                                  />
+                                  <img src={`/${a.imagePath.replace(/\\/g, "/").replace(/^\/+/, "")}`}
+                                    alt={a.assemblyName} className="am-table-img-thumb"
+                                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                                 ) : <span className="am-path">—</span>}
                               </td>
                               <td className="am-table__actions">
@@ -1008,58 +984,113 @@ const AdminModules = () => {
               {/* ════════════ PARTS TAB ════════════ */}
               {activeTab === "parts" && (
                 <div className="am-section">
-                  <ImportRow downloadUrl="/Parts/download-template" importUrl="/Parts/import" fileName="Parts_Import_Template.xlsx" onDone={fetchParts} entity="Parts" />
+                  <ImportRow downloadUrl="/Parts/download-template" importUrl="/Parts/import"
+                    fileName="Parts_Import_Template.xlsx" onDone={fetchParts} entity="Parts" />
 
-                  <button className="am-btn am-btn--success am-btn--icon" style={{ marginBottom: 12 }} onClick={() => setShowPartForm(p => !p)}>
+                  <button className="am-btn am-btn--success am-btn--icon" style={{ marginBottom: 12 }}
+                    onClick={() => setShowPartForm(p => !p)}>
                     <FaPlus /> {showPartForm ? "Hide Form" : "Add New Part"}
                   </button>
 
+                  {/* ── ADD PART FORM ── */}
                   {showPartForm && (
                     <div className="am-form-card">
                       <div className="am-form-card__title">Add New Part</div>
                       <div className="am-form-grid am-form-grid--5">
-                        <Field label="Part Number *" value={partForm.partNumber}    onChange={v => setPartForm(p => ({ ...p, partNumber: v }))} />
-                        <Field label="Part Name"     value={partForm.partName}      onChange={v => setPartForm(p => ({ ...p, partName: v }))} />
-                        <Field label="Description"   value={partForm.description}   onChange={v => setPartForm(p => ({ ...p, description: v }))} />
-                        <Field label="Remarks"       value={partForm.remarks}       onChange={v => setPartForm(p => ({ ...p, remarks: v }))} />
-                        <Field label="Image Number"  value={partForm.imageNumber}   onChange={v => setPartForm(p => ({ ...p, imageNumber: v }))} />
-                        <Field label="BDP"           value={partForm.bdp}           onChange={v => setPartForm(p => ({ ...p, bdp: +v }))}           type="number" />
-                        <Field label="MRP"           value={partForm.mrp}           onChange={v => setPartForm(p => ({ ...p, mrp: +v }))}           type="number" />
-                        <Field label="Price"         value={partForm.price}         onChange={v => setPartForm(p => ({ ...p, price: +v }))}         type="number" />
-                        <Field label="Tax %"         value={partForm.taxPercent}    onChange={v => setPartForm(p => ({ ...p, taxPercent: +v }))}    type="number" />
-                        <Field label="Stock Qty"     value={partForm.stockQuantity} onChange={v => setPartForm(p => ({ ...p, stockQuantity: +v }))} type="number" />
-                        <Field label="Torque Nm"     value={partForm.torqueNm}      onChange={v => setPartForm(p => ({ ...p, torqueNm: +v }))}      type="number" />
-                        <Field label="Colour IDs (CSV)" value={partForm.colourIds} onChange={v => setPartForm(p => ({ ...p, colourIds: v }))} />
-                        <SelectField label="Model" value={partForm.modelId ?? ""} onChange={v => setPartForm(p => ({ ...p, modelId: +v || null, variantId: null, assemblyId: null }))} options={modelOpts} />
-                        <SelectField label="Variant" value={partForm.variantId ?? ""} onChange={v => setPartForm(p => ({ ...p, variantId: +v || null }))} options={filteredVariantOpts} />
-                        <SelectField label="Assembly" value={partForm.assemblyId ?? ""} onChange={v => setPartForm(p => ({ ...p, assemblyId: +v || null }))} options={filteredAsmOpts} />
+                        <Field label="Part Number *" value={partForm.partNumber}
+                          onChange={v => setPartForm(p => ({ ...p, partNumber: v }))} />
+                        <Field label="Part Name" value={partForm.partName}
+                          onChange={v => setPartForm(p => ({ ...p, partName: v }))} />
+                        <Field label="Description" value={partForm.description}
+                          onChange={v => setPartForm(p => ({ ...p, description: v }))} />
+                        <Field label="Remarks" value={partForm.remarks}
+                          onChange={v => setPartForm(p => ({ ...p, remarks: v }))} />
+                        <Field label="Image Number" value={partForm.imageNumber}
+                          onChange={v => setPartForm(p => ({ ...p, imageNumber: v }))} />
+                        <Field label="BDP" value={partForm.bdp}
+                          onChange={v => setPartForm(p => ({ ...p, bdp: +v }))} type="number" />
+                        <Field label="MRP" value={partForm.mrp}
+                          onChange={v => setPartForm(p => ({ ...p, mrp: +v }))} type="number" />
+                        <Field label="Price" value={partForm.price}
+                          onChange={v => setPartForm(p => ({ ...p, price: +v }))} type="number" />
+                        <Field label="Tax %" value={partForm.taxPercent}
+                          onChange={v => setPartForm(p => ({ ...p, taxPercent: +v }))} type="number" />
+                        <Field label="Stock Qty" value={partForm.stockQuantity}
+                          onChange={v => setPartForm(p => ({ ...p, stockQuantity: +v }))} type="number" />
+                        <Field label="Torque Nm" value={partForm.torqueNm}
+                          onChange={v => setPartForm(p => ({ ...p, torqueNm: +v }))} type="number" />
+                        <Field label="Colour IDs (CSV)" value={partForm.colourIds}
+                          onChange={v => setPartForm(p => ({ ...p, colourIds: v }))} />
+
+                        {/* Model — resets variant + assembly on change */}
+                        <SelectField label="Model" value={partForm.modelId ?? ""}
+                          onChange={v => setPartForm(p => ({ ...p, modelId: +v || null, variantId: null, assemblyId: null }))}
+                          options={modelOpts} />
+
+                        {/* Variant — filtered by partForm.modelId */}
+                        <SelectField label="Variant" value={partForm.variantId ?? ""}
+                          onChange={v => setPartForm(p => ({ ...p, variantId: +v || null }))}
+                          options={addPartVariantOpts} />
+
+                        {/* Assembly — filtered by partForm.modelId */}
+                        <SelectField label="Assembly" value={partForm.assemblyId ?? ""}
+                          onChange={v => setPartForm(p => ({ ...p, assemblyId: +v || null }))}
+                          options={addPartAsmOpts} />
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                         <button className="am-btn am-btn--success" onClick={createPart}><FaCheck /> Save Part</button>
-                        <button className="am-btn am-btn--ghost" onClick={() => { setPartForm(blankPart()); setShowPartForm(false); }}><FaTimes /> Cancel</button>
+                        <button className="am-btn am-btn--ghost"
+                          onClick={() => { setPartForm(blankPart()); setShowPartForm(false); }}>
+                          <FaTimes /> Cancel
+                        </button>
                       </div>
                     </div>
                   )}
 
+                  {/* ── EDIT PART FORM ── */}
                   {editPart && (
                     <div className="am-form-card am-form-card--edit">
                       <div className="am-form-card__title">✏️ Editing Part #{editPart.id} — {editPart.partNumber}</div>
                       <div className="am-form-grid am-form-grid--5">
-                        <Field label="Part Number"   value={editPart.partNumber}    onChange={v => setEditPart(p => p && ({ ...p, partNumber: v }))} />
-                        <Field label="Part Name"     value={editPart.partName}      onChange={v => setEditPart(p => p && ({ ...p, partName: v }))} />
-                        <Field label="Description"   value={editPart.description}   onChange={v => setEditPart(p => p && ({ ...p, description: v }))} />
-                        <Field label="Remarks"       value={editPart.remarks}       onChange={v => setEditPart(p => p && ({ ...p, remarks: v }))} />
-                        <Field label="Image Number"  value={editPart.imageNumber}   onChange={v => setEditPart(p => p && ({ ...p, imageNumber: v }))} />
-                        <Field label="BDP"           value={editPart.bdp}           onChange={v => setEditPart(p => p && ({ ...p, bdp: +v }))}           type="number" />
-                        <Field label="MRP"           value={editPart.mrp}           onChange={v => setEditPart(p => p && ({ ...p, mrp: +v }))}           type="number" />
-                        <Field label="Price"         value={editPart.price}         onChange={v => setEditPart(p => p && ({ ...p, price: +v }))}         type="number" />
-                        <Field label="Tax %"         value={editPart.taxPercent}    onChange={v => setEditPart(p => p && ({ ...p, taxPercent: +v }))}    type="number" />
-                        <Field label="Stock Qty"     value={editPart.stockQuantity} onChange={v => setEditPart(p => p && ({ ...p, stockQuantity: +v }))} type="number" />
-                        <Field label="Torque Nm"     value={editPart.torqueNm}      onChange={v => setEditPart(p => p && ({ ...p, torqueNm: +v }))}      type="number" />
-                        <Field label="Colour IDs"    value={editPart.colourIds}     onChange={v => setEditPart(p => p && ({ ...p, colourIds: v }))} />
-                        <SelectField label="Model" value={editPart.modelId ?? ""} onChange={v => setEditPart(p => p && ({ ...p, modelId: +v || null }))} options={modelOpts} />
-                        <SelectField label="Variant" value={editPart.variantId ?? ""} onChange={v => setEditPart(p => p && ({ ...p, variantId: +v || null }))} options={filteredVariantOpts} />
-                        <SelectField label="Assembly" value={editPart.assemblyId ?? ""} onChange={v => setEditPart(p => p && ({ ...p, assemblyId: +v || null }))} options={filteredAsmOpts} />
+                        <Field label="Part Number" value={editPart.partNumber}
+                          onChange={v => setEditPart(p => p && ({ ...p, partNumber: v }))} />
+                        <Field label="Part Name" value={editPart.partName}
+                          onChange={v => setEditPart(p => p && ({ ...p, partName: v }))} />
+                        <Field label="Description" value={editPart.description}
+                          onChange={v => setEditPart(p => p && ({ ...p, description: v }))} />
+                        <Field label="Remarks" value={editPart.remarks}
+                          onChange={v => setEditPart(p => p && ({ ...p, remarks: v }))} />
+                        <Field label="Image Number" value={editPart.imageNumber}
+                          onChange={v => setEditPart(p => p && ({ ...p, imageNumber: v }))} />
+                        <Field label="BDP" value={editPart.bdp}
+                          onChange={v => setEditPart(p => p && ({ ...p, bdp: +v }))} type="number" />
+                        <Field label="MRP" value={editPart.mrp}
+                          onChange={v => setEditPart(p => p && ({ ...p, mrp: +v }))} type="number" />
+                        <Field label="Price" value={editPart.price}
+                          onChange={v => setEditPart(p => p && ({ ...p, price: +v }))} type="number" />
+                        <Field label="Tax %" value={editPart.taxPercent}
+                          onChange={v => setEditPart(p => p && ({ ...p, taxPercent: +v }))} type="number" />
+                        <Field label="Stock Qty" value={editPart.stockQuantity}
+                          onChange={v => setEditPart(p => p && ({ ...p, stockQuantity: +v }))} type="number" />
+                        <Field label="Torque Nm" value={editPart.torqueNm}
+                          onChange={v => setEditPart(p => p && ({ ...p, torqueNm: +v }))} type="number" />
+                        <Field label="Colour IDs" value={editPart.colourIds}
+                          onChange={v => setEditPart(p => p && ({ ...p, colourIds: v }))} />
+
+                        {/* Model — resets variant + assembly on change */}
+                        <SelectField label="Model" value={editPart.modelId ?? ""}
+                          onChange={v => setEditPart(p => p && ({ ...p, modelId: +v || null, variantId: null, assemblyId: null }))}
+                          options={modelOpts} />
+
+                        {/* Variant — filtered by editPart.modelId */}
+                        <SelectField label="Variant" value={editPart.variantId ?? ""}
+                          onChange={v => setEditPart(p => p && ({ ...p, variantId: +v || null }))}
+                          options={editPartVariantOpts} />
+
+                        {/* Assembly — filtered by editPart.modelId */}
+                        <SelectField label="Assembly" value={editPart.assemblyId ?? ""}
+                          onChange={v => setEditPart(p => p && ({ ...p, assemblyId: +v || null }))}
+                          options={editPartAsmOpts} />
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                         <button className="am-btn am-btn--success" onClick={savePart}><FaCheck /> Update Part</button>
@@ -1070,7 +1101,8 @@ const AdminModules = () => {
 
                   <div className="am-search-row">
                     <FaSearch className="am-search-icon" />
-                    <input className="am-search" placeholder="Search by part name or number…" value={partSearch} onChange={e => setPartSearch(e.target.value)} />
+                    <input className="am-search" placeholder="Search by part name or number…" value={partSearch}
+                      onChange={e => setPartSearch(e.target.value)} />
                     <span className="am-count">{fParts.length} record{fParts.length !== 1 ? "s" : ""}</span>
                   </div>
 
@@ -1078,10 +1110,10 @@ const AdminModules = () => {
                     <table className="am-table am-table--sm">
                       <thead>
                         <tr>
-                          <th>ID</th><th>Part #</th><th>Name</th><th>Desc</th>
+                          <th>ID</th><th>Img#</th><th>Part #</th><th>Name</th><th>Desc</th>
                           <th>BDP</th><th>MRP</th><th>Tax%</th><th>Stock</th>
                           <th>Model</th><th>Variant</th><th>Assembly</th>
-                          <th>Torque</th><th>Img#</th><th>Actions</th>
+                          <th>Torque</th><th>Price</th><th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1089,21 +1121,32 @@ const AdminModules = () => {
                         {fParts.map(p => (
                           <tr key={p.id} className={editPart?.id === p.id ? "am-table__active-row" : ""}>
                             <td><span className="am-id">#{p.id}</span></td>
+                            <td>{p.imageNumber || "—"}</td>
                             <td><strong>{p.partNumber}</strong></td>
                             <td>{p.partName}</td>
                             <td><span className="am-ellipsis" title={p.description}>{p.description}</span></td>
                             <td>{p.bdp}</td>
                             <td>{p.mrp}</td>
                             <td>{p.taxPercent}%</td>
-                            <td><span className={`am-stock ${(p.stockQuantity ?? 0) <= 0 ? "am-stock--low" : ""}`}>{p.stockQuantity}</span></td>
+                            <td>
+                              <span className={`am-stock ${(p.stockQuantity ?? 0) <= 0 ? "am-stock--low" : ""}`}>
+                                {p.stockQuantity}
+                              </span>
+                            </td>
                             <td><span className="am-badge">{modelName(p.modelId)}</span></td>
                             <td><span className="am-badge am-badge--teal">{variantName(p.variantId)}</span></td>
                             <td><span className="am-badge am-badge--amber">{asmName(p.assemblyId)}</span></td>
                             <td>{p.torqueNm || "—"}</td>
-                            <td>{p.imageNumber || "—"}</td>
+                            <td>{p.price || "—"}</td>
                             <td className="am-table__actions">
-                              <button className="am-btn am-btn--edit am-btn--xs" onClick={() => { setEditPart({ ...p }); setShowPartForm(false); }}><FaEdit /></button>
-                              <button className="am-btn am-btn--danger am-btn--xs" onClick={() => deletePart(p.id!)}><FaTrash /></button>
+                              <button className="am-btn am-btn--edit am-btn--xs"
+                                onClick={() => { setEditPart({ ...p }); setShowPartForm(false); }}>
+                                <FaEdit />
+                              </button>
+                              <button className="am-btn am-btn--danger am-btn--xs"
+                                onClick={() => deletePart(p.id!)}>
+                                <FaTrash />
+                              </button>
                             </td>
                           </tr>
                         ))}

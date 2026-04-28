@@ -24,7 +24,7 @@ public partial class Part
 
     public decimal? TaxPercent { get; set; }
 
-    public int StockQuantity { get; set; }
+    public string? StockQuantity { get; set; }
 
     public int? AssemblyId { get; set; }
 

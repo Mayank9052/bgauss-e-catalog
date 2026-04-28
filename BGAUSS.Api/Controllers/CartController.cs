@@ -23,6 +23,13 @@ namespace BGAUSS.Api.Controllers
             _context = context;
         }
 
+        // 🔹 SAFE STRING → INT
+        private int ToInt(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return 0;
+            return int.TryParse(value, out var result) ? result : 0;
+        }
+
         // // 🔐 Get logged-in user from JWT
         // private int GetUserId()
         // {
@@ -33,7 +40,7 @@ namespace BGAUSS.Api.Controllers
 
         private int GetUserId()
         {
-            var claim = User.FindFirst("UserId")??
+            var claim = User.FindFirst("UserId") ??
                         User.FindFirst(ClaimTypes.NameIdentifier) ??
                         User.FindFirst("sub");
 
@@ -57,7 +64,9 @@ namespace BGAUSS.Api.Controllers
             if (part == null)
                 return NotFound("Part not found");
 
-            if (part.StockQuantity < request.Quantity)
+            int stockQty = ToInt(part.StockQuantity);
+
+            if (stockQty < request.Quantity)
                 return BadRequest("Insufficient stock");
 
             var cart = await _context.Carts
@@ -75,19 +84,22 @@ namespace BGAUSS.Api.Controllers
 
             if (existingItem != null)
             {
-                int nextQuantity = existingItem.Quantity + request.Quantity;
+                int existingQty = ToInt(existingItem.Quantity);
+                int nextQty = existingQty + request.Quantity;
 
-                if (nextQuantity > part.StockQuantity)
-                    return BadRequest($"Only {part.StockQuantity - existingItem.Quantity} additional items available for {part.PartName}");
+                if (nextQty > stockQty)
+                    return BadRequest($"Only {stockQty - existingQty} available");
 
-                existingItem.Quantity += request.Quantity;
+                existingItem.Quantity = nextQty.ToString();
             }
             else
+            {
                 cart.CartItems.Add(new CartItem
                 {
                     PartId = request.PartId,
-                    Quantity = request.Quantity
+                    Quantity = request.Quantity.ToString()
                 });
+            }
 
             await _context.SaveChangesAsync();
             return Ok("Item added to cart");
@@ -105,33 +117,34 @@ namespace BGAUSS.Api.Controllers
                 .FirstOrDefaultAsync(c => c.UserId == userId);
 
             if (cart == null || !cart.CartItems.Any())
-                return Ok(new {  items = new List<object>() });
+                return Ok(new { items = new List<object>() });
 
-            var items = cart.CartItems.Select(ci => new
+            var items = cart.CartItems.Select(ci =>
             {
-                ci.Id,
-                ci.PartId,
-                PartName = ci.Part!.PartName,
-                PartNumber = ci.Part.PartNumber,
-                //ImagePath = ci.Part.PartImages,
-                Price = ci.Part.Price,
-                ci.Quantity,
-                SubTotal = ci.Quantity * (ci.Part.Price ?? 0),
-                StockQuantity = ci.Part.StockQuantity
+                int qty = ToInt(ci.Quantity);
+                decimal price = ci.Part?.Price ?? 0;
+
+                return new
+                {
+                    ci.Id,
+                    ci.PartId,
+                    PartName = ci.Part!.PartName,
+                    PartNumber = ci.Part.PartNumber,
+                    Price = price,
+                    Quantity = qty,
+                    SubTotal = qty * price,
+                    StockQuantity = ci.Part.StockQuantity
+                };
             }).ToList();
 
             return Ok(new
             {
-                // cart.Id,
-                // Items = items,
-                // Total = items.Sum(i => i.SubTotal)
-
                 items,
                 total = items.Sum(i => i.SubTotal)
             });
         }
 
-        // ================= UPDATE SINGLE ITEM =================
+        // ================= UPDATE ITEM =================
         [HttpPut("update/{cartItemId}")]
         public async Task<IActionResult> UpdateQuantity(int cartItemId, int quantity)
         {
@@ -151,13 +164,12 @@ namespace BGAUSS.Api.Controllers
             }
             else
             {
-                if (item.Part == null)
-                    return BadRequest("Part not found");
+                int stockQty = ToInt(item.Part!.StockQuantity);
 
-                if (quantity > item.Part.StockQuantity)
-                    return BadRequest($"Only {item.Part.StockQuantity} items available for {item.Part.PartName}");
+                if (quantity > stockQty)
+                    return BadRequest($"Only {stockQty} available");
 
-                item.Quantity = quantity;
+                item.Quantity = quantity.ToString();
             }
 
             await _context.SaveChangesAsync();
@@ -183,7 +195,7 @@ namespace BGAUSS.Api.Controllers
                     if (item.Quantity <= 0)
                         _context.CartItems.Remove(cartItem);
                     else
-                        cartItem.Quantity = item.Quantity;
+                        cartItem.Quantity = item.Quantity.ToString();
                 }
             }
 
@@ -232,68 +244,58 @@ namespace BGAUSS.Api.Controllers
         {
             int userId = GetUserId();
 
-            try
+            var cart = await _context.Carts
+                .Include(c => c.CartItems)
+                .ThenInclude(ci => ci.Part)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (cart == null || !cart.CartItems.Any())
+                return BadRequest("Cart is empty");
+
+            var order = new Order
             {
-                var cart = await _context.Carts
-                    .Include(c => c.CartItems)
-                    .ThenInclude(ci => ci.Part)
-                    .FirstOrDefaultAsync(c => c.UserId == userId);
+                UserId = userId,
+                TotalAmount = 0,
+                Status = "Pending",
+                OrderItems = new List<OrderItem>()
+            };
 
-                if (cart == null || !cart.CartItems.Any())
-                    return BadRequest("Cart is empty");
-
-                var order = new Order
-                {
-                    UserId = userId,
-                    TotalAmount = 0,
-                    Status = "Pending",
-                    OrderItems = new List<OrderItem>()
-                };
-
-                foreach (var item in cart.CartItems)
-                {
-                    var part = item.Part;
-
-                    if (part.StockQuantity < item.Quantity)
-                        return BadRequest($"Insufficient stock for {part.PartName}");
-
-                    decimal price = part.Price ?? 0;
-                    decimal subTotal = price * item.Quantity;
-                    
-                    // Deduct stock
-                    part.StockQuantity -= item.Quantity;
-
-                    order.OrderItems.Add(new OrderItem
-                    {
-                        PartId = part.Id,
-                        Quantity = item.Quantity,
-                        Price = price,
-                        SubTotal = subTotal
-                    });
-
-                    order.TotalAmount += subTotal;
-                }
-
-                _context.Orders.Add(order);
-                _context.CartItems.RemoveRange(cart.CartItems);
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new
-                {
-                    Message = "Order placed successfully",
-                    OrderId = order.Id,
-                    Total = order.TotalAmount
-                });
-            }
-            catch (Exception ex)
+            foreach (var item in cart.CartItems)
             {
-                return BadRequest(new
+                var part = item.Part!;
+                int qty = ToInt(item.Quantity);
+                int stockQty = ToInt(part.StockQuantity);
+
+                if (stockQty < qty)
+                    return BadRequest($"Insufficient stock for {part.PartName}");
+
+                decimal price = part.Price ?? 0;
+                decimal subTotal = price * qty;
+
+                part.StockQuantity = (stockQty - qty).ToString();
+
+                order.OrderItems.Add(new OrderItem
                 {
-                    Message = "Checkout failed",
-                    Details = ex.Message
+                    PartId = part.Id,
+                    Quantity = qty,
+                    Price = price,
+                    SubTotal = subTotal
                 });
+
+                order.TotalAmount += subTotal;
             }
+
+            _context.Orders.Add(order);
+            _context.CartItems.RemoveRange(cart.CartItems);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Message = "Order placed successfully",
+                OrderId = order.Id,
+                Total = order.TotalAmount
+            });
         }
 
         // ================= DOWNLOAD CSV =================
@@ -319,7 +321,8 @@ namespace BGAUSS.Api.Controllers
             foreach (var item in cart.CartItems)
             {
                 decimal price = item.Part?.Price ?? 0;
-                decimal subtotal = price * item.Quantity;
+                int qty = ToInt(item.Quantity);
+                decimal subtotal = price * qty;
         
                 total += subtotal;
         
@@ -363,13 +366,18 @@ namespace BGAUSS.Api.Controllers
             if (cart == null || !cart.CartItems.Any())
                 return NotFound("Cart is empty");
 
-            var items = cart.CartItems.Select(ci => new
+            var items = cart.CartItems.Select(ci =>
             {
-                ProductName = ci.Part!.PartName,
-                PartNumber = ci.Part.PartNumber,
-                Price = ci.Part.Price ?? 0,
-                Quantity = ci.Quantity,
-                SubTotal = (ci.Part.Price ?? 0) * ci.Quantity
+                int qty = ToInt(ci.Quantity);
+                decimal price = ci.Part.Price ?? 0;
+                return new
+                {
+                    ProductName = ci.Part!.PartName,
+                    PartNumber = ci.Part.PartNumber,
+                    Price = price,
+                    Quantity = qty,
+                    SubTotal = price * qty
+                };
             }).ToList();
 
             decimal total = items.Sum(x => x.SubTotal);

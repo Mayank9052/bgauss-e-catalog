@@ -34,7 +34,7 @@ public class PartsController : ControllerBase
             bdp            = p.Bdp ?? 0,
             mrp            = p.Mrp ?? 0,
             taxPercent     = p.TaxPercent ?? 0,
-            stockQuantity  = p.StockQuantity,
+            stockQuantity  = p.StockQuantity ?? "",
             assemblyId     = p.AssemblyId,
             modelId        = p.ModelId,
             variantId      = p.VariantId,
@@ -62,7 +62,7 @@ public class PartsController : ControllerBase
                 Remarks = p.Remarks ?? "",
                 Bdp = p.Bdp ?? 0,
                 Mrp = p.Mrp ?? 0,
-                StockQuantity = p.StockQuantity,
+                StockQuantity = p.StockQuantity ?? "",
                 TaxPercent = p.TaxPercent ?? 0,
                 ImagePath = "",
                 ImageNumber = p.ImageNumber ?? ""
@@ -107,7 +107,7 @@ public class PartsController : ControllerBase
         part.Mrp = updated.Mrp;
         part.TaxPercent = updated.TaxPercent;
 
-        part.StockQuantity = updated.StockQuantity;
+        part.StockQuantity = updated.StockQuantity ?? "";
 
         part.AssemblyId = updated.AssemblyId;
         part.ModelId = updated.ModelId;
@@ -183,7 +183,7 @@ public class PartsController : ControllerBase
             bdp            = p.Bdp ?? 0,
             mrp            = p.Mrp ?? 0,
             taxPercent     = p.TaxPercent ?? 0,
-            stockQuantity  = p.StockQuantity,
+            stockQuantity  = p.StockQuantity ?? "",
             assemblyId     = p.AssemblyId,
             modelId        = p.ModelId,
             variantId      = p.VariantId,
@@ -308,12 +308,12 @@ public class PartsController : ControllerBase
                     existingPart.Bdp = ParseDecimalSafe(worksheet.Cells[row, 5].Text);
                     existingPart.Mrp = ParseDecimalSafe(worksheet.Cells[row, 6].Text);
                     existingPart.TaxPercent = ParseDecimalSafe(worksheet.Cells[row, 7].Text);
-                    existingPart.StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Text);
+                    existingPart.StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Text).ToString();
                     existingPart.AssemblyId = validAssemblies.Contains(assemblyId) ? assemblyId : null;
                     existingPart.ModelId = validModels.Contains(modelId) ? modelId : null;
                     existingPart.VariantId = validVariants.Contains(variantId) ? variantId : null;
                     existingPart.TorqueNm = ParseDecimalSafe(worksheet.Cells[row, 13].Text);
-                    existingPart.Remarks = worksheet.Cells[row, 14].Text?.Trim();
+                    existingPart.Remarks = worksheet.Cells[row, 14].Text.Trim();
                     existingPart.ImageNumber = imageNumber;
 
                     // Update colours
@@ -337,12 +337,12 @@ public class PartsController : ControllerBase
                         Bdp = ParseDecimalSafe(worksheet.Cells[row, 5].Text),
                         Mrp = ParseDecimalSafe(worksheet.Cells[row, 6].Text),
                         TaxPercent = ParseDecimalSafe(worksheet.Cells[row, 7].Text),
-                        StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Text),
+                        StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Text).ToString(),
                         AssemblyId = validAssemblies.Contains(assemblyId) ? assemblyId : null,
                         ModelId = validModels.Contains(modelId) ? modelId : null,
                         VariantId = validVariants.Contains(variantId) ? variantId : null,
                         TorqueNm = ParseDecimalSafe(worksheet.Cells[row, 13].Text),
-                        Remarks = worksheet.Cells[row, 14].Text?.Trim(),
+                        Remarks = worksheet.Cells[row, 14].Text.Trim(),
                         ImageNumber = imageNumber
                     };
 

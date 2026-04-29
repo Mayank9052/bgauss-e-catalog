@@ -11,11 +11,11 @@ public class PartResponse
     public decimal Bdp { get; set; }
     public decimal Mrp { get; set; }
     public decimal TaxPercent { get; set; }
-    public int StockQuantity { get; set; }
+    public string? StockQuantity { get; set; }
     public int? AssemblyId { get; set; }
     public int? ModelId { get; set; }
     public int? VariantId { get; set; }
-    public decimal TorqueNm { get; set; }
+    public decimal? TorqueNm { get; set; }
     public string ImageNumber { get; set; } = "";
     public string ColourIds { get; set; } = ""; 
     public string ImagePath { get; set; } = "";

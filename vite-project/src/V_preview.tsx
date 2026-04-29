@@ -172,12 +172,20 @@ const VehiclePreview = () => {
                   </span>
                 </div>
               )}
+<<<<<<< fix/QuantityDatatype
               {/* {searchState.vin && (
+=======
+              {searchState.vin && (
+>>>>>>> main
                 <div className="vib-row">
                   <span className="vib-label">VIN</span>
                   <span className="vib-value vib-vin">{searchState.vin}</span>
                 </div>
+<<<<<<< fix/QuantityDatatype
               )} */}
+=======
+              )}
+>>>>>>> main
             </div>
 
             {/* <button className="primary-btn" onClick={goToCatalogue}>

@@ -34,7 +34,7 @@ interface Assembly {
 interface Part {
   id?: number; partNumber: string; partName: string; description: string;
   remarks: string; price: number; bdp: number; mrp: number; taxPercent: number;
-  stockQuantity: number; assemblyId: number | null; modelId: number | null;
+  stockQuantity: string; assemblyId: number | null; modelId: number | null;
   variantId: number | null; colourIds: string; torqueNm: number; imageNumber: string;
 }
 
@@ -374,7 +374,7 @@ const AdminModules = () => {
 
   const blankPart = (): Part => ({
     partNumber: "", partName: "", description: "", remarks: "",
-    price: 0, bdp: 0, mrp: 0, taxPercent: 0, stockQuantity: 0,
+    price: 0, bdp: 0, mrp: 0, taxPercent: 0, stockQuantity: "",
     assemblyId: null, modelId: null, variantId: null,
     colourIds: "", torqueNm: 0, imageNumber: "",
   });
@@ -1033,7 +1033,7 @@ const AdminModules = () => {
                         <Field label="MRP" value={partForm.mrp} onChange={v => setPartForm(p => ({ ...p, mrp: +v }))} type="number" />
                         <Field label="Price" value={partForm.price} onChange={v => setPartForm(p => ({ ...p, price: +v }))} type="number" />
                         <Field label="Tax %" value={partForm.taxPercent} onChange={v => setPartForm(p => ({ ...p, taxPercent: +v }))} type="number" />
-                        <Field label="Stock Qty" value={partForm.stockQuantity} onChange={v => setPartForm(p => ({ ...p, stockQuantity: +v }))} type="number" />
+                        <Field label="Stock Qty" value={partForm.stockQuantity} onChange={v => setPartForm(p => ({ ...p, stockQuantity: v }))} />
                         <Field label="Torque Nm" value={partForm.torqueNm} onChange={v => setPartForm(p => ({ ...p, torqueNm: +v }))} type="number" />
                         <Field label="Colour IDs (CSV)" value={partForm.colourIds} onChange={v => setPartForm(p => ({ ...p, colourIds: v }))} />
                         <SelectField label="Model" value={partForm.modelId ?? ""}
@@ -1067,7 +1067,7 @@ const AdminModules = () => {
                         <Field label="MRP" value={editPart.mrp} onChange={v => setEditPart(p => p && ({ ...p, mrp: +v }))} type="number" />
                         <Field label="Price" value={editPart.price} onChange={v => setEditPart(p => p && ({ ...p, price: +v }))} type="number" />
                         <Field label="Tax %" value={editPart.taxPercent} onChange={v => setEditPart(p => p && ({ ...p, taxPercent: +v }))} type="number" />
-                        <Field label="Stock Qty" value={editPart.stockQuantity} onChange={v => setEditPart(p => p && ({ ...p, stockQuantity: +v }))} type="number" />
+                        <Field label="Stock Qty" value={editPart.stockQuantity} onChange={v => setEditPart(p => p && ({ ...p, stockQuantity: v }))} />
                         <Field label="Torque Nm" value={editPart.torqueNm} onChange={v => setEditPart(p => p && ({ ...p, torqueNm: +v }))} type="number" />
                         <Field label="Colour IDs" value={editPart.colourIds} onChange={v => setEditPart(p => p && ({ ...p, colourIds: v }))} />
                         <SelectField label="Model" value={editPart.modelId ?? ""}
@@ -1114,7 +1114,7 @@ const AdminModules = () => {
                             <td>{p.bdp}</td>
                             <td>{p.mrp}</td>
                             <td>{p.taxPercent}%</td>
-                            <td><span className={`am-stock ${(p.stockQuantity ?? 0) <= 0 ? "am-stock--low" : ""}`}>{p.stockQuantity}</span></td>
+                            <td><span className={`am-stock ${!p.stockQuantity || p.stockQuantity === "0" ? "am-stock--low" : ""}`}>{p.stockQuantity}</span></td>
                             <td><span className="am-badge">{modelName(p.modelId)}</span></td>
                             <td><span className="am-badge am-badge--teal">{variantName(p.variantId)}</span></td>
                             <td><span className="am-badge am-badge--amber">{asmName(p.assemblyId)}</span></td>

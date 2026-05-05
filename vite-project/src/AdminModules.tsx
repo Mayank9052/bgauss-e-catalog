@@ -1,3 +1,6 @@
+// AdminModules.tsx — updated: Assemblies tab now supports VariantId
+// All other logic unchanged
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +21,16 @@ import {
 interface VehicleModel   { id?: number; modelName: string; }
 interface VehicleVariant { id?: number; variantName: string; modelId: number; }
 interface VehicleColour  { id?: number; colourName: string; modelId: number | null; variantId: number | null; imagePath: string; }
-interface Assembly       { id?: number; assemblyName: string; imagePath: string; modelId: number; }
+
+// ── UPDATED: added variantId ──
+interface Assembly {
+  id?: number;
+  assemblyName: string;
+  imagePath: string;
+  modelId: number;
+  variantId?: number | null;   // ← NEW
+}
+
 interface Part {
   id?: number; partNumber: string; partName: string; description: string;
   remarks: string; price: number; bdp: number; mrp: number; taxPercent: number;
@@ -101,9 +113,7 @@ function SelectField({ label, value, onChange, options, placeholder }: {
    IMAGE UPLOAD FIELD
 ═══════════════════════════════════════════════════ */
 function ImageUploadField({ label, value, onChange }: {
-  label: string;
-  value: string;
-  onChange: (path: string) => void;
+  label: string; value: string; onChange: (path: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -128,8 +138,7 @@ function ImageUploadField({ label, value, onChange }: {
       onChange(res.data.path);
     } catch {
       alert("Image upload failed. Please try again.");
-      setPreviewUrl("");
-      onChange("");
+      setPreviewUrl(""); onChange("");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -179,10 +188,7 @@ function ImageUploadField({ label, value, onChange }: {
 /* ═══════════════════════════════════════════════════
    INLINE IMAGE UPLOAD
 ═══════════════════════════════════════════════════ */
-function InlineImageUpload({ value, onChange }: {
-  value: string;
-  onChange: (path: string) => void;
-}) {
+function InlineImageUpload({ value, onChange }: { value: string; onChange: (path: string) => void; }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -360,8 +366,9 @@ const AdminModules = () => {
   const [editColour,   setEditColour]   = useState<VehicleColour | null>(null);
   const [colourSearch, setColourSearch] = useState("");
 
+  // ── UPDATED: asmForm now includes variantId ──
   const [assemblies, setAssemblies] = useState<Assembly[]>([]);
-  const [asmForm,    setAsmForm]    = useState({ assemblyName: "", imagePath: "", modelId: 0 });
+  const [asmForm,    setAsmForm]    = useState({ assemblyName: "", imagePath: "", modelId: 0, variantId: 0 });
   const [editAsm,    setEditAsm]    = useState<Assembly | null>(null);
   const [asmSearch,  setAsmSearch]  = useState("");
 
@@ -420,24 +427,18 @@ const AdminModules = () => {
     try {
       await axios.post("/VehicleModels", modelForm);
       setModelForm({ modelName: "" }); fetchModels(); ok("Model created successfully");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
-
   const saveModel = async () => {
     if (!editModel?.id) { err("No model selected for update"); return; }
     try {
       await axios.put(`/VehicleModels/${editModel.id}`, editModel);
       setEditModel(null); fetchModels(); ok("Model updated successfully");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
-
   const deleteModel = (id: number) => ask("Delete this model? This may affect related data.", async () => {
     try { await axios.delete(`/VehicleModels/${id}`); fetchModels(); ok("Model deleted"); }
-    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
     finally { setConfirm(null); }
   });
 
@@ -447,24 +448,18 @@ const AdminModules = () => {
     try {
       await axios.post("/VehicleVariants", variantForm);
       setVariantForm({ variantName: "", modelId: 0 }); fetchVariants(); ok("Variant created successfully");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
-
   const saveVariant = async () => {
     if (!editVariant) return;
     try {
       await axios.put(`/VehicleVariants/${editVariant.id}`, editVariant);
       setEditVariant(null); fetchVariants(); ok("Variant updated");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
-
   const deleteVariant = (id: number) => ask("Delete this variant?", async () => {
     try { await axios.delete(`/VehicleVariants/${id}`); fetchVariants(); ok("Variant deleted"); }
-    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
     finally { setConfirm(null); }
   });
 
@@ -479,51 +474,48 @@ const AdminModules = () => {
       });
       setColourForm({ colourName: "", modelId: 0, variantId: 0, imagePath: "" });
       fetchColours(); ok("Colour created successfully");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
-
   const saveColour = async () => {
     if (!editColour) return;
     try {
       await axios.put(`/VehicleColours/${editColour.id}`, editColour);
       setEditColour(null); fetchColours(); ok("Colour updated");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
-
   const deleteColour = (id: number) => ask("Delete this colour?", async () => {
     try { await axios.delete(`/VehicleColours/${id}`); fetchColours(); ok("Colour deleted"); }
-    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
     finally { setConfirm(null); }
   });
 
-  /* ═══════════ ASSEMBLY CRUD ═══════════ */
+  /* ═══════════ ASSEMBLY CRUD (UPDATED) ═══════════ */
   const createAssembly = async () => {
     if (!asmForm.assemblyName.trim() || !asmForm.modelId) return err("Assembly name and model are required");
     try {
-      await axios.post("/Assemblies", asmForm);
-      setAsmForm({ assemblyName: "", imagePath: "", modelId: 0 }); fetchAssemblies(); ok("Assembly created successfully");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+      await axios.post("/Assemblies", {
+        ...asmForm,
+        variantId: asmForm.variantId || null,   // ── send null if 0 ──
+      });
+      setAsmForm({ assemblyName: "", imagePath: "", modelId: 0, variantId: 0 });
+      fetchAssemblies(); ok("Assembly created successfully");
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
 
   const saveAssembly = async () => {
     if (!editAsm) return;
     try {
-      await axios.put(`/Assemblies/${editAsm.id}`, editAsm);
+      await axios.put(`/Assemblies/${editAsm.id}`, {
+        ...editAsm,
+        variantId: editAsm.variantId || null,   // ── send null if 0 / undefined ──
+      });
       setEditAsm(null); fetchAssemblies(); ok("Assembly updated");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
 
   const deleteAssembly = (id: number) => ask("Delete this assembly?", async () => {
     try { await axios.delete(`/Assemblies/${id}`); fetchAssemblies(); ok("Assembly deleted"); }
-    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
     finally { setConfirm(null); }
   });
 
@@ -533,24 +525,18 @@ const AdminModules = () => {
     try {
       await axios.post("/Parts", { ...partForm, colourId: partForm.colourIds ? parseInt(partForm.colourIds) : null });
       setPartForm(blankPart()); setShowPartForm(false); fetchParts(); ok("Part created successfully");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
-
   const savePart = async () => {
     if (!editPart) return;
     try {
       await axios.put(`/Parts/${editPart.id}`, editPart);
       setEditPart(null); fetchParts(); ok("Part updated");
-    } catch (error: unknown) {
-      err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error));
-    }
+    } catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
   };
-
   const deletePart = (id: number) => ask("Delete this part?", async () => {
     try { await axios.delete(`/Parts/${id}`); fetchParts(); ok("Part deleted"); }
-    catch (error: unknown) { err(axios.isAxiosError(error) ? (error.response?.data as string) ?? error.message : String(error)); }
+    catch (e: unknown) { err(axios.isAxiosError(e) ? (e.response?.data as string) ?? e.message : String(e)); }
     finally { setConfirm(null); }
   });
 
@@ -560,8 +546,10 @@ const AdminModules = () => {
   const onEditColourName    = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, colourName: v }); };
   const onEditColourModel   = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, modelId: +v || null, variantId: null }); };
   const onEditColourVariant = (v: string) => { if (!editColour) return; setEditColour({ ...editColour, variantId: +v || null }); };
-  const onEditAsmName  = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, assemblyName: v }); };
-  const onEditAsmModel = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, modelId: +v }); };
+  // ── UPDATED assembly inline handlers ──
+  const onEditAsmName    = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, assemblyName: v }); };
+  const onEditAsmModel   = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, modelId: +v, variantId: null }); };
+  const onEditAsmVariant = (v: string) => { if (!editAsm) return; setEditAsm({ ...editAsm, variantId: +v || null }); };
 
   /* ═══════════ FILTER / DERIVED ═══════════ */
   const fModels     = models.filter(m => m.modelName?.toLowerCase().includes(modelSearch.toLowerCase()));
@@ -575,25 +563,29 @@ const AdminModules = () => {
 
   const modelOpts = models.map(m => ({ id: m.id!, label: m.modelName }));
 
-  // Colour form — variant dropdown filtered by selected model
   const colourFormVariantOpts = variants
     .filter(v => v.modelId === colourForm.modelId)
     .map(v => ({ id: v.id!, label: v.variantName }));
 
-  // ── ADD part form — filtered by partForm.modelId ──────────
+  // ── Assembly form: variants filtered by selected modelId ──
+  const asmFormVariantOpts = variants
+    .filter(v => v.modelId === asmForm.modelId)
+    .map(v => ({ id: v.id!, label: v.variantName }));
+
+  // ── Edit assembly: variants filtered by editAsm.modelId ──
+  const editAsmVariantOpts = variants
+    .filter(v => v.modelId === (editAsm?.modelId ?? 0))
+    .map(v => ({ id: v.id!, label: v.variantName }));
+
   const addPartVariantOpts = variants
     .filter(v => v.modelId === (partForm.modelId ?? 0))
     .map(v => ({ id: v.id!, label: v.variantName }));
-
   const addPartAsmOpts = assemblies
     .filter(a => a.modelId === (partForm.modelId ?? 0))
     .map(a => ({ id: a.id!, label: a.assemblyName }));
-
-  // ── EDIT part form — filtered by editPart.modelId ─────────
   const editPartVariantOpts = variants
     .filter(v => v.modelId === (editPart?.modelId ?? 0))
     .map(v => ({ id: v.id!, label: v.variantName }));
-
   const editPartAsmOpts = assemblies
     .filter(a => a.modelId === (editPart?.modelId ?? 0))
     .map(a => ({ id: a.id!, label: a.assemblyName }));
@@ -778,10 +770,8 @@ const AdminModules = () => {
                           editVariant?.id === v.id ? (
                             <tr key={v.id} className="am-table__edit-row">
                               <td>{v.id}</td>
-                              <td>
-                                <input className="am-inline-input" value={editVariant?.variantName}
-                                  onChange={e => onEditVariantName(e.target.value)} />
-                              </td>
+                              <td><input className="am-inline-input" value={editVariant?.variantName}
+                                onChange={e => onEditVariantName(e.target.value)} /></td>
                               <td>
                                 <select className="am-inline-select" value={editVariant?.modelId}
                                   onChange={e => onEditVariantModel(e.target.value)}>
@@ -822,11 +812,9 @@ const AdminModules = () => {
                       <Field label="Colour Name" value={colourForm.colourName}
                         onChange={v => setColourForm(p => ({ ...p, colourName: v }))} />
                       <SelectField label="Model" value={colourForm.modelId}
-                        onChange={v => setColourForm(p => ({ ...p, modelId: +v, variantId: 0 }))}
-                        options={modelOpts} />
+                        onChange={v => setColourForm(p => ({ ...p, modelId: +v, variantId: 0 }))} options={modelOpts} />
                       <SelectField label="Variant" value={colourForm.variantId}
-                        onChange={v => setColourForm(p => ({ ...p, variantId: +v }))}
-                        options={colourFormVariantOpts} />
+                        onChange={v => setColourForm(p => ({ ...p, variantId: +v }))} options={colourFormVariantOpts} />
                       <ImageUploadField label="Colour Image" value={colourForm.imagePath}
                         onChange={v => setColourForm(p => ({ ...p, imagePath: v }))} />
                     </div>
@@ -848,10 +836,8 @@ const AdminModules = () => {
                           editColour?.id === c.id ? (
                             <tr key={c.id} className="am-table__edit-row">
                               <td>{c.id}</td>
-                              <td>
-                                <input className="am-inline-input" value={editColour?.colourName}
-                                  onChange={e => onEditColourName(e.target.value)} />
-                              </td>
+                              <td><input className="am-inline-input" value={editColour?.colourName}
+                                onChange={e => onEditColourName(e.target.value)} /></td>
                               <td>
                                 <select className="am-inline-select" value={editColour?.modelId ?? ""}
                                   onChange={e => onEditColourModel(e.target.value)}>
@@ -860,12 +846,10 @@ const AdminModules = () => {
                                 </select>
                               </td>
                               <td>
-                                {/* Variant filtered by editColour.modelId */}
                                 <select className="am-inline-select" value={editColour?.variantId ?? ""}
                                   onChange={e => onEditColourVariant(e.target.value)}>
                                   <option value="">—</option>
-                                  {variants
-                                    .filter(v => v.modelId === editColour?.modelId)
+                                  {variants.filter(v => v.modelId === editColour?.modelId)
                                     .map(v => <option key={v.id} value={v.id}>{v.variantName}</option>)}
                                 </select>
                               </td>
@@ -904,35 +888,62 @@ const AdminModules = () => {
                 </div>
               )}
 
-              {/* ════════════ ASSEMBLIES TAB ════════════ */}
+              {/* ════════════ ASSEMBLIES TAB (UPDATED) ════════════ */}
               {activeTab === "assemblies" && (
                 <div className="am-section">
                   <ImportRow downloadUrl="/Assemblies/download-template" importUrl="/Assemblies/import"
                     fileName="Assemblies_Import_Template.xlsx" onDone={fetchAssemblies} entity="Assemblies" />
+
+                  {/* ── ADD FORM ── */}
                   <div className="am-form-card">
                     <div className="am-form-card__title">Add New Assembly</div>
                     <div className="am-form-grid">
                       <Field label="Assembly Name" value={asmForm.assemblyName}
                         onChange={v => setAsmForm(p => ({ ...p, assemblyName: v }))} />
+
+                      {/* Model — resets variant on change */}
                       <SelectField label="Model" value={asmForm.modelId}
-                        onChange={v => setAsmForm(p => ({ ...p, modelId: +v }))} options={modelOpts} />
+                        onChange={v => setAsmForm(p => ({ ...p, modelId: +v, variantId: 0 }))}
+                        options={modelOpts} />
+
+                      {/* ── NEW: Variant (optional, filtered by model) ── */}
+                      <SelectField
+                        label="Variant (optional)"
+                        value={asmForm.variantId}
+                        onChange={v => setAsmForm(p => ({ ...p, variantId: +v }))}
+                        options={asmFormVariantOpts}
+                        placeholder="— All Variants —"
+                      />
+
                       <ImageUploadField label="Assembly Image" value={asmForm.imagePath}
                         onChange={v => setAsmForm(p => ({ ...p, imagePath: v }))} />
                     </div>
                     <button className="am-btn am-btn--success am-btn--icon" style={{ marginTop: 10 }}
                       onClick={createAssembly}><FaPlus /> Add Assembly</button>
                   </div>
+
                   <div className="am-search-row">
                     <FaSearch className="am-search-icon" />
                     <input className="am-search" placeholder="Search assemblies…" value={asmSearch}
                       onChange={e => setAsmSearch(e.target.value)} />
                     <span className="am-count">{fAssemblies.length} record{fAssemblies.length !== 1 ? "s" : ""}</span>
                   </div>
+
                   <div className="am-table-wrap">
+                    {/* ── UPDATED: added Variant column ── */}
                     <table className="am-table">
-                      <thead><tr><th>ID</th><th>Assembly Name</th><th>Model</th><th>Image</th><th>Actions</th></tr></thead>
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Assembly Name</th>
+                          <th>Model</th>
+                          <th>Variant</th>      {/* ← NEW */}
+                          <th>Image</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
                       <tbody>
-                        {fAssemblies.length === 0 && <tr><td colSpan={5} className="am-empty">No assemblies found</td></tr>}
+                        {fAssemblies.length === 0 && <tr><td colSpan={6} className="am-empty">No assemblies found</td></tr>}
                         {fAssemblies.map(a => (
                           editAsm?.id === a.id ? (
                             <tr key={a.id} className="am-table__edit-row">
@@ -942,9 +953,20 @@ const AdminModules = () => {
                                   onChange={e => onEditAsmName(e.target.value)} />
                               </td>
                               <td>
+                                {/* Model select — resets variant */}
                                 <select className="am-inline-select" value={editAsm?.modelId}
                                   onChange={e => onEditAsmModel(e.target.value)}>
                                   {models.map(m => <option key={m.id} value={m.id}>{m.modelName}</option>)}
+                                </select>
+                              </td>
+                              {/* ── NEW: Variant inline edit, filtered by editAsm.modelId ── */}
+                              <td>
+                                <select className="am-inline-select" value={editAsm?.variantId ?? ""}
+                                  onChange={e => onEditAsmVariant(e.target.value)}>
+                                  <option value="">— All —</option>
+                                  {editAsmVariantOpts.map(o => (
+                                    <option key={o.id} value={o.id}>{o.label}</option>
+                                  ))}
                                 </select>
                               </td>
                               <td>
@@ -961,6 +983,12 @@ const AdminModules = () => {
                               <td><span className="am-id">#{a.id}</span></td>
                               <td><strong>{a.assemblyName}</strong></td>
                               <td><span className="am-badge">{modelName(a.modelId)}</span></td>
+                              {/* ── NEW: show variant badge ── */}
+                              <td>
+                                <span className="am-badge am-badge--teal">
+                                  {a.variantId ? variantName(a.variantId) : "All Variants"}
+                                </span>
+                              </td>
                               <td>
                                 {a.imagePath ? (
                                   <img src={`/${a.imagePath.replace(/\\/g, "/").replace(/^\/+/, "")}`}
@@ -992,50 +1020,29 @@ const AdminModules = () => {
                     <FaPlus /> {showPartForm ? "Hide Form" : "Add New Part"}
                   </button>
 
-                  {/* ── ADD PART FORM ── */}
                   {showPartForm && (
                     <div className="am-form-card">
                       <div className="am-form-card__title">Add New Part</div>
                       <div className="am-form-grid am-form-grid--5">
-                        <Field label="Part Number *" value={partForm.partNumber}
-                          onChange={v => setPartForm(p => ({ ...p, partNumber: v }))} />
-                        <Field label="Part Name" value={partForm.partName}
-                          onChange={v => setPartForm(p => ({ ...p, partName: v }))} />
-                        <Field label="Description" value={partForm.description}
-                          onChange={v => setPartForm(p => ({ ...p, description: v }))} />
-                        <Field label="Remarks" value={partForm.remarks}
-                          onChange={v => setPartForm(p => ({ ...p, remarks: v }))} />
-                        <Field label="Image Number" value={partForm.imageNumber}
-                          onChange={v => setPartForm(p => ({ ...p, imageNumber: v }))} />
-                        <Field label="BDP" value={partForm.bdp}
-                          onChange={v => setPartForm(p => ({ ...p, bdp: +v }))} type="number" />
-                        <Field label="MRP" value={partForm.mrp}
-                          onChange={v => setPartForm(p => ({ ...p, mrp: +v }))} type="number" />
-                        <Field label="Price" value={partForm.price}
-                          onChange={v => setPartForm(p => ({ ...p, price: +v }))} type="number" />
-                        <Field label="Tax %" value={partForm.taxPercent}
-                          onChange={v => setPartForm(p => ({ ...p, taxPercent: +v }))} type="number" />
-                        <Field label="Stock Qty" value={partForm.stockQuantity}
-                          onChange={v => setPartForm(p => ({ ...p, stockQuantity: +v }))} type="number" />
-                        <Field label="Torque Nm" value={partForm.torqueNm}
-                          onChange={v => setPartForm(p => ({ ...p, torqueNm: +v }))} type="number" />
-                        <Field label="Colour IDs (CSV)" value={partForm.colourIds}
-                          onChange={v => setPartForm(p => ({ ...p, colourIds: v }))} />
-
-                        {/* Model — resets variant + assembly on change */}
+                        <Field label="Part Number *" value={partForm.partNumber} onChange={v => setPartForm(p => ({ ...p, partNumber: v }))} />
+                        <Field label="Part Name" value={partForm.partName} onChange={v => setPartForm(p => ({ ...p, partName: v }))} />
+                        <Field label="Description" value={partForm.description} onChange={v => setPartForm(p => ({ ...p, description: v }))} />
+                        <Field label="Remarks" value={partForm.remarks} onChange={v => setPartForm(p => ({ ...p, remarks: v }))} />
+                        <Field label="Image Number" value={partForm.imageNumber} onChange={v => setPartForm(p => ({ ...p, imageNumber: v }))} />
+                        <Field label="BDP" value={partForm.bdp} onChange={v => setPartForm(p => ({ ...p, bdp: +v }))} type="number" />
+                        <Field label="MRP" value={partForm.mrp} onChange={v => setPartForm(p => ({ ...p, mrp: +v }))} type="number" />
+                        <Field label="Price" value={partForm.price} onChange={v => setPartForm(p => ({ ...p, price: +v }))} type="number" />
+                        <Field label="Tax %" value={partForm.taxPercent} onChange={v => setPartForm(p => ({ ...p, taxPercent: +v }))} type="number" />
+                        <Field label="Stock Qty" value={partForm.stockQuantity} onChange={v => setPartForm(p => ({ ...p, stockQuantity: +v }))} type="number" />
+                        <Field label="Torque Nm" value={partForm.torqueNm} onChange={v => setPartForm(p => ({ ...p, torqueNm: +v }))} type="number" />
+                        <Field label="Colour IDs (CSV)" value={partForm.colourIds} onChange={v => setPartForm(p => ({ ...p, colourIds: v }))} />
                         <SelectField label="Model" value={partForm.modelId ?? ""}
                           onChange={v => setPartForm(p => ({ ...p, modelId: +v || null, variantId: null, assemblyId: null }))}
                           options={modelOpts} />
-
-                        {/* Variant — filtered by partForm.modelId */}
                         <SelectField label="Variant" value={partForm.variantId ?? ""}
-                          onChange={v => setPartForm(p => ({ ...p, variantId: +v || null }))}
-                          options={addPartVariantOpts} />
-
-                        {/* Assembly — filtered by partForm.modelId */}
+                          onChange={v => setPartForm(p => ({ ...p, variantId: +v || null }))} options={addPartVariantOpts} />
                         <SelectField label="Assembly" value={partForm.assemblyId ?? ""}
-                          onChange={v => setPartForm(p => ({ ...p, assemblyId: +v || null }))}
-                          options={addPartAsmOpts} />
+                          onChange={v => setPartForm(p => ({ ...p, assemblyId: +v || null }))} options={addPartAsmOpts} />
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                         <button className="am-btn am-btn--success" onClick={createPart}><FaCheck /> Save Part</button>
@@ -1047,50 +1054,29 @@ const AdminModules = () => {
                     </div>
                   )}
 
-                  {/* ── EDIT PART FORM ── */}
                   {editPart && (
                     <div className="am-form-card am-form-card--edit">
                       <div className="am-form-card__title">✏️ Editing Part #{editPart.id} — {editPart.partNumber}</div>
                       <div className="am-form-grid am-form-grid--5">
-                        <Field label="Part Number" value={editPart.partNumber}
-                          onChange={v => setEditPart(p => p && ({ ...p, partNumber: v }))} />
-                        <Field label="Part Name" value={editPart.partName}
-                          onChange={v => setEditPart(p => p && ({ ...p, partName: v }))} />
-                        <Field label="Description" value={editPart.description}
-                          onChange={v => setEditPart(p => p && ({ ...p, description: v }))} />
-                        <Field label="Remarks" value={editPart.remarks}
-                          onChange={v => setEditPart(p => p && ({ ...p, remarks: v }))} />
-                        <Field label="Image Number" value={editPart.imageNumber}
-                          onChange={v => setEditPart(p => p && ({ ...p, imageNumber: v }))} />
-                        <Field label="BDP" value={editPart.bdp}
-                          onChange={v => setEditPart(p => p && ({ ...p, bdp: +v }))} type="number" />
-                        <Field label="MRP" value={editPart.mrp}
-                          onChange={v => setEditPart(p => p && ({ ...p, mrp: +v }))} type="number" />
-                        <Field label="Price" value={editPart.price}
-                          onChange={v => setEditPart(p => p && ({ ...p, price: +v }))} type="number" />
-                        <Field label="Tax %" value={editPart.taxPercent}
-                          onChange={v => setEditPart(p => p && ({ ...p, taxPercent: +v }))} type="number" />
-                        <Field label="Stock Qty" value={editPart.stockQuantity}
-                          onChange={v => setEditPart(p => p && ({ ...p, stockQuantity: +v }))} type="number" />
-                        <Field label="Torque Nm" value={editPart.torqueNm}
-                          onChange={v => setEditPart(p => p && ({ ...p, torqueNm: +v }))} type="number" />
-                        <Field label="Colour IDs" value={editPart.colourIds}
-                          onChange={v => setEditPart(p => p && ({ ...p, colourIds: v }))} />
-
-                        {/* Model — resets variant + assembly on change */}
+                        <Field label="Part Number" value={editPart.partNumber} onChange={v => setEditPart(p => p && ({ ...p, partNumber: v }))} />
+                        <Field label="Part Name" value={editPart.partName} onChange={v => setEditPart(p => p && ({ ...p, partName: v }))} />
+                        <Field label="Description" value={editPart.description} onChange={v => setEditPart(p => p && ({ ...p, description: v }))} />
+                        <Field label="Remarks" value={editPart.remarks} onChange={v => setEditPart(p => p && ({ ...p, remarks: v }))} />
+                        <Field label="Image Number" value={editPart.imageNumber} onChange={v => setEditPart(p => p && ({ ...p, imageNumber: v }))} />
+                        <Field label="BDP" value={editPart.bdp} onChange={v => setEditPart(p => p && ({ ...p, bdp: +v }))} type="number" />
+                        <Field label="MRP" value={editPart.mrp} onChange={v => setEditPart(p => p && ({ ...p, mrp: +v }))} type="number" />
+                        <Field label="Price" value={editPart.price} onChange={v => setEditPart(p => p && ({ ...p, price: +v }))} type="number" />
+                        <Field label="Tax %" value={editPart.taxPercent} onChange={v => setEditPart(p => p && ({ ...p, taxPercent: +v }))} type="number" />
+                        <Field label="Stock Qty" value={editPart.stockQuantity} onChange={v => setEditPart(p => p && ({ ...p, stockQuantity: +v }))} type="number" />
+                        <Field label="Torque Nm" value={editPart.torqueNm} onChange={v => setEditPart(p => p && ({ ...p, torqueNm: +v }))} type="number" />
+                        <Field label="Colour IDs" value={editPart.colourIds} onChange={v => setEditPart(p => p && ({ ...p, colourIds: v }))} />
                         <SelectField label="Model" value={editPart.modelId ?? ""}
                           onChange={v => setEditPart(p => p && ({ ...p, modelId: +v || null, variantId: null, assemblyId: null }))}
                           options={modelOpts} />
-
-                        {/* Variant — filtered by editPart.modelId */}
                         <SelectField label="Variant" value={editPart.variantId ?? ""}
-                          onChange={v => setEditPart(p => p && ({ ...p, variantId: +v || null }))}
-                          options={editPartVariantOpts} />
-
-                        {/* Assembly — filtered by editPart.modelId */}
+                          onChange={v => setEditPart(p => p && ({ ...p, variantId: +v || null }))} options={editPartVariantOpts} />
                         <SelectField label="Assembly" value={editPart.assemblyId ?? ""}
-                          onChange={v => setEditPart(p => p && ({ ...p, assemblyId: +v || null }))}
-                          options={editPartAsmOpts} />
+                          onChange={v => setEditPart(p => p && ({ ...p, assemblyId: +v || null }))} options={editPartAsmOpts} />
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                         <button className="am-btn am-btn--success" onClick={savePart}><FaCheck /> Update Part</button>
@@ -1117,7 +1103,7 @@ const AdminModules = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {fParts.length === 0 && <tr><td colSpan={14} className="am-empty">No parts found</td></tr>}
+                        {fParts.length === 0 && <tr><td colSpan={15} className="am-empty">No parts found</td></tr>}
                         {fParts.map(p => (
                           <tr key={p.id} className={editPart?.id === p.id ? "am-table__active-row" : ""}>
                             <td><span className="am-id">#{p.id}</span></td>
@@ -1128,11 +1114,7 @@ const AdminModules = () => {
                             <td>{p.bdp}</td>
                             <td>{p.mrp}</td>
                             <td>{p.taxPercent}%</td>
-                            <td>
-                              <span className={`am-stock ${(p.stockQuantity ?? 0) <= 0 ? "am-stock--low" : ""}`}>
-                                {p.stockQuantity}
-                              </span>
-                            </td>
+                            <td><span className={`am-stock ${(p.stockQuantity ?? 0) <= 0 ? "am-stock--low" : ""}`}>{p.stockQuantity}</span></td>
                             <td><span className="am-badge">{modelName(p.modelId)}</span></td>
                             <td><span className="am-badge am-badge--teal">{variantName(p.variantId)}</span></td>
                             <td><span className="am-badge am-badge--amber">{asmName(p.assemblyId)}</span></td>
@@ -1140,13 +1122,9 @@ const AdminModules = () => {
                             <td>{p.price || "—"}</td>
                             <td className="am-table__actions">
                               <button className="am-btn am-btn--edit am-btn--xs"
-                                onClick={() => { setEditPart({ ...p }); setShowPartForm(false); }}>
-                                <FaEdit />
-                              </button>
+                                onClick={() => { setEditPart({ ...p }); setShowPartForm(false); }}><FaEdit /></button>
                               <button className="am-btn am-btn--danger am-btn--xs"
-                                onClick={() => deletePart(p.id!)}>
-                                <FaTrash />
-                              </button>
+                                onClick={() => deletePart(p.id!)}><FaTrash /></button>
                             </td>
                           </tr>
                         ))}

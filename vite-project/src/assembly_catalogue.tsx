@@ -1,4 +1,4 @@
-// assembly_catalogue.tsx — production-ready (no localhost hardcoding)
+// assembly_catalogue.tsx — fetches assemblies filtered by modelId + variantId
 import { useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./assembly_catalogue.css";
@@ -12,19 +12,17 @@ import { FaSearchPlus } from "react-icons/fa";
 interface VehicleSearchState {
   searchType?: "vin" | "model";
   vin?: string;
-  modelId?: number | string;
-  variantId?: number | string;
-  colourId?: number | string;
+  modelId?:   number | string;
+  variantId?: number | string;   // ← used for variant-scoped assembly filtering
+  colourId?:  number | string;
 }
 interface CartCountResponse { items: { id: number }[] }
 
-// ── FIX: no more localhost hardcoding — works on any host ──
 const resolveAssemblyImage = (imagePath?: string | null): string => {
   if (!imagePath) return "";
-  // If already absolute URL, use as-is
   if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) return imagePath;
-  // Normalize backslashes and leading slashes, then make relative
   const normalized = imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
+  //return `http://localhost:5053/${normalized}`;
   return `/${normalized}`;
 };
 
@@ -33,7 +31,8 @@ const AssemblyCatalogue = () => {
   const navigate  = useNavigate();
 
   const searchState = location.state as VehicleSearchState;
-  const modelId = Number(searchState?.modelId);
+  const modelId   = Number(searchState?.modelId);
+  const variantId = searchState?.variantId ? Number(searchState.variantId) : undefined;
 
   const [assemblies,        setAssemblies]        = useState<Assembly[]>([]);
   const [visibleAssemblies, setVisibleAssemblies] = useState<Assembly[]>([]);
@@ -46,10 +45,16 @@ const AssemblyCatalogue = () => {
   const [scale,     setScale]     = useState(1);
   const [origin,    setOrigin]    = useState("center center");
 
-  // ── FIX: use /api/cart/my-cart (works in production, proxied in dev) ──
+  // ── Persist state for breadcrumb back-nav ──
+  useEffect(() => {
+    if (searchState && Object.keys(searchState).length > 0) {
+      sessionStorage.setItem("assemblyCatalogueState", JSON.stringify(searchState));
+    }
+  }, [searchState]);
+
   const fetchCartCount = useCallback(async () => {
     try {
-      const res = await axios.get<CartCountResponse>("/api/cart/my-cart");
+      const res = await axios.get<CartCountResponse>("/cart/my-cart");
       setCartCount(res.data?.items?.length ?? 0);
     } catch { setCartCount(0); }
   }, []);
@@ -61,7 +66,10 @@ const AssemblyCatalogue = () => {
       }
       setLoading(true);
       try {
-        const res = await fetch(`/api/assemblies?modelId=${modelId}`);
+        // ── Pass variantId to backend for variant-scoped filtering ──
+        // The API returns: assemblies matching variantId + assemblies with no variantId (fallback)
+        const variantParam = variantId != null ? `&variantId=${variantId}` : "";
+        const res = await fetch(`/api/assemblies?modelId=${modelId}${variantParam}`);
         if (!res.ok) throw new Error("Failed to fetch");
         const data: Assembly[] = await res.json();
         setAssemblies(data); setVisibleAssemblies(data);
@@ -73,7 +81,7 @@ const AssemblyCatalogue = () => {
     };
     void fetchAssemblies();
     void fetchCartCount();
-  }, [modelId, fetchCartCount]);
+  }, [modelId, variantId, fetchCartCount]);
 
   useEffect(() => {
     const trimmedTerm = searchTerm.trim();
@@ -114,28 +122,32 @@ const AssemblyCatalogue = () => {
   };
 
   const goToAssembly = (assembly: Assembly) => {
-    navigate("/parts", {
-      state: {
-        modelId:       searchState?.modelId,
-        assemblyId:    assembly.id,
-        assemblyName:  assembly.assemblyName,
-        assemblyImage: resolveAssemblyImage(assembly.imagePath),
-      }
-    });
+    const partsState = {
+      modelId:       searchState?.modelId,
+      assemblyId:    assembly.id,
+      assemblyName:  assembly.assemblyName,
+      assemblyImage: resolveAssemblyImage(assembly.imagePath),
+    };
+    sessionStorage.setItem("partsPageState", JSON.stringify(partsState));
+    navigate("/parts", { state: partsState });
   };
+
+  // ── Restore vehicle_preview state for breadcrumb ──
+  const vehiclePreviewState = (() => {
+    try { return JSON.parse(sessionStorage.getItem("partsSearchState") ?? "null"); }
+    catch { return null; }
+  })();
 
   return (
     <div className="assembly-page">
 
-      {/* Shared navbar */}
       <AppNavbar cartCount={cartCount} />
 
-      {/* Breadcrumb */}
       <BreadcrumbPath
         current="assembly_catalogue"
         stateMap={{
-          dashboard:        null,
-          vehicle_preview:  searchState ?? null,
+          dashboard:       null,
+          vehicle_preview: vehiclePreviewState ?? (searchState as object) ?? null,
         }}
       />
 
@@ -226,34 +238,18 @@ const AssemblyCatalogue = () => {
             display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
           }}
         >
-          <button
-            onClick={() => setZoomImage(null)}
-            style={{
-              position: "absolute", top: 18, right: 24,
-              background: "none", border: "none", color: "#fff",
-              fontSize: 28, cursor: "pointer", lineHeight: 1,
-            }}
-          >✕</button>
-          <div
-            className="zoom-container"
-            onClick={e => e.stopPropagation()}
-            onWheel={handleWheel}
-            style={{ overflow: "hidden", maxWidth: "90vw", maxHeight: "90vh", cursor: scale > 1 ? "zoom-out" : "zoom-in" }}
-          >
-            <img
-              src={zoomImage}
-              alt="Zoomed assembly"
-              style={{
-                transform: `scale(${scale})`, transformOrigin: origin,
+          <button onClick={() => setZoomImage(null)}
+            style={{ position: "absolute", top: 18, right: 24, background: "none", border: "none",
+              color: "#fff", fontSize: 28, cursor: "pointer", lineHeight: 1 }}>✕</button>
+          <div className="zoom-container" onClick={e => e.stopPropagation()} onWheel={handleWheel}
+            style={{ overflow: "hidden", maxWidth: "90vw", maxHeight: "90vh", cursor: scale > 1 ? "zoom-out" : "zoom-in" }}>
+            <img src={zoomImage} alt="Zoomed assembly"
+              style={{ transform: `scale(${scale})`, transformOrigin: origin,
                 transition: "transform 0.1s ease", display: "block",
-                maxWidth: "90vw", maxHeight: "90vh", userSelect: "none",
-              }}
-            />
+                maxWidth: "90vw", maxHeight: "90vh", userSelect: "none" }} />
           </div>
-          <div style={{
-            position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)",
-            color: "rgba(255,255,255,0.6)", fontSize: 12,
-          }}>
+          <div style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)",
+            color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
             Scroll to zoom · Click outside to close
           </div>
         </div>

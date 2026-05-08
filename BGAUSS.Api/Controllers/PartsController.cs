@@ -221,26 +221,45 @@ public class PartsController : ControllerBase
         worksheet.Cells[1, 9].Value = "AssemblyId";
         worksheet.Cells[1, 10].Value = "ModelId";
         worksheet.Cells[1, 11].Value = "VariantId";
-        worksheet.Cells[1, 12].Value = "ColourIds"; // multiple CSV like "1,2,3"
+        worksheet.Cells[1, 12].Value = "ColourIds";
         worksheet.Cells[1, 13].Value = "TorqueNm";
         worksheet.Cells[1, 14].Value = "Remarks";
         worksheet.Cells[1, 15].Value = "ImageNumber";
 
-        // ✅ Optional: Set bold header
+        // ✅ Make header bold
         using (var range = worksheet.Cells[1, 1, 1, 15])
         {
             range.Style.Font.Bold = true;
-            range.AutoFitColumns();
         }
+
+        // ✅ Force ImageNumber column to TEXT format
+        // Prevents Excel auto-converting values like:
+        // 1.1 → decimal
+        // 2A → scientific/text issues
+        worksheet.Cells[2, 15, 1000, 15].Style.Numberformat.Format = "@";
+
+        // ✅ Add comment to ImageNumber header
+        worksheet.Cells[1, 15].AddComment(
+            "Enter image numbers as text: 1, 1.1, 2A, etc. Column is pre-formatted as Text.",
+            "BGauss"
+        );
+
+        // ✅ Optional column width
+        worksheet.Column(15).Width = 25;
+
+        // ✅ Auto fit columns
+        worksheet.Cells.AutoFitColumns();
 
         // Convert package to byte array
         var fileBytes = package.GetAsByteArray();
         var fileName = "Parts_Import_Template.xlsx";
 
         // Return as file
-        return File(fileBytes, 
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                    fileName);
+        return File(
+            fileBytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            fileName
+        );
     }
 
     [HttpPost("import")]
@@ -293,15 +312,7 @@ public class PartsController : ControllerBase
                     .ToList();
 
                 // Clean and parse ImageNumber safely as string
-                string? imageNumber = worksheet.Cells[row, 15].Text?.Trim();
-                if (!string.IsNullOrWhiteSpace(imageNumber))
-                {
-                    imageNumber = imageNumber.Replace("'", "").Trim(); // remove leading apostrophes
-                }
-                else
-                {
-                    imageNumber = null;
-                }
+               string? imageNumber = ParseImageNumberSafe(worksheet.Cells[row, 15]);
 
                 var existingPart = existingParts.FirstOrDefault(p => p.PartNumber == partNumber);
 
@@ -314,7 +325,7 @@ public class PartsController : ControllerBase
                     existingPart.Bdp = ParseDecimalSafe(worksheet.Cells[row, 5].Text);
                     existingPart.Mrp = ParseDecimalSafe(worksheet.Cells[row, 6].Text);
                     existingPart.TaxPercent = ParseDecimalSafe(worksheet.Cells[row, 7].Text);
-                    existingPart.StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Text).ToString();
+                    existingPart.StockQuantity = ParseIntSafe(worksheet.Cells[row, 8].Value?.ToString()).ToString();
                     existingPart.AssemblyId = validAssemblies.Contains(assemblyId) ? assemblyId : null;
                     existingPart.ModelId = validModels.Contains(modelId) ? modelId : null;
                     existingPart.VariantId = validVariants.Contains(variantId) ? variantId : null;
@@ -379,6 +390,42 @@ public class PartsController : ControllerBase
         if (string.IsNullOrWhiteSpace(value)) return 0;
         value = value.Replace(",", "").Trim();
         return decimal.TryParse(value, out var result) ? result : 0;
+    }
+    private string? ParseImageNumberSafe(ExcelRange cell)
+    {
+        // ── 1. Try .Value first (raw object from EPPlus) ──
+        var rawValue = cell.Value;
+
+        string result = "";
+
+        if (rawValue != null)
+        {
+            if (rawValue is double d)
+            {
+                // Excel stores all numbers as double internally
+                // 1.0 → "1", 1.1 → "1.1", 10.0 → "10"
+                result = d == Math.Floor(d)
+                    ? ((long)d).ToString()
+                    : d.ToString("G");
+            }
+            else
+            {
+                result = rawValue.ToString()?.Trim() ?? "";
+            }
+        }
+
+        // ── 2. If .Value gave nothing, fall back to .Text ──
+        // .Text is what you visually see in the cell — handles
+        // text-formatted cells where EPPlus returns Value = null
+        if (string.IsNullOrWhiteSpace(result))
+        {
+            result = cell.Text?.Trim() ?? "";
+        }
+
+        // ── 3. Strip leading apostrophe Excel sometimes injects ──
+        result = result.TrimStart('\'').Trim();
+
+        return string.IsNullOrWhiteSpace(result) ? null : result;
     }
 
     private int ParseIntSafe(string? value)

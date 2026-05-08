@@ -4,6 +4,7 @@ import "../styles/tableselect.css";
 interface TableSelectProps {
   label: string;
   columns: string[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   options: Array<{ id: number | string; [key: string]: any }>;
   value: string | number;
   onChange: (id: string | number) => void;
@@ -60,7 +61,7 @@ const TableSelect = ({
     setIsOpen(false);
   };
 
-  const selectedObj = options.find((opt) => String(opt.id) === String(value));
+  //const selectedObj = options.find((opt) => String(opt.id) === String(value));
 
   return (
     <div className="table-select-wrapper" ref={containerRef}>

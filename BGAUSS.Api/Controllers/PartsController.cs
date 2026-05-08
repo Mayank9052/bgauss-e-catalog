@@ -53,25 +53,31 @@ public class PartsController : ControllerBase
     {
         var parts = await _context.Parts
             .Where(p => p.ModelId == modelId && p.AssemblyId == assemblyId)
-            .Select(p => new PartResponse
+            .Select(p => new
             {
-                Id = p.Id,
-                PartNumber = p.PartNumber ?? "",
-                PartName = p.PartName ?? "",
-                Description = p.Description ?? "",
-                Remarks = p.Remarks ?? "",
-                Bdp = p.Bdp ?? 0,
-                Mrp = p.Mrp ?? 0,
-                StockQuantity = p.StockQuantity ?? "",
-                TaxPercent = p.TaxPercent ?? 0,
-                ImagePath = "",
-                ImageNumber = p.ImageNumber ?? ""
+                id            = p.Id,
+                partNumber    = p.PartNumber    ?? "",
+                partName      = p.PartName      ?? "",
+                description   = p.Description   ?? "",
+                remarks       = p.Remarks       ?? "",
+                price         = p.Price         ?? 0m,
+                bdp           = p.Bdp           ?? 0m,
+                mrp           = p.Mrp           ?? 0m,
+                taxPercent    = p.TaxPercent    ?? 0m,
+                // ✅ Keep as string — imageNumber can be "1", "1.1", "2A" etc.
+                stockQuantity = p.StockQuantity ?? "",
+                assemblyId    = p.AssemblyId,
+                modelId       = p.ModelId,
+                variantId     = p.VariantId,
+                torqueNm      = p.TorqueNm      ?? 0m,
+                // ✅ String — never null, never parsed as int
+                imageNumber   = p.ImageNumber   ?? "",
+                imagePath     = "",
+                categoryName  = "",
             })
             .ToListAsync();
 
-        if (!parts.Any())
-            return NotFound("No parts found for this assembly.");
-
+        // ✅ Always return 200 with empty array — never 404
         return Ok(parts);
     }
 

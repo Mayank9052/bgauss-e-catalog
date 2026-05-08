@@ -22,8 +22,8 @@ const resolveAssemblyImage = (imagePath?: string | null): string => {
   if (!imagePath) return "";
   if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) return imagePath;
   const normalized = imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
-  //return `http://localhost:5053/${normalized}`;
-  return `/${normalized}`;
+  return `http://localhost:5053/${normalized}`;
+  //return `/${normalized}`;
 };
 
 const AssemblyCatalogue = () => {

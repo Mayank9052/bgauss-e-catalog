@@ -39,8 +39,8 @@ const resolveVehicleImage = (imagePath: string): string => {
   if (imagePath.startsWith("/api/")) return imagePath;
   const normalized = imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
   // Dev: full URL to backend; Production: use `/${normalized}` (relative)
-  //return `http://localhost:5053/${normalized}`;
-  return `/${normalized}`;
+  return `http://localhost:5053/${normalized}`;
+  //return `/${normalized}`;
 };
 
 const VehiclePreview = () => {

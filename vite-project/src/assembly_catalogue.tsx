@@ -170,7 +170,7 @@ const AssemblyCatalogue = () => {
             : `${visibleAssemblies.length} assemblies found`}
         </p>
 
-        {loading ? <p>Loading assemblies…</p> : (
+        {loading ? <p></p> : (
           <div className="assembly-grid">
             {visibleAssemblies.length === 0 ? (
               <p>No assemblies found</p>

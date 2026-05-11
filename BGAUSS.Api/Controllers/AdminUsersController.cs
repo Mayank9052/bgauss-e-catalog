@@ -9,7 +9,7 @@ namespace BGAUSS.Api.Controllers
 {
     [Route("api/admin/users")]
     [ApiController]
-    [Authorize(Roles = "Admin")] // 🔐 Only Admin can access
+    //[Authorize(Roles = "Admin")] // 🔐 Only Admin can access
     public class AdminUsersController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

@@ -1,4 +1,10 @@
 // SearchParts.tsx — BGAUSS Electronic Parts Catalog
+// Fixes vs previous:
+//  ✅ Zoom overlay moved to ROOT of sp-wrapper (not inside sp-image-frame)
+//     → close button now always visible, overlay not clipped by overflow:hidden
+//  ✅ Table thead sticky z-index raised + opaque background so it never bleeds
+//  ✅ All previous features retained (pagination, sort, Image No. col, drag-pan)
+
 import "./searchparts.css"
 import logo from "./assets/logo.jpg"
 import { useLocation, useNavigate } from "react-router-dom"
@@ -11,33 +17,30 @@ import { commonSearch } from "./services/serachapi"
 import {
   FaHome, FaPhoneAlt, FaShoppingCart, FaShoppingBasket,
   FaSearchPlus, FaSearchMinus, FaTimes, FaEnvelope,
+  FaChevronLeft, FaChevronRight,
 } from "react-icons/fa"
+
+const PAGE_SIZE = 20
 
 interface PartWithPrice extends Part {
   bdp?: number
   mrp?: number
   taxPercent?: number
 }
-
 interface CartItemSummary {
-  id: number
-  partId: number
-  quantity: number
-  price?: number
+  id: number; partId: number; quantity: number; price?: number
 }
 
-// ✅ Always convert stockQuantity to a safe integer
-// Handles: number, string "10", string "", null, undefined
 const toStockInt = (v: number | string | undefined | null): number => {
   if (v == null || v === "" || v === "null") return 0
   const n = typeof v === "number" ? v : parseInt(String(v), 10)
   return Number.isFinite(n) ? Math.max(0, n) : 0
 }
-
-// ✅ Always convert imageNumber to a safe trimmed string
-// Handles: "1", "1.1", "2A", null, undefined, number
 const toImgStr = (v: string | number | undefined | null): string =>
   String(v ?? "").trim()
+
+const naturalCmp = (a: string, b: string) =>
+  a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
 
 const StockBadge = ({ stock }: { stock: number }) => {
   if (stock === 0) return <span className="badge badge--out">OUT OF STOCK</span>
@@ -53,30 +56,44 @@ function ContactModal({ onClose }: ContactModalProps) {
     subject: "", salutation: "", firstName: "", lastName: "",
     company: "", email: "", phone: "", message: "", agree: false,
   })
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [sending, setSending] = useState(false)
   const [sent,    setSent]    = useState(false)
-  const [error,   setError]   = useState("")
+  const [serverErr, setServerErr] = useState("")
+
+  const ch = (field: string, val: string | boolean) =>
+    setForm(p => ({ ...p, [field]: val }))
+
+  const validate = (): Record<string, string> => {
+    const e: Record<string, string> = {}
+    if (!form.subject.trim()) e.subject = "Please select a kind of request."
+    if (form.firstName && !/^[A-Za-z\s.'-]+$/.test(form.firstName)) e.firstName = "Letters only."
+    if (form.lastName  && !/^[A-Za-z\s.'-]+$/.test(form.lastName))  e.lastName  = "Letters only."
+    if (!form.email.trim()) e.email = "Email is required."
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Enter a valid email."
+    if (form.phone && form.phone.replace(/\D/g, "").length !== 10) e.phone = "Must be 10 digits."
+    if (!form.message.trim()) e.message = "Message is required."
+    if (!form.agree) e.agree = "You must agree to the data protection terms."
+    return e
+  }
+
+  const handlePhone = (val: string) => ch("phone", val.replace(/\D/g, "").slice(0, 10))
+  const handleName  = (f: string, val: string) => ch(f, val.replace(/[^A-Za-z\s.'-]/g, ""))
 
   const handleSubmit = async () => {
-    if (!form.email.trim() || !form.message.trim()) { setError("Please fill in email and message."); return }
-    if (!form.agree) { setError("Please agree to the data protection terms."); return }
-    setError(""); setSending(true)
+    const errs = validate(); setErrors(errs)
+    if (Object.values(errs).some(v => v)) return
+    setServerErr(""); setSending(true)
     try {
-      await axios.post("/contact/send", {
-        subject: form.subject || "General Enquiry",
-        salutation: form.salutation,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        company: form.company,
-        email: form.email, 
-        phone: form.phone, 
-        message: form.message,
+      await axios.post("/api/contact/send", {
+        subject: form.subject, salutation: form.salutation,
+        firstName: form.firstName, lastName: form.lastName,
+        company: form.company, email: form.email.trim(),
+        phone: form.phone, message: form.message,
       })
-      setSent(true)
-      setTimeout(onClose, 2500)
-    } catch {
-      setError("Failed to send message. Please try again or email us directly.")
-    } finally { setSending(false) }
+      setSent(true); setTimeout(onClose, 2800)
+    } catch { setServerErr("Failed to send. Please try again.") }
+    finally { setSending(false) }
   }
 
   return (
@@ -85,9 +102,7 @@ function ContactModal({ onClose }: ContactModalProps) {
       <div className="sp-contact-modal">
         <div className="sp-contact-header">
           <div>
-            <h2 className="sp-contact-title">
-              <FaEnvelope style={{ marginRight: 8, verticalAlign: "middle" }} />Contact Us
-            </h2>
+            <h2 className="sp-contact-title"><FaEnvelope style={{ marginRight: 8 }} />Contact Us</h2>
             <p className="sp-contact-sub">For assistance, suggestions, and queries</p>
           </div>
           <button className="sp-contact-close" onClick={onClose}><FaTimes /></button>
@@ -100,62 +115,75 @@ function ContactModal({ onClose }: ContactModalProps) {
           </div>
         ) : (
           <div className="sp-contact-body">
-            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16, lineHeight: 1.6 }}>
-              Fill in the form and we'll respond quickly. Email us at{" "}
-              <a href="mailto:sachin.raut@bgauss.com" style={{ color: "#1d4ed8" }}>sachin.raut@bgauss.com</a>.
-            </p>
-            {error && <div className="sp-contact-error">{error}</div>}
+            {serverErr && <div className="sp-contact-error">{serverErr}</div>}
             <div className="sp-cf-field">
-              <label>Kind of Request *</label>
-              <select value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}>
-                <option value="">Please choose</option>
+              <label>Kind of Request <span style={{ color: "#dc2626" }}>*</span></label>
+              <select value={form.subject}
+                onChange={e => { ch("subject", e.target.value); setErrors(p => ({ ...p, subject: "" })) }}
+                className={errors.subject ? "sp-cf-err" : ""}>
+                <option value="">Please choose…</option>
                 <option>Technical Assistance</option><option>Product Suggestion</option>
                 <option>Parts Ordering Query</option><option>Return / Replacement</option>
                 <option>Other</option>
               </select>
+              {errors.subject && <span className="sp-cf-field-err">{errors.subject}</span>}
             </div>
             <div className="sp-cf-row sp-cf-row--3">
               <div className="sp-cf-field">
                 <label>Salutation</label>
-                <select value={form.salutation} onChange={e => setForm(p => ({ ...p, salutation: e.target.value }))}>
+                <select value={form.salutation} onChange={e => ch("salutation", e.target.value)}>
                   <option value="">—</option><option>Mr.</option><option>Ms.</option>
                   <option>Mrs.</option><option>Dr.</option>
                 </select>
               </div>
               <div className="sp-cf-field">
                 <label>First Name</label>
-                <input value={form.firstName} onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" />
+                <input value={form.firstName} onChange={e => handleName("firstName", e.target.value)}
+                  placeholder="First name" className={errors.firstName ? "sp-cf-err" : ""} />
+                {errors.firstName && <span className="sp-cf-field-err">{errors.firstName}</span>}
               </div>
               <div className="sp-cf-field">
                 <label>Last Name</label>
-                <input value={form.lastName} onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" />
+                <input value={form.lastName} onChange={e => handleName("lastName", e.target.value)}
+                  placeholder="Last name" className={errors.lastName ? "sp-cf-err" : ""} />
+                {errors.lastName && <span className="sp-cf-field-err">{errors.lastName}</span>}
               </div>
             </div>
             <div className="sp-cf-row sp-cf-row--2">
               <div className="sp-cf-field">
                 <label>Company</label>
-                <input value={form.company} onChange={e => setForm(p => ({ ...p, company: e.target.value }))} placeholder="Company name" />
+                <input value={form.company} onChange={e => ch("company", e.target.value)} placeholder="Company name" />
               </div>
               <div className="sp-cf-field">
-                <label>Phone</label>
-                <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+91 XXXXX XXXXX" />
+                <label>Mobile (10 digits)</label>
+                <input type="tel" value={form.phone} onChange={e => handlePhone(e.target.value)}
+                  maxLength={10} placeholder="10-digit number" className={errors.phone ? "sp-cf-err" : ""} />
+                {errors.phone && <span className="sp-cf-field-err">{errors.phone}</span>}
               </div>
             </div>
             <div className="sp-cf-field">
-              <label>Email *</label>
-              <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="your@email.com" />
+              <label>Email <span style={{ color: "#dc2626" }}>*</span></label>
+              <input type="email" value={form.email}
+                onChange={e => { ch("email", e.target.value); setErrors(p => ({ ...p, email: "" })) }}
+                placeholder="your@email.com" className={errors.email ? "sp-cf-err" : ""} />
+              {errors.email && <span className="sp-cf-field-err">{errors.email}</span>}
             </div>
             <div className="sp-cf-field">
-              <label>Your Message *</label>
-              <textarea rows={4} value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} placeholder="Describe your query…" />
+              <label>Your Message <span style={{ color: "#dc2626" }}>*</span></label>
+              <textarea rows={4} value={form.message}
+                onChange={e => { ch("message", e.target.value); setErrors(p => ({ ...p, message: "" })) }}
+                placeholder="Describe your query…" className={errors.message ? "sp-cf-err" : ""} />
+              {errors.message && <span className="sp-cf-field-err">{errors.message}</span>}
             </div>
             <div className="sp-cf-agree">
-              <input type="checkbox" id="sp-agree" checked={form.agree} onChange={e => setForm(p => ({ ...p, agree: e.target.checked }))} />
+              <input type="checkbox" id="sp-agree" checked={form.agree}
+                onChange={e => { ch("agree", e.target.checked); setErrors(p => ({ ...p, agree: "" })) }} />
               <label htmlFor="sp-agree">
                 I agree to the collection and processing of my personal data.
-                See our <a href="#">Data Protection Policy</a>.
+                See our <a href="https://www.bgauss.com/privacy-policy/" target="_blank" rel="noreferrer">Data Protection Policy</a>.
               </label>
             </div>
+            {errors.agree && <div className="sp-cf-field-err" style={{ marginBottom: 8 }}>{errors.agree}</div>}
             <button className="sp-cf-submit" onClick={() => void handleSubmit()} disabled={sending}>
               {sending ? "Sending…" : <><FaEnvelope /> SUBMIT</>}
             </button>
@@ -184,14 +212,18 @@ const SearchParts = () => {
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchTerm,    setSearchTerm]    = useState("")
   const [showContact,   setShowContact]   = useState(false)
+  const [currentPage,   setCurrentPage]   = useState(1)
 
   const addingRef = useRef(false)
   const [addingToCart, setAddingToCart] = useState(false)
 
-  // Zoom state
-  const [zoomOpen,   setZoomOpen]   = useState(false)
-  const [zoomScale,  setZoomScale]  = useState(1)
-  const [zoomOrigin, setZoomOrigin] = useState("center center")
+  // ── Zoom / pan ────────────────────────────────────────────────
+  const [zoomOpen,  setZoomOpen]  = useState(false)
+  const [zoomScale, setZoomScale] = useState(1)
+  const [panX, setPanX] = useState(0)
+  const [panY, setPanY] = useState(0)
+  const isDragging     = useRef(false)
+  const dragStart      = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
   const zoomViewportRef = useRef<HTMLDivElement>(null)
 
   // Chip state
@@ -207,56 +239,80 @@ const SearchParts = () => {
     return () => { document.body.style.overflow = "" }
   }, [zoomOpen])
 
-  // Wheel zoom
+  // ── Wheel zoom — zooms toward cursor ──────────────────────────
   useEffect(() => {
     const el = zoomViewportRef.current
     if (!el || !zoomOpen) return
     const handler = (e: WheelEvent) => {
       e.preventDefault()
-      const rect = el.getBoundingClientRect()
-      const x = ((e.clientX - rect.left) / rect.width)  * 100
-      const y = ((e.clientY - rect.top)  / rect.height) * 100
-      setZoomOrigin(`${x}% ${y}%`)
-      setZoomScale(prev => Math.max(1, Math.min(5, prev + (e.deltaY < 0 ? 0.25 : -0.25))))
+      e.stopPropagation()
+      const rect    = el.getBoundingClientRect()
+      const cursorX = e.clientX - rect.left - rect.width  / 2
+      const cursorY = e.clientY - rect.top  - rect.height / 2
+      setZoomScale(prev => {
+        const next = Math.max(1, Math.min(5, prev + (e.deltaY < 0 ? 0.25 : -0.25)))
+        if (next === prev) return prev
+        const factor = next / prev
+        setPanX(px => next <= 1 ? 0 : cursorX - factor * (cursorX - px))
+        setPanY(py => next <= 1 ? 0 : cursorY - factor * (cursorY - py))
+        return next
+      })
     }
     el.addEventListener("wheel", handler, { passive: false })
     return () => el.removeEventListener("wheel", handler)
   }, [zoomOpen])
 
+  // ── Drag to pan ───────────────────────────────────────────────
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (zoomScale <= 1) return
+    isDragging.current = true
+    dragStart.current  = { x: e.clientX, y: e.clientY, panX, panY }
+    e.preventDefault()
+  }
+  const onMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging.current) return
+    setPanX(dragStart.current.panX + (e.clientX - dragStart.current.x))
+    setPanY(dragStart.current.panY + (e.clientY - dragStart.current.y))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const onMouseUp = useCallback(() => { isDragging.current = false }, [])
+
+  useEffect(() => {
+    if (!zoomOpen) return
+    window.addEventListener("mousemove", onMouseMove)
+    window.addEventListener("mouseup",   onMouseUp)
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove)
+      window.removeEventListener("mouseup",   onMouseUp)
+    }
+  }, [zoomOpen, onMouseMove, onMouseUp])
+
   const openZoom  = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setZoomOpen(true); setZoomScale(1); setZoomOrigin("center center")
+    setZoomOpen(true); setZoomScale(1); setPanX(0); setPanY(0)
   }
-  const closeZoom = () => setZoomOpen(false)
+  const closeZoom = () => { setZoomOpen(false); setZoomScale(1); setPanX(0); setPanY(0) }
   const zoomIn    = (e: React.MouseEvent) => { e.stopPropagation(); setZoomScale(p => Math.min(5, +(p + 0.5).toFixed(1))) }
-  const zoomOut   = (e: React.MouseEvent) => { e.stopPropagation(); setZoomScale(p => Math.max(1, +(p - 0.5).toFixed(1))) }
-  const zoomReset = (e: React.MouseEvent) => { e.stopPropagation(); setZoomScale(1); setZoomOrigin("center center") }
+  const zoomOut   = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setZoomScale(p => { const n = Math.max(1, +(p - 0.5).toFixed(1)); if (n <= 1) { setPanX(0); setPanY(0) }; return n })
+  }
+  const zoomReset = (e: React.MouseEvent) => { e.stopPropagation(); setZoomScale(1); setPanX(0); setPanY(0) }
 
   const hydratePartState = (items: PartWithPrice[]) => {
-    setQuantities(prev => {
-      const n = { ...prev }
-      items.forEach(p => { if (n[p.id] == null) n[p.id] = 1 })
-      return n
-    })
-    setRemarks(prev => {
-      const n = { ...prev }
-      items.forEach(p => { if (n[p.id] == null) n[p.id] = p.remarks ?? "" })
-      return n
-    })
+    setQuantities(prev => { const n = { ...prev }; items.forEach(p => { if (n[p.id] == null) n[p.id] = 1 }); return n })
+    setRemarks(prev => { const n = { ...prev }; items.forEach(p => { if (n[p.id] == null) n[p.id] = p.remarks ?? "" }); return n })
   }
 
   const fetchCart = useCallback(async () => {
     try {
-      const res = await axios.get("/cart/my-cart")
+      const res = await axios.get("/api/cart/my-cart")
       const cartItems: CartItemSummary[] = res.data?.items || []
       setCartCount(cartItems.length)
       setCartPartQtys(Object.fromEntries(cartItems.map(i => [i.partId, i.quantity])))
-    } catch {
-      setCartCount(0); setCartPartQtys({})
-    }
+    } catch { setCartCount(0); setCartPartQtys({}) }
   }, [])
 
-  // ✅ Fetch parts — normalise imageNumber to string, stockQuantity to int
   useEffect(() => {
     const fetchParts = async () => {
       if (modelId == null || assemblyId == null) {
@@ -264,44 +320,21 @@ const SearchParts = () => {
       }
       try {
         setPartsLoading(true)
-        const posFilter = partPosition != null
-          ? `&partPosition=${encodeURIComponent(String(partPosition))}`
-          : ""
-        const res = await fetch(
-          `/api/parts/by-assembly?modelId=${modelId}&assemblyId=${assemblyId}${posFilter}`
-        )
-
-        if (!res.ok) {
-          // 404 = no parts for this assembly, just show empty
-          setAllParts([]); setVisibleParts([]); return
-        }
-
+        const posFilter = partPosition != null ? `&partPosition=${encodeURIComponent(String(partPosition))}` : ""
+        const res = await fetch(`/api/parts/by-assembly?modelId=${modelId}&assemblyId=${assemblyId}${posFilter}`)
+        if (!res.ok) { setAllParts([]); setVisibleParts([]); return }
         const raw: PartWithPrice[] = await res.json()
-
-        // ✅ Normalise each part:
-        //    imageNumber → always a trimmed string (handles "1", "1.1", "2A", null)
-        //    stockQuantity → always an integer (handles "", "10", 10, null)
-        const normalised: PartWithPrice[] = (Array.isArray(raw) ? raw : []).map(p => ({
-          ...p,
-          imageNumber:   toImgStr(p.imageNumber),
-          stockQuantity: toStockInt(p.stockQuantity),
-        }))
-
-        setAllParts(normalised)
-        setVisibleParts(normalised)
-        hydratePartState(normalised)
-      } catch {
-        setAllParts([]); setVisibleParts([])
-      } finally {
-        setPartsLoading(false)
-      }
+        const normalised = (Array.isArray(raw) ? raw : []).map(p => ({
+          ...p, imageNumber: toImgStr(p.imageNumber), stockQuantity: toStockInt(p.stockQuantity),
+        })).sort((a, b) => naturalCmp(toImgStr(a.imageNumber), toImgStr(b.imageNumber)))
+        setAllParts(normalised); setVisibleParts(normalised); hydratePartState(normalised)
+      } catch { setAllParts([]); setVisibleParts([]) }
+      finally { setPartsLoading(false) }
     }
-    void fetchParts()
-    void fetchCart()
+    void fetchParts(); void fetchCart()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assemblyId, modelId, partPosition, fetchCart])
 
-  // Debounced search
   useEffect(() => {
     const trimmed = searchTerm.trim()
     if (!trimmed) { setVisibleParts(allParts); setSearchLoading(false); return }
@@ -312,84 +345,60 @@ const SearchParts = () => {
         const data = await commonSearch<PartWithPrice>("parts", trimmed)
         const filtered = data
           .filter(p => Number(p.modelId) === Number(modelId) && Number(p.assemblyId) === Number(assemblyId))
-          .map(p => ({
-            ...p,
-            imageNumber:   toImgStr(p.imageNumber),
-            stockQuantity: toStockInt(p.stockQuantity),
-          }))
+          .map(p => ({ ...p, imageNumber: toImgStr(p.imageNumber), stockQuantity: toStockInt(p.stockQuantity) }))
+          .sort((a, b) => naturalCmp(toImgStr(a.imageNumber), toImgStr(b.imageNumber)))
         if (cancelled) return
         hydratePartState(filtered); setVisibleParts(filtered)
-      } catch {
-        if (!cancelled) setVisibleParts([])
-      } finally {
-        if (!cancelled) setSearchLoading(false)
-      }
+      } catch { if (!cancelled) setVisibleParts([]) }
+      finally  { if (!cancelled) setSearchLoading(false) }
     }, 300)
     return () => { cancelled = true; window.clearTimeout(t) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allParts, assemblyId, modelId, searchTerm])
 
-  // ✅ Reset chips AND clear stale rowRefs on assembly change
   useEffect(() => {
-    setActiveNums(new Set())
-    setHoveredNum(null)
-    rowRefs.current = {}
+    setActiveNums(new Set()); setHoveredNum(null); rowRefs.current = {}; setCurrentPage(1)
   }, [assemblyId, modelId])
 
-  // Auto-scroll table on chip hover
+  useEffect(() => { setCurrentPage(1) }, [searchTerm, activeNums])
+
   useEffect(() => {
     if (!hoveredNum) return
     const row = rowRefs.current[hoveredNum]
     if (row && tableScrollRef.current) {
       const container = tableScrollRef.current
-      const targetTop = row.offsetTop - container.clientHeight / 2 + row.offsetHeight / 2
-      container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" })
+      container.scrollTo({ top: Math.max(0, row.offsetTop - container.clientHeight / 2 + row.offsetHeight / 2), behavior: "smooth" })
     }
   }, [hoveredNum])
 
-  // ✅ getAvailableStock uses toStockInt so string stock never gives NaN
-  const getAvailableStock = useCallback((p: PartWithPrice): number => {
-    const total  = toStockInt(p.stockQuantity)
-    const inCart = cartPartQtys[p.id] ?? 0
-    return Math.max(0, total - inCart)
-  }, [cartPartQtys])
+  const getAvailableStock = useCallback((p: PartWithPrice): number =>
+    Math.max(0, toStockInt(p.stockQuantity) - (cartPartQtys[p.id] ?? 0)),
+  [cartPartQtys])
 
-  // ✅ hotspotNumbers: collect unique non-empty imageNumber strings
-  //    Works with "1", "1.1", "2A", "10" — all strings
   const hotspotNumbers: string[] = Array.from(
-    new Set(
-      allParts
-        .map(p => toImgStr(p.imageNumber))
-        .filter(n => n.length > 0)        // ← key: reject empty strings
-    )
-  ).sort((a, b) =>
-    // Natural sort: "1" < "1.1" < "2" < "2A" < "10"
-    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
-  )
+    new Set(allParts.map(p => toImgStr(p.imageNumber)).filter(n => n.length > 0))
+  ).sort(naturalCmp)
 
   const displayParts = activeNums.size > 0
-    ? visibleParts.filter(p => {
-        const n = toImgStr(p.imageNumber)
-        return n.length > 0 && activeNums.has(n)
-      })
+    ? visibleParts.filter(p => { const n = toImgStr(p.imageNumber); return n.length > 0 && activeNums.has(n) })
     : visibleParts
 
-  // ✅ Chip click — uses toImgStr consistently
+  const totalPages = Math.max(1, Math.ceil(displayParts.length / PAGE_SIZE))
+  const safePage   = Math.min(currentPage, totalPages)
+  const pagedParts = displayParts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
   const handleChipClick = (num: string) => {
     setActiveNums(prev => {
       const next = new Set(prev)
       if (next.has(num)) {
         next.delete(num)
         setSelectedParts(sp => sp.filter(id => {
-          const part = allParts.find(p => p.id === id)
-          const pNum = toImgStr(part?.imageNumber)
+          const pNum = toImgStr(allParts.find(p => p.id === id)?.imageNumber)
           return pNum !== num || next.has(pNum)
         }))
       } else {
         next.add(num)
-        const toSelect = allParts
-          .filter(p => toImgStr(p.imageNumber) === num && getAvailableStock(p) > 0)
-          .map(p => p.id)
+        const toSelect = allParts.filter(p => toImgStr(p.imageNumber) === num && getAvailableStock(p) > 0).map(p => p.id)
         setSelectedParts(sp => Array.from(new Set([...sp, ...toSelect])))
       }
       return next
@@ -398,9 +407,7 @@ const SearchParts = () => {
 
   const toggleSelect = (part: PartWithPrice) => {
     if (getAvailableStock(part) === 0) { alert(`"${part.partName}" is out of stock.`); return }
-    setSelectedParts(prev =>
-      prev.includes(part.id) ? prev.filter(x => x !== part.id) : [...prev, part.id]
-    )
+    setSelectedParts(prev => prev.includes(part.id) ? prev.filter(x => x !== part.id) : [...prev, part.id])
   }
 
   const allDisplaySelected =
@@ -431,36 +438,78 @@ const SearchParts = () => {
     addingRef.current = true; setAddingToCart(true)
     try {
       for (const partId of selectedParts) {
-        const qty = quantities[partId] || 1
-        await axios.post("/cart/add", { PartId: partId, Quantity: qty })
+        await axios.post("/api/cart/add", { PartId: partId, Quantity: quantities[partId] || 1 })
       }
-      await fetchCart()
-      navigate("/checkout")
+      await fetchCart(); navigate("/checkout")
     } catch (err: unknown) {
       const msg = axios.isAxiosError(err) ? (err.response?.data as string | undefined) : undefined
       alert(msg ?? "Failed to add items to cart.")
-    } finally {
-      addingRef.current = false; setAddingToCart(false)
-    }
+    } finally { addingRef.current = false; setAddingToCart(false) }
   }
 
-  // ✅ getRowClass — uses toImgStr consistently
   const getRowClass = (part: PartWithPrice, stock: number): string => {
     const imgNum = toImgStr(part.imageNumber)
-    if (stock === 0)                     return "row--out-stock"
-    if (selectedParts.includes(part.id)) return "row--selected"
-    if (hoveredNum != null && imgNum === hoveredNum) return "row--chip-hover"
+    if (stock === 0)                                              return "row--out-stock"
+    if (selectedParts.includes(part.id))                         return "row--selected"
+    if (hoveredNum != null && imgNum === hoveredNum)              return "row--chip-hover"
     if (activeNums.size > 0 && imgNum && activeNums.has(imgNum)) return "row--hotspot-match"
     return ""
   }
 
   const assemblyState = { searchType: undefined as string | undefined, vin: undefined as string | undefined, modelId }
 
-  // ── Render ────────────────────────────────────────────────────
   return (
     <div className="sp-wrapper">
-
       {showContact && <ContactModal onClose={() => setShowContact(false)} />}
+
+      {/* ✅ FIX 1: Zoom overlay at ROOT level — NOT inside sp-image-frame
+          This prevents overflow:hidden on sp-image-frame from clipping the
+          overlay and hiding the close button / controls bar               */}
+      {zoomOpen && (
+        <div className="sp-zoom-overlay" onClick={closeZoom}>
+          {/* Close button — always visible top-right */}
+          <button className="sp-zoom-close" onClick={e => { e.stopPropagation(); closeZoom() }}>
+            <FaTimes />
+          </button>
+
+          {/* Controls bar */}
+          <div className="sp-zoom-controls" onClick={e => e.stopPropagation()}>
+            <button className="sp-zoom-btn" onClick={zoomOut} disabled={zoomScale <= 1} title="Zoom out">
+              <FaSearchMinus />
+            </button>
+            <span className="sp-zoom-level">{Math.round(zoomScale * 100)}%</span>
+            <button className="sp-zoom-btn" onClick={zoomIn} disabled={zoomScale >= 5} title="Zoom in">
+              <FaSearchPlus />
+            </button>
+            <button className="sp-zoom-btn sp-zoom-btn--reset" onClick={zoomReset} disabled={zoomScale === 1}>
+              Reset
+            </button>
+          </div>
+
+          {/* Viewport — receives wheel + drag events */}
+          <div
+            ref={zoomViewportRef}
+            className="sp-zoom-viewport"
+            onClick={e => e.stopPropagation()}
+            onMouseDown={onMouseDown}
+            style={{ cursor: zoomScale > 1 ? (isDragging.current ? "grabbing" : "grab") : "zoom-in" }}
+          >
+            <img
+              src={assemblyImage as string}
+              alt={assemblyName as string}
+              draggable={false}
+              style={{
+                transform: `scale(${zoomScale}) translate(${panX / zoomScale}px, ${panY / zoomScale}px)`,
+                transition: isDragging.current ? "none" : "transform 0.15s ease",
+                maxWidth: "90%", maxHeight: "90%",
+                objectFit: "contain",
+                userSelect: "none", pointerEvents: "none",
+              }}
+            />
+          </div>
+          <p className="sp-zoom-hint">Scroll to zoom · Drag to pan · Click outside to close</p>
+        </div>
+      )}
 
       {/* Navbar */}
       <nav className="sp-navbar">
@@ -491,10 +540,12 @@ const SearchParts = () => {
 
       <div className="sp-layout">
 
-        {/* LEFT: image + chips */}
+        {/* LEFT */}
         <aside className="sp-image-panel">
           {assemblyImage ? (
             <>
+              {/* ✅ sp-image-frame: overflow:hidden is fine now because the
+                  zoom overlay is rendered at root level, not inside here  */}
               <div className="sp-image-frame">
                 <img
                   src={assemblyImage as string}
@@ -505,123 +556,48 @@ const SearchParts = () => {
                 <button className="sp-zoom-trigger" onClick={openZoom} title="Zoom image">
                   <FaSearchPlus style={{ fontSize: 11 }} /> Zoom
                 </button>
-
-                {/* ✅ Zoom overlay with +/- controls */}
-                {zoomOpen && (
-                  <div className="sp-zoom-overlay" onClick={closeZoom}>
-                    <button className="sp-zoom-close" onClick={closeZoom}><FaTimes /></button>
-
-                    {/* Zoom controls bar */}
-                    <div className="sp-zoom-controls" onClick={e => e.stopPropagation()}>
-                      <button
-                        className="sp-zoom-btn"
-                        onClick={zoomOut}
-                        disabled={zoomScale <= 1}
-                        title="Zoom out"
-                      >
-                        <FaSearchMinus />
-                      </button>
-                      <span className="sp-zoom-level">{Math.round(zoomScale * 100)}%</span>
-                      <button
-                        className="sp-zoom-btn"
-                        onClick={zoomIn}
-                        disabled={zoomScale >= 5}
-                        title="Zoom in"
-                      >
-                        <FaSearchPlus />
-                      </button>
-                      <button
-                        className="sp-zoom-btn sp-zoom-btn--reset"
-                        onClick={zoomReset}
-                        disabled={zoomScale === 1}
-                        title="Reset zoom"
-                      >
-                        Reset
-                      </button>
-                    </div>
-
-                    <div
-                      ref={zoomViewportRef}
-                      className="sp-zoom-viewport"
-                      onClick={e => e.stopPropagation()}
-                      style={{ cursor: zoomScale > 1 ? "move" : "zoom-in" }}
-                    >
-                      <img
-                        src={assemblyImage as string}
-                        alt={assemblyName as string}
-                        style={{
-                          transform: `scale(${zoomScale})`,
-                          transformOrigin: zoomOrigin,
-                          transition: "transform 0.15s ease",
-                          display: "block", width: "100%",
-                          userSelect: "none", pointerEvents: "none",
-                        }}
-                      />
-                    </div>
-                    <p className="sp-zoom-hint">Scroll or use +/− to zoom · Click outside to close</p>
-                  </div>
-                )}
               </div>
 
-              {/* ✅ Chip panel — always rendered after load, shows message if no image numbers */}
               {!partsLoading && (
                 <div className="sp-chip-panel">
                   <div className="sp-chip-panel__header">
                     <span className="sp-chip-panel__label">
                       Image No.
                       {hotspotNumbers.length > 0 && activeNums.size > 0 && (
-                        <span className="sp-chip-panel__count">
-                          &nbsp;({activeNums.size} of {hotspotNumbers.length} selected)
-                        </span>
+                        <span className="sp-chip-panel__count">&nbsp;({activeNums.size}/{hotspotNumbers.length})</span>
                       )}
                     </span>
                     {activeNums.size > 0 && (
-                      <button
-                        className="sp-chip-panel__clear"
-                        onClick={() => { setActiveNums(new Set()); setSelectedParts([]) }}
-                      >
+                      <button className="sp-chip-panel__clear"
+                        onClick={() => { setActiveNums(new Set()); setSelectedParts([]) }}>
                         ✕ Clear
                       </button>
                     )}
                   </div>
-
                   {hotspotNumbers.length > 0 ? (
                     <>
                       <div className="sp-chip-list">
                         {hotspotNumbers.map(num => (
                           <button
-                            key={num}
-                            type="button"
-                            className={[
-                              "sp-chip",
-                              activeNums.has(num) ? "sp-chip--active" : "",
-                              hoveredNum === num  ? "sp-chip--hover"  : "",
-                            ].filter(Boolean).join(" ")}
+                            key={num} type="button"
+                            className={["sp-chip", activeNums.has(num) ? "sp-chip--active" : "", hoveredNum === num ? "sp-chip--hover" : ""].filter(Boolean).join(" ")}
                             onMouseEnter={() => setHoveredNum(num)}
                             onMouseLeave={() => setHoveredNum(null)}
                             onClick={() => handleChipClick(num)}
-                            title={`Click to filter · image no. ${num}`}
-                          >
-                            {num}
-                          </button>
+                            title={`Filter image no. ${num}`}
+                          >{num}</button>
                         ))}
                       </div>
-
                       {hoveredNum && (
                         <div className="sp-chip-hover-hint">
                           <span className="sp-chip-hover-arrow">▶</span>
-                          Scrolling to image no. <strong>{hoveredNum}</strong> rows
+                          Scrolling to image no. <strong>{hoveredNum}</strong>
                         </div>
                       )}
-
                       {activeNums.size > 0 && (
                         <p className="sp-chip-panel__info">
                           Showing {displayParts.length} part{displayParts.length !== 1 ? "s" : ""} for img no.&nbsp;
-                          <strong>
-                            {Array.from(activeNums)
-                              .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-                              .join(", ")}
-                          </strong>
+                          <strong>{Array.from(activeNums).sort(naturalCmp).join(", ")}</strong>
                         </p>
                       )}
                     </>
@@ -638,20 +614,16 @@ const SearchParts = () => {
           )}
         </aside>
 
-        {/* RIGHT: table */}
+        {/* RIGHT */}
         <section className="sp-table-panel">
           <div className="sp-toolbar">
             <input
               type="text" className="sp-search"
               placeholder="Search parts by name, number, or description…"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             />
-            <button
-              disabled={!selectedParts.length || addingToCart}
-              onClick={() => void addSelectedToCart()}
-              className="sp-add-btn"
-            >
+            <button disabled={!selectedParts.length || addingToCart}
+              onClick={() => void addSelectedToCart()} className="sp-add-btn">
               <FaShoppingBasket />
               {addingToCart ? "Adding…" : `Add to Cart (${selectedParts.length})`}
             </button>
@@ -660,11 +632,9 @@ const SearchParts = () => {
           <div className="sp-status-bar">
             <span className="sp-status-bar__text">
               {partsLoading ? "Loading parts…"
-                : searchLoading ? "Searching parts…"
+                : searchLoading ? "Searching…"
                 : activeNums.size > 0
-                  ? `${displayParts.length} part${displayParts.length !== 1 ? "s" : ""} for image no. ${
-                      Array.from(activeNums).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).join(", ")
-                    }`
+                  ? `${displayParts.length} part${displayParts.length !== 1 ? "s" : ""} for img no. ${Array.from(activeNums).sort(naturalCmp).join(", ")}`
                   : `${displayParts.length} part${displayParts.length !== 1 ? "s" : ""} found`}
             </span>
             {selectedParts.length > 0 && (
@@ -678,25 +648,28 @@ const SearchParts = () => {
           <div className="sp-table-scroll" ref={tableScrollRef}>
             <table className="sp-table">
               <colgroup>
-                <col style={{ width: 44 }} /><col style={{ width: 40 }} />
-                <col style={{ width: "14%" }} /><col />
-                <col style={{ width: 100 }} /><col style={{ width: 80 }} />
-                <col style={{ width: 84 }} /><col style={{ width: "14%" }} />
-                <col style={{ width: 96 }} />
+                <col style={{ width: 40  }} />
+                <col style={{ width: 38  }} />
+                <col style={{ width: 60  }} />
+                <col style={{ width: "13%" }} />
+                <col />
+                <col style={{ width: 96  }} />
+                <col style={{ width: 78  }} />
+                <col style={{ width: 78  }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: 92  }} />
               </colgroup>
               <thead>
                 <tr>
                   <th style={{ textAlign: "center" }}>Sr.</th>
                   <th style={{ textAlign: "center" }}>
-                    <input
-                      type="checkbox"
-                      checked={allDisplaySelected}
+                    <input type="checkbox" checked={allDisplaySelected}
                       onChange={e => toggleSelectAll(e.target.checked)}
-                      className="sp-checkbox"
-                      title="Select all in-stock"
-                    />
+                      className="sp-checkbox" title="Select all in-stock" />
                   </th>
-                  <th>Part No.</th><th>Part Name</th>
+                  <th style={{ textAlign: "center" }}>Img No.</th>
+                  <th>Part No.</th>
+                  <th>Part Name</th>
                   <th style={{ textAlign: "center" }}>Stock</th>
                   <th style={{ textAlign: "right" }}>BDP</th>
                   <th style={{ textAlign: "right" }}>MRP</th>
@@ -705,20 +678,18 @@ const SearchParts = () => {
                 </tr>
               </thead>
               <tbody>
-                {displayParts.length === 0 ? (
+                {pagedParts.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="sp-table__empty" data-label="">
-                      {partsLoading ? "Loading parts…"
-                        : searchLoading ? "Searching parts…"
-                        : activeNums.size > 0 ? "No parts for selected image numbers"
-                        : "No parts found"}
+                    <td colSpan={10} className="sp-table__empty" data-label="">
+                      {partsLoading ? "Loading parts…" : searchLoading ? "Searching parts…"
+                        : activeNums.size > 0 ? "No parts for selected image numbers" : "No parts found"}
                     </td>
                   </tr>
-                ) : displayParts.map((part, idx) => {
+                ) : pagedParts.map((part, idx) => {
                   const qty    = quantities[part.id] || 1
                   const stock  = getAvailableStock(part)
-                  // ✅ Always use toImgStr — handles "1", "1.1", "2A" and null
                   const imgNum = toImgStr(part.imageNumber)
+                  const globalIdx = (safePage - 1) * PAGE_SIZE + idx + 1
 
                   return (
                     <tr
@@ -727,28 +698,17 @@ const SearchParts = () => {
                       className={getRowClass(part, stock)}
                       onClick={() => stock > 0 && toggleSelect(part)}
                       style={{ cursor: stock > 0 ? "pointer" : "not-allowed" }}
-                      ref={el => {
-                        // ✅ Always update ref (not just first time)
-                        if (imgNum) rowRefs.current[imgNum] = el
-                      }}
+                      ref={el => { if (imgNum) rowRefs.current[imgNum] = el }}
                     >
-                      <td data-label="Sr." style={{ textAlign: "center" }} className="sp-td--sr">
-                        {idx + 1}
-                      </td>
+                      <td data-label="Sr." style={{ textAlign: "center" }} className="sp-td--sr">{globalIdx}</td>
                       <td data-label="Select" style={{ textAlign: "center" }} onClick={e => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedParts.includes(part.id)}
-                          disabled={stock === 0}
-                          onChange={() => toggleSelect(part)}
-                          className="sp-checkbox"
-                        />
+                        <input type="checkbox" checked={selectedParts.includes(part.id)}
+                          disabled={stock === 0} onChange={() => toggleSelect(part)} className="sp-checkbox" />
                       </td>
-                      <td className="sp-td--part-num" data-label="Part No.">
-                        <span>{part.partNumber}</span>
-                        {/* ✅ Show image number tag — works with "1.1", "2A" etc */}
-                        {imgNum && <span className="sp-img-num-tag">#{imgNum}</span>}
+                      <td data-label="Img No." style={{ textAlign: "center" }} className="sp-td--img-num">
+                        {imgNum || "—"}
                       </td>
+                      <td className="sp-td--part-num" data-label="Part No.">{part.partNumber}</td>
                       <td className="sp-td--part-name" data-label="Part Name">{part.partName}</td>
                       <td data-label="Stock" style={{ textAlign: "center" }} onClick={e => e.stopPropagation()}>
                         <StockBadge stock={stock} />
@@ -757,18 +717,12 @@ const SearchParts = () => {
                         {part.bdp != null ? `₹${Number(part.bdp).toFixed(2)}` : "—"}
                       </td>
                       <td data-label="MRP" className="sp-td--money sp-td--mrp">
-                        {part.mrp != null
-                          ? `₹${Number(part.mrp).toFixed(2)}`
-                          : part.price != null
-                          ? `₹${Number(part.price).toFixed(2)}`
-                          : "—"}
+                        {part.mrp != null ? `₹${Number(part.mrp).toFixed(2)}`
+                          : part.price != null ? `₹${Number(part.price).toFixed(2)}` : "—"}
                       </td>
                       <td data-label="Remarks" onClick={e => e.stopPropagation()}>
-                        <input
-                          className="sp-remarks-input"
-                          value={remarks[part.id] ?? ""}
-                          onChange={e => setRemarks(prev => ({ ...prev, [part.id]: e.target.value }))}
-                        />
+                        <input className="sp-remarks-input" value={remarks[part.id] ?? ""}
+                          onChange={e => setRemarks(prev => ({ ...prev, [part.id]: e.target.value }))} />
                       </td>
                       <td data-label="Qty" onClick={e => e.stopPropagation()}>
                         <div className="sp-qty">
@@ -783,6 +737,39 @@ const SearchParts = () => {
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="sp-pagination">
+              <button className="sp-page-btn"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1} title="Previous page">
+                <FaChevronLeft />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(n => n === 1 || n === totalPages || (n >= safePage - 2 && n <= safePage + 2))
+                .reduce<(number | "...")[]>((acc, n, i, arr) => {
+                  if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push("...")
+                  acc.push(n); return acc
+                }, [])
+                .map((item, i) =>
+                  item === "..." ? (
+                    <span key={`e${i}`} className="sp-page-ellipsis">…</span>
+                  ) : (
+                    <button key={item}
+                      className={`sp-page-btn${safePage === item ? " sp-page-btn--active" : ""}`}
+                      onClick={() => setCurrentPage(item as number)}>{item}</button>
+                  )
+                )}
+              <button className="sp-page-btn"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages} title="Next page">
+                <FaChevronRight />
+              </button>
+              <span className="sp-page-info">
+                Page {safePage} of {totalPages} &nbsp;·&nbsp; {displayParts.length} parts
+              </span>
+            </div>
+          )}
         </section>
       </div>
     </div>

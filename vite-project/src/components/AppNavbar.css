@@ -1,4 +1,4 @@
-/* AppNavbar.css — shared navbar + contact modal styles */
+/* AppNavbar.css */
 
 /* ── Navbar ──────────────────────────────────────────────────── */
 .an-navbar {
@@ -12,144 +12,77 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
-  flex-shrink: 0;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.18);
 }
 
-/* Brand */
-.an-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 1;
-  min-width: 0;
-}
+.an-brand           { display: flex; align-items: center; gap: 12px; }
+.an-brand__logo     { height: 38px; border-radius: 4px; }
+.an-brand__text     { display: flex; flex-direction: column; line-height: 1.25; }
+.an-brand__name     { font-size: 20px; font-weight: 800; letter-spacing: 0.04em; }
+.an-brand__sub      { font-size: 12px; opacity: 0.8; }
+.an-actions         { display: flex; align-items: center; gap: 10px; }
 
-.an-brand__logo {
-  height: 38px;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.an-brand__text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-  min-width: 0;
-}
-
-.an-brand__name {
-  font-size: 20px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.an-brand__sub {
-  font-size: 12px;
-  color: rgba(255,255,255,0.75);
-  white-space: nowrap;
-}
-
-/* Actions */
-.an-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-/* Icon button */
 .an-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border: none;
-  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border: none; border-radius: 9px;
   background: rgba(255,255,255,0.14);
-  color: #fff;
-  font-size: 17px;
-  cursor: pointer;
+  color: #fff; font-size: 17px; cursor: pointer;
   position: relative;
-  transition: background 0.18s ease, transform 0.15s ease;
+  transition: background 0.18s, transform 0.18s;
 }
+.an-btn:hover { background: rgba(255,255,255,0.26); transform: translateY(-1px); }
+.an-btn--active { background: rgba(255,255,255,0.32) !important; }
 
-.an-btn:hover  { background: rgba(255,255,255,0.26); transform: translateY(-1px); }
-.an-btn:active { transform: scale(0.96); }
-
-/* Active (home highlighted) */
-.an-btn--active {
-  background: rgba(255,255,255,0.28);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
+.an-orders-btn {
+  display: flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  border: none; border-radius: 9px;
+  background: rgba(255,255,255,0.14);
+  color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: background 0.18s, transform 0.18s;
+  white-space: nowrap;
 }
+.an-orders-btn:hover { background: rgba(255,255,255,0.26); transform: translateY(-1px); }
 
-/* Cart badge */
 .an-cart-badge {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: #ef4444;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
+  position: absolute; top: -5px; right: -5px;
+  background: #ef4444; color: #fff;
+  font-size: 10px; font-weight: 800;
+  min-width: 18px; height: 18px; padding: 0 4px;
   border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   pointer-events: none;
 }
 
-/* My Orders text button */
-.an-orders-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 12px;
-  background: rgba(255,255,255,0.14);
-  border: 1px solid rgba(255,255,255,0.22);
-  border-radius: 9px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-
-.an-orders-btn:hover { background: rgba(255,255,255,0.26); }
-
-/* ── Contact Modal backdrop ──────────────────────────────────── */
+/* ── Modal backdrop ──────────────────────────────────────────── */
 .an-modal-bg {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(0,0,0,0.52);
   z-index: 2000;
 }
 
-/* Modal box */
+/* ── Contact Modal ───────────────────────────────────────────── */
 .an-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
+  position: fixed; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  width: min(580px, 95vw);
+  width: min(600px, 96vw);
   max-height: 90vh;
   overflow-y: auto;
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.30);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   z-index: 2001;
   font-family: 'Segoe UI', Arial, sans-serif;
 }
 
-/* Modal header */
+/* Policy modal — slightly wider */
+.an-modal--policy {
+  width: min(720px, 96vw);
+  max-height: 88vh;
+  z-index: 3200;
+}
+
 .an-modal__header {
   background: linear-gradient(90deg, #0b3c4d, #0e5068);
   padding: 18px 22px;
@@ -157,180 +90,178 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
-
 .an-modal__title {
-  margin: 0;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 800;
+  margin: 0; color: #fff; font-size: 18px; font-weight: 800;
 }
-
 .an-modal__sub {
-  margin: 4px 0 0;
-  color: rgba(255,255,255,0.65);
-  font-size: 12px;
+  margin: 4px 0 0; color: rgba(255,255,255,0.65); font-size: 12px;
 }
-
 .an-modal__close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: rgba(255,255,255,0.14);
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 15px;
-  cursor: pointer;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  background: rgba(255,255,255,0.14); border: none; border-radius: 8px;
+  color: #fff; font-size: 15px; cursor: pointer;
   transition: background 0.15s;
+  flex-shrink: 0; margin-left: 12px;
 }
+.an-modal__close:hover { background: rgba(255,255,255,0.28); }
 
-.an-modal__close:hover { background: rgba(255,255,255,0.26); }
-
-/* Modal body */
-.an-modal__body { padding: 20px 22px 24px; }
-
-.an-modal__intro {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 16px;
-  line-height: 1.6;
-}
-
-.an-modal__intro a { color: #1d4ed8; font-weight: 700; }
-
-/* Sent state */
 .an-sent {
-  padding: 48px 24px;
+  padding: 44px 24px;
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
 }
-
 .an-sent__icon { font-size: 52px; }
-.an-sent h3    { color: #16a34a; font-weight: 800; font-size: 20px; margin: 0; }
-.an-sent p     { color: #64748b; margin: 0; font-size: 14px; }
+.an-sent h3 { color: #15803d; font-weight: 800; font-size: 20px; margin: 0; }
+.an-sent p  { color: #64748b; margin: 0; font-size: 14px; }
 
-/* Error */
+.an-modal__body {
+  padding: 20px 24px 28px;
+}
+.an-modal__intro {
+  font-size: 13px; color: #64748b; margin-bottom: 18px; line-height: 1.6;
+}
+.an-modal__intro a { color: #1d4ed8; font-weight: 600; }
+
+/* ── Error banner ────────────────────────────────────────────── */
 .an-error {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #b91c1c;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  margin-bottom: 14px;
+  background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c;
+  border-radius: 8px; padding: 9px 13px; font-size: 13px; margin-bottom: 14px;
 }
 
-/* Form fields */
+/* ── Form fields ─────────────────────────────────────────────── */
 .an-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: 13px;
 }
-
 .an-field label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #374151;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 11px; font-weight: 700; color: #374151;
+  text-transform: uppercase; letter-spacing: 0.04em;
 }
+.an-req { color: #dc2626; margin-left: 2px; }
 
 .an-field input,
 .an-field select,
 .an-field textarea {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #374151;
-  outline: none;
-  font-family: inherit;
+  width: 100%; padding: 8px 11px;
+  border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; color: #1e293b; outline: none; font-family: inherit;
   transition: border-color 0.15s, box-shadow 0.15s;
-  box-sizing: border-box;
   background: #fff;
 }
-
 .an-field input:focus,
 .an-field select:focus,
 .an-field textarea:focus {
   border-color: #1d4ed8;
-  box-shadow: 0 0 0 2px rgba(29,78,216,0.10);
+  box-shadow: 0 0 0 3px rgba(29,78,216,0.10);
 }
-
 .an-field textarea { resize: vertical; }
 
-/* Grid rows */
-.an-row { display: grid; gap: 10px; margin-bottom: 0; }
+/* Error state */
+.an-input--err {
+  border-color: #f87171 !important;
+  background: #fff8f8 !important;
+}
+.an-input--err:focus {
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.12) !important;
+}
+
+.an-field-err {
+  font-size: 11px; color: #dc2626; font-weight: 600; margin-top: 2px;
+}
+.an-field-err--agree {
+  margin-top: -4px; margin-bottom: 8px;
+}
+
+/* ── Grid rows ───────────────────────────────────────────────── */
+.an-row { display: grid; gap: 10px; }
 .an-row--2 { grid-template-columns: 1fr 1fr; }
 .an-row--3 { grid-template-columns: 100px 1fr 1fr; }
 
-/* Agree */
+/* ── Agree checkbox ──────────────────────────────────────────── */
 .an-agree {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-bottom: 6px;
+}
+.an-agree input[type="checkbox"] {
+  margin-top: 3px; width: 16px; height: 16px;
+  accent-color: #0b3c4d; flex-shrink: 0; cursor: pointer;
+}
+.an-agree label {
+  font-size: 12px; color: #475569; line-height: 1.55; cursor: pointer;
+}
+
+/* Policy button — looks like a link */
+.an-policy-btn {
+  background: none; border: none; padding: 0;
+  color: #1d4ed8; font-size: inherit; font-weight: 700;
+  cursor: pointer; text-decoration: underline; font-family: inherit;
+  line-height: inherit;
+}
+.an-policy-btn:hover { color: #1e40af; }
+
+/* ── Submit ──────────────────────────────────────────────────── */
+.an-submit {
+  width: 100%; padding: 12px;
+  background: #0b3c4d; color: #fff;
+  border: none; border-radius: 9px;
+  font-weight: 800; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 10px;
+  transition: background 0.15s, transform 0.12s;
+}
+.an-submit:hover:not(:disabled) { background: #0e5068; transform: translateY(-1px); }
+.an-submit:active:not(:disabled) { transform: scale(0.98); }
+.an-submit:disabled { background: #94a3b8; cursor: not-allowed; }
+
+/* ── Policy Modal body ───────────────────────────────────────── */
+.an-policy-body {
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+}
+.an-policy-loading {
+  text-align: center; padding: 32px 0;
+  color: #64748b; font-size: 14px; font-style: italic;
+}
+.an-policy-content {
+  font-size: 13px; color: #374151; line-height: 1.7;
+  max-height: 55vh; overflow-y: auto;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 16px 20px; background: #fafbfc;
   margin-bottom: 18px;
 }
+/* Strip any extreme styles from the fetched HTML */
+.an-policy-content img  { max-width: 100%; height: auto; }
+.an-policy-content h1,
+.an-policy-content h2,
+.an-policy-content h3  { color: #0b3c4d; margin: 14px 0 6px; font-size: 15px; }
+.an-policy-content p   { margin: 0 0 10px; }
+.an-policy-content a   { color: #1d4ed8; }
 
-.an-agree input[type="checkbox"] {
-  margin-top: 3px;
-  accent-color: #0b3c4d;
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
+.an-policy-whistle {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: #f0f9ff; border: 1px solid #bae6fd;
+  border-radius: 10px; padding: 14px 16px;
+  font-size: 13px; color: #0b3c4d; font-weight: 700;
+  margin-top: 4px;
 }
-
-.an-agree label {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.5;
+.an-policy-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: #1d4ed8; font-size: 13px; font-weight: 700;
+  text-decoration: none; padding: 6px 14px;
+  border: 1.5px solid #bfdbfe; border-radius: 7px;
+  background: #eff6ff;
+  transition: background 0.15s;
 }
-
-.an-agree a { color: #1d4ed8; font-weight: 700; }
-
-/* Submit */
-.an-submit {
-  width: 100%;
-  padding: 12px;
-  background: #0b3c4d;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: background 0.15s, transform 0.1s;
-}
-
-.an-submit:hover:not(:disabled) { background: #1d4ed8; transform: translateY(-1px); }
-.an-submit:active:not(:disabled) { transform: scale(0.98); }
-.an-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.an-policy-link:hover { background: #dbeafe; }
 
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .an-navbar { padding: 0 14px; height: 56px; }
-  .an-brand__name { font-size: 16px; }
-  .an-brand__sub  { font-size: 10px; }
-  .an-btn { width: 32px; height: 32px; font-size: 15px; }
-  .an-orders-btn span { display: none; }
-  .an-orders-btn { padding: 0 10px; }
-  .an-row--3 { grid-template-columns: 1fr 1fr; }
-}
-
-@media (max-width: 400px) {
-  .an-brand__sub { display: none; }
+  .an-navbar    { padding: 0 16px; }
+  .an-row--3    { grid-template-columns: 1fr 1fr; }
+  .an-row--2    { grid-template-columns: 1fr; }
+  .an-modal__body { padding: 16px 16px 22px; }
 }

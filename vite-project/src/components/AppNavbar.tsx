@@ -1,14 +1,11 @@
 // src/components/AppNavbar.tsx
-// Shared navbar used by ALL pages: Dashboard, AssemblyCatalogue, VehiclePreview,
-// SearchParts, Checkout, OrderDetails, OrderHistory.
-//
 // Features:
-//  ✅ Home button → /dashboard
-//  ✅ Contact button → opens full contact form modal
-//  ✅ Cart button → /checkout (shows live badge count)
-//  ✅ My Orders button (optional) → /order_history
-//  ✅ Contact form POSTs to /api/contact/send → emails both recipients
-//  ✅ Cart count passed as prop (each page fetches its own)
+//  ✅ Full form validation (email domain, 10-digit phone, name words-only)
+//  ✅ Kind of Request required
+//  ✅ Data Protection Policy fetched from bgauss.com/privacy-policy
+//  ✅ Whistle Blower Policy PDF link embedded
+//  ✅ Agree checkbox required (unchecked = blocked submit)
+//  ✅ Home, Contact, Cart, My Orders buttons
 
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -17,9 +14,113 @@ import AccountMenu from "./AccountMenu"
 import axios from "axios"
 import {
   FaHome, FaPhoneAlt, FaShoppingCart, FaTimes,
-  FaEnvelope, FaListAlt,
+  FaEnvelope, FaListAlt, FaFileAlt, FaExternalLinkAlt,
 } from "react-icons/fa"
 import "./AppNavbar.css"
+
+// ── Validation Helpers ────────────────────────────────────────
+const ALLOWED_EMAIL_DOMAINS = /\.(com|in|org|net|co|io|edu|gov|info|biz)$/i
+
+function validateEmail(email: string): string {
+  if (!email.trim()) return "Email is required."
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.trim())) return "Enter a valid email address."
+  if (!ALLOWED_EMAIL_DOMAINS.test(email.trim())) return "Email must end with a valid domain (e.g. @gmail.com, @bgauss.com)."
+  return ""
+}
+
+function validateName(name: string, label: string): string {
+  if (!name.trim()) return ""   // optional fields
+  if (!/^[A-Za-z\s.'-]+$/.test(name.trim()))
+    return `${label} must contain letters only.`
+  return ""
+}
+
+function validatePhone(phone: string): string {
+  if (!phone.trim()) return ""  // optional
+  const digits = phone.replace(/\D/g, "")
+  if (digits.length !== 10) return "Mobile number must be exactly 10 digits."
+  if (!/^[6-9]/.test(digits)) return "Enter a valid Indian mobile number."
+  return ""
+}
+
+// ── Privacy Policy Modal ──────────────────────────────────────
+function PrivacyModal({ onClose }: { onClose: () => void }) {
+  const [content, setContent] = useState<string>("")
+  const [loading, setLoading] = useState(true)
+  const [err,     setErr]     = useState(false)
+
+  // Fetch on mount
+  useState(() => {
+    const controller = new AbortController()
+    fetch("https://www.bgauss.com/privacy-policy/", { signal: controller.signal })
+      .then(r => r.text())
+      .then(html => {
+        // Extract main text from the page — strip scripts/style tags
+        const doc = new DOMParser().parseFromString(html, "text/html")
+        // Remove script, style, nav, header, footer noise
+        doc.querySelectorAll("script, style, nav, header, footer, iframe, noscript").forEach(el => el.remove())
+        // Try to find the main content area
+        const main =
+          doc.querySelector("main") ||
+          doc.querySelector(".entry-content") ||
+          doc.querySelector(".page-content") ||
+          doc.querySelector("article") ||
+          doc.body
+        setContent(main?.innerHTML ?? "")
+        setLoading(false)
+      })
+      .catch(() => { setErr(true); setLoading(false) })
+    return () => controller.abort()
+  })
+
+  return (
+    <>
+      <div className="an-modal-bg" onClick={onClose} style={{ zIndex: 3100 }} />
+      <div className="an-modal an-modal--policy" role="dialog" aria-modal="true" style={{ zIndex: 3200 }}>
+        <div className="an-modal__header">
+          <div>
+            <h2 className="an-modal__title"><FaFileAlt style={{ marginRight: 8, verticalAlign: "middle", fontSize: 15 }} />Data Protection & Privacy Policy</h2>
+            <p className="an-modal__sub">Source: bgauss.com/privacy-policy</p>
+          </div>
+          <button className="an-modal__close" onClick={onClose}><FaTimes /></button>
+        </div>
+        <div className="an-policy-body">
+          {loading && <p className="an-policy-loading">Loading privacy policy…</p>}
+          {err && (
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <p style={{ color: "#64748b", marginBottom: 14 }}>Could not load policy. View it directly:</p>
+              <a href="https://www.bgauss.com/privacy-policy/" target="_blank" rel="noreferrer" className="an-policy-link">
+                <FaExternalLinkAlt style={{ marginRight: 6 }} /> Open Privacy Policy
+              </a>
+            </div>
+          )}
+          {!loading && !err && (
+            <div
+              className="an-policy-content"
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
+          )}
+          <div className="an-policy-whistle">
+            <FaFileAlt style={{ marginRight: 8, flexShrink: 0 }} />
+            <div>
+              <strong>Whistle Blower Policy</strong>
+              <p style={{ margin: "3px 0 0", fontSize: 12, color: "#64748b" }}>
+                For concerns about ethical violations or misconduct:
+              </p>
+              <a
+                href="https://www.bgauss.com/wp-content/uploads/2025/09/Bgauss-Auto-Whistle-Blower-Policy-19.07.2025.pdf"
+                target="_blank" rel="noreferrer" className="an-policy-link" style={{ marginTop: 6, display: "inline-flex" }}
+              >
+                <FaExternalLinkAlt style={{ marginRight: 6 }} /> View Whistle Blower Policy PDF
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
 
 // ── Contact Modal ─────────────────────────────────────────────
 function ContactModal({ onClose }: { onClose: () => void }) {
@@ -27,37 +128,81 @@ function ContactModal({ onClose }: { onClose: () => void }) {
     subject: "", salutation: "", firstName: "", lastName: "",
     company: "", email: "", phone: "", message: "", agree: false,
   })
+  const [errors,  setErrors]  = useState<Record<string, string>>({})
   const [sending, setSending] = useState(false)
   const [sent,    setSent]    = useState(false)
-  const [error,   setError]   = useState("")
+  const [serverErr, setServerErr] = useState("")
+  const [showPolicy, setShowPolicy] = useState(false)
 
   const ch = (field: string, val: string | boolean) =>
     setForm(p => ({ ...p, [field]: val }))
 
+  // Live validation on blur
+  const validate = (): Record<string, string> => {
+    const e: Record<string, string> = {}
+
+    if (!form.subject.trim())
+      e.subject = "Please select a kind of request."
+
+    const firstErr = validateName(form.firstName, "First name")
+    if (firstErr) e.firstName = firstErr
+
+    const lastErr = validateName(form.lastName, "Last name")
+    if (lastErr) e.lastName = lastErr
+
+    const emailErr = validateEmail(form.email)
+    if (emailErr) e.email = emailErr
+
+    const phoneErr = validatePhone(form.phone)
+    if (phoneErr) e.phone = phoneErr
+
+    if (!form.message.trim())
+      e.message = "Message is required."
+
+    if (!form.agree)
+      e.agree = "You must agree to the data protection terms to proceed."
+
+    return e
+  }
+
+  const handleBlur = (field: string) => {
+    const all = validate()
+    setErrors(prev => ({ ...prev, [field]: all[field] ?? "" }))
+  }
+
+  // Only allow digits in phone
+  const handlePhone = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 10)
+    ch("phone", digits)
+  }
+
+  // Only allow letters/spaces in name fields
+  const handleName = (field: string, val: string) => {
+    const cleaned = val.replace(/[^A-Za-z\s.'-]/g, "")
+    ch(field, cleaned)
+  }
+
   const handleSubmit = async () => {
-    if (!form.email.trim() || !form.message.trim()) {
-      setError("Please fill in your email and message."); return
-    }
-    if (!form.agree) {
-      setError("Please agree to the data protection terms."); return
-    }
-    setError(""); setSending(true)
+    const errs = validate()
+    setErrors(errs)
+    if (Object.values(errs).some(v => v)) return
+
+    setServerErr(""); setSending(true)
     try {
-      //await axios.post("/api/contact/send", {
       await axios.post("/contact/send", {
-        subject:    form.subject || "General Enquiry",
+        subject:    form.subject,
         salutation: form.salutation,
         firstName:  form.firstName,
         lastName:   form.lastName,
         company:    form.company,
-        email:      form.email,
+        email:      form.email.trim(),
         phone:      form.phone,
         message:    form.message,
       })
       setSent(true)
-      setTimeout(onClose, 2500)
+      setTimeout(onClose, 2800)
     } catch {
-      setError("Failed to send message. Please try again or email us directly.")
+      setServerErr("Failed to send message. Please try again or email us directly.")
     } finally {
       setSending(false)
     }
@@ -65,25 +210,19 @@ function ContactModal({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      {/* Backdrop */}
       <div className="an-modal-bg" onClick={onClose} />
 
-      {/* Modal */}
       <div className="an-modal" role="dialog" aria-modal="true" aria-label="Contact form">
         {/* Header */}
         <div className="an-modal__header">
           <div>
             <h2 className="an-modal__title">
-              <FaEnvelope style={{ marginRight: 8, verticalAlign: "middle", fontSize: 16 }} />
+              <FaEnvelope style={{ marginRight: 8, verticalAlign: "middle", fontSize: 15 }} />
               Contact Us
             </h2>
-            <p className="an-modal__sub">
-              For assistance, suggestions, and part queries
-            </p>
+            <p className="an-modal__sub">For assistance, suggestions, and part queries</p>
           </div>
-          <button className="an-modal__close" onClick={onClose} aria-label="Close">
-            <FaTimes />
-          </button>
+          <button className="an-modal__close" onClick={onClose} aria-label="Close"><FaTimes /></button>
         </div>
 
         {/* Body */}
@@ -100,19 +239,25 @@ function ContactModal({ onClose }: { onClose: () => void }) {
               <a href="mailto:sachin.raut@bgauss.com">sachin.raut@bgauss.com</a>.
             </p>
 
-            {error && <div className="an-error">{error}</div>}
+            {serverErr && <div className="an-error">{serverErr}</div>}
 
-            {/* Subject */}
+            {/* Subject — REQUIRED */}
             <div className="an-field">
-              <label>Kind of Request *</label>
-              <select value={form.subject} onChange={e => ch("subject", e.target.value)}>
-                <option value="">Please choose</option>
+              <label>Kind of Request <span className="an-req">*</span></label>
+              <select
+                value={form.subject}
+                onChange={e => { ch("subject", e.target.value); setErrors(p => ({ ...p, subject: "" })) }}
+                onBlur={() => handleBlur("subject")}
+                className={errors.subject ? "an-input--err" : ""}
+              >
+                <option value="">Please choose…</option>
                 <option>Technical Assistance</option>
                 <option>Product Suggestion</option>
                 <option>Parts Ordering Query</option>
                 <option>Return / Replacement</option>
                 <option>Other</option>
               </select>
+              {errors.subject && <span className="an-field-err">{errors.subject}</span>}
             </div>
 
             {/* Name row */}
@@ -127,11 +272,25 @@ function ContactModal({ onClose }: { onClose: () => void }) {
               </div>
               <div className="an-field">
                 <label>First Name</label>
-                <input value={form.firstName} onChange={e => ch("firstName", e.target.value)} placeholder="First name" />
+                <input
+                  value={form.firstName}
+                  onChange={e => handleName("firstName", e.target.value)}
+                  onBlur={() => handleBlur("firstName")}
+                  placeholder="First name"
+                  className={errors.firstName ? "an-input--err" : ""}
+                />
+                {errors.firstName && <span className="an-field-err">{errors.firstName}</span>}
               </div>
               <div className="an-field">
                 <label>Last Name</label>
-                <input value={form.lastName}  onChange={e => ch("lastName",  e.target.value)} placeholder="Last name" />
+                <input
+                  value={form.lastName}
+                  onChange={e => handleName("lastName", e.target.value)}
+                  onBlur={() => handleBlur("lastName")}
+                  placeholder="Last name"
+                  className={errors.lastName ? "an-input--err" : ""}
+                />
+                {errors.lastName && <span className="an-field-err">{errors.lastName}</span>}
               </div>
             </div>
 
@@ -142,52 +301,98 @@ function ContactModal({ onClose }: { onClose: () => void }) {
                 <input value={form.company} onChange={e => ch("company", e.target.value)} placeholder="Company name" />
               </div>
               <div className="an-field">
-                <label>Phone</label>
-                <input type="tel" value={form.phone} onChange={e => ch("phone", e.target.value)} placeholder="+91 XXXXX XXXXX" />
+                <label>Mobile Number</label>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={e => handlePhone(e.target.value)}
+                  onBlur={() => handleBlur("phone")}
+                  placeholder="10-digit number"
+                  maxLength={10}
+                  className={errors.phone ? "an-input--err" : ""}
+                />
+                {errors.phone && <span className="an-field-err">{errors.phone}</span>}
               </div>
             </div>
 
-            {/* Email */}
+            {/* Email — REQUIRED */}
             <div className="an-field">
-              <label>Email *</label>
-              <input type="email" value={form.email} onChange={e => ch("email", e.target.value)} placeholder="your@email.com" />
+              <label>Email <span className="an-req">*</span></label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => { ch("email", e.target.value); setErrors(p => ({ ...p, email: "" })) }}
+                onBlur={() => handleBlur("email")}
+                placeholder="your@email.com"
+                className={errors.email ? "an-input--err" : ""}
+              />
+              {errors.email && <span className="an-field-err">{errors.email}</span>}
             </div>
 
-            {/* Message */}
+            {/* Message — REQUIRED */}
             <div className="an-field">
-              <label>Your Message *</label>
-              <textarea rows={4} value={form.message} onChange={e => ch("message", e.target.value)} placeholder="Describe your query…" />
+              <label>Your Message <span className="an-req">*</span></label>
+              <textarea
+                rows={4}
+                value={form.message}
+                onChange={e => { ch("message", e.target.value); setErrors(p => ({ ...p, message: "" })) }}
+                onBlur={() => handleBlur("message")}
+                placeholder="Describe your query…"
+                className={errors.message ? "an-input--err" : ""}
+              />
+              {errors.message && <span className="an-field-err">{errors.message}</span>}
             </div>
 
-            {/* Agree */}
+            {/* Agree — REQUIRED */}
             <div className="an-agree">
               <input
                 type="checkbox" id="an-agree"
                 checked={form.agree}
-                onChange={e => ch("agree", e.target.checked)}
+                onChange={e => { ch("agree", e.target.checked); setErrors(p => ({ ...p, agree: "" })) }}
               />
               <label htmlFor="an-agree">
                 I agree to the collection and processing of my personal data.
-                See our <a href="#">Data Protection Policy</a>.
+                See our{" "}
+                <button
+                  type="button"
+                  className="an-policy-btn"
+                  onClick={() => setShowPolicy(true)}
+                >
+                  Data Protection Policy
+                </button>
+                {" "}and{" "}
+                <a
+                  href="https://www.bgauss.com/wp-content/uploads/2025/09/Bgauss-Auto-Whistle-Blower-Policy-19.07.2025.pdf"
+                  target="_blank" rel="noreferrer" className="an-policy-btn"
+                >
+                  Whistle Blower Policy
+                </a>.
               </label>
             </div>
+            {errors.agree && <div className="an-field-err an-field-err--agree">{errors.agree}</div>}
 
             {/* Submit */}
-            <button className="an-submit" onClick={() => void handleSubmit()} disabled={sending}>
+            <button
+              className="an-submit"
+              onClick={() => void handleSubmit()}
+              disabled={sending}
+            >
               {sending ? "Sending…" : <><FaEnvelope style={{ marginRight: 8 }} /> SUBMIT</>}
             </button>
           </div>
         )}
       </div>
+
+      {showPolicy && <PrivacyModal onClose={() => setShowPolicy(false)} />}
     </>
   )
 }
 
 // ── AppNavbar Props ────────────────────────────────────────────
 interface AppNavbarProps {
-  cartCount?:    number          // badge number on cart icon
-  showOrders?:   boolean         // show "My Orders" button (checkout / order pages)
-  activeHome?:   boolean         // highlight home icon
+  cartCount?:   number
+  showOrders?:  boolean
+  activeHome?:  boolean
 }
 
 // ── AppNavbar ─────────────────────────────────────────────────
@@ -202,7 +407,6 @@ export default function AppNavbar({
   return (
     <>
       <nav className="an-navbar">
-        {/* Brand */}
         <div className="an-brand">
           <img src={logo} className="an-brand__logo" alt="BGAUSS Logo" />
           <div className="an-brand__text">
@@ -211,9 +415,7 @@ export default function AppNavbar({
           </div>
         </div>
 
-        {/* Actions */}
         <div className="an-actions">
-          {/* Home */}
           <button
             className={`an-btn${activeHome ? " an-btn--active" : ""}`}
             title="Home"
@@ -222,45 +424,30 @@ export default function AppNavbar({
             <FaHome />
           </button>
 
-          {/* Contact — opens modal */}
-          <button
-            className="an-btn"
-            title="Contact Us"
-            onClick={() => setShowContact(true)}
-          >
+          <button className="an-btn" title="Contact Us" onClick={() => setShowContact(true)}>
             <FaPhoneAlt />
           </button>
 
-          {/* My Orders (optional) */}
           {showOrders && (
-            <button
-              className="an-orders-btn"
-              title="My Orders"
-              onClick={() => navigate("/order_history")}
-            >
+            <button className="an-orders-btn" title="My Orders" onClick={() => navigate("/order_history")}>
               <FaListAlt style={{ fontSize: 14 }} />
               <span>My Orders</span>
             </button>
           )}
 
-          {/* Cart */}
           <button
-            className="an-btn"
-            title="Cart"
+            className="an-btn" title="Cart"
             onClick={() => navigate("/checkout")}
             style={{ position: "relative" }}
           >
             <FaShoppingCart />
-            {cartCount > 0 && (
-              <span className="an-cart-badge">{cartCount}</span>
-            )}
+            {cartCount > 0 && <span className="an-cart-badge">{cartCount}</span>}
           </button>
 
           <AccountMenu />
         </div>
       </nav>
 
-      {/* Contact modal */}
       {showContact && <ContactModal onClose={() => setShowContact(false)} />}
     </>
   )

@@ -671,8 +671,8 @@ const SearchParts = () => {
                   <th>Part No.</th>
                   <th>Part Name</th>
                   <th style={{ textAlign: "center" }}>Stock</th>
-                  <th style={{ textAlign: "right" }}>BDP</th>
-                  <th style={{ textAlign: "right" }}>MRP</th>
+                  <th style={{ textAlign: "center" }}>BDP</th>
+                  <th style={{ textAlign: "center" }}>MRP</th>
                   <th>Remarks</th>
                   <th style={{ textAlign: "center" }}>Qty</th>
                 </tr>

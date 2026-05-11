@@ -308,23 +308,31 @@
 .sp-table thead tr { background: linear-gradient(90deg, var(--brand-dark), var(--brand-mid)); }
 
 .sp-table th {
-  padding: 11px 8px;
+  padding: 9px 6px;
   color: #d0eaf5;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  text-align: left;
+  letter-spacing: 0.04em;
+ 
+  /* ✅ FIX 1: Allow text to wrap onto next line if it doesn't fit */
+  white-space: normal;
+  word-break: break-word;
+ 
+  /* ✅ FIX 2: Centre ALL header text by default */
+  text-align: center;
+ 
+  /* ✅ FIX 3: Vertical alignment — top so wrapped text aligns neatly */
+  vertical-align: middle;
+ 
   border-right: 1px solid rgba(255, 255, 255, 0.08);
-  /* ✅ FIX: sticky works relative to .sp-table-scroll (the scrollable div).
-     background must be fully opaque so content doesn't bleed through.
-     z-index: 10 ensures it sits above all td content.                    */
   position: sticky;
   top: 0;
   z-index: 10;
-  /* Explicit opaque background — same gradient as thead tr */
   background: #0b3c4d;
+ 
+  /* ✅ FIX 4: No overflow hidden — text wraps instead of being cut off */
+  overflow: visible;
 }
 .sp-table th:last-child { border-right: none; }
 
@@ -333,8 +341,8 @@
 .sp-table th:nth-child(3),
 .sp-table th:nth-child(6),
 .sp-table th:nth-child(10) { text-align: center; }
-.sp-table th:nth-child(7),
-.sp-table th:nth-child(8)  { text-align: right; }
+.sp-table th:nth-child(7) { text-align: center; }
+.sp-table th:nth-child(8)  { text-align: center; }
 
 .sp-table td {
   padding: 9px 8px; font-size: 12.5px;
@@ -357,7 +365,7 @@
 }
 .sp-td--part-num  { font-weight: 700; color: var(--text-primary); word-break: break-word; overflow-wrap: anywhere; }
 .sp-td--part-name { font-weight: 600; color: var(--text-primary); word-break: break-word; overflow-wrap: anywhere; }
-.sp-td--money     { text-align: right !important; font-weight: 700; color: #374151; padding: 9px 10px !important; }
+.sp-td--money     { text-align: center !important; font-weight: 700; color: #374151; padding: 9px 10px !important; }
 .sp-td--mrp       { color: #1e40af !important; font-weight: 800 !important; }
 
 .sp-table__empty {

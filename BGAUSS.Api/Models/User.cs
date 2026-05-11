@@ -30,6 +30,9 @@ public partial class User
 
     public DateTime? PasswordResetTokenExpiry { get; set; }
 
+    [StringLength(256)]
+    public string? Email { get; set; }
+
     [InverseProperty("User")]
     public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
 

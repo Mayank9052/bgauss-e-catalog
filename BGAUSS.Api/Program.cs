@@ -6,6 +6,7 @@ using BGAUSS.Api.Models;
 using BGAUSS.Api.Services;
 using OfficeOpenXml;
 using QuestPDF.Infrastructure;
+using BGAUSS.Api.Settings;   // ← NEW
 
 // SET LICENSES FIRST
 ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
@@ -52,6 +53,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddControllers();
 
 // ================= SWAGGER =================
 builder.Services.AddEndpointsApiExplorer();
@@ -95,6 +97,11 @@ builder.Services.AddCors(options =>
 
 // ================= SERVICES =================
 builder.Services.AddScoped<ISearchService, SearchService>();
+
+// ── NEW: SMTP email ──────────────────────────────────────────────────────
+builder.Services.Configure<SmtpSettings>(
+builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.AddSingleton<IEmailService, EmailService>();
 
 // ================= BUILD APP =================
 var app = builder.Build();

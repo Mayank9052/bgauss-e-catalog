@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,8 +47,6 @@ public partial class ApplicationDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.HasDefaultSchema("dbo");
-
         modelBuilder.Entity<Assembly>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Assembli__3214EC07BFD3C3CB");

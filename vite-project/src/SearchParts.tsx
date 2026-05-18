@@ -705,7 +705,17 @@ const SearchParts = () => {
                         <input type="checkbox" checked={selectedParts.includes(part.id)}
                           disabled={stock === 0} onChange={() => toggleSelect(part)} className="sp-checkbox" />
                       </td>
-                      <td data-label="Img No." style={{ textAlign: "center" }} className="sp-td--img-num">
+                      <td
+                        data-label="Img No."
+                        className="sp-td--img-num"
+                        style={{
+                          textAlign: "center",
+                          wordBreak: "break-word",
+                          whiteSpace: "normal",
+                          overflowWrap: "break-word",
+                          maxWidth: "120px"
+                        }}
+                      >
                         {imgNum || "—"}
                       </td>
                       <td className="sp-td--part-num" data-label="Part No.">{part.partNumber}</td>

@@ -1,10 +1,4 @@
 // SearchParts.tsx — BGAUSS Electronic Parts Catalog
-// Fixes vs previous:
-//  ✅ Zoom overlay moved to ROOT of sp-wrapper (not inside sp-image-frame)
-//     → close button now always visible, overlay not clipped by overflow:hidden
-//  ✅ Table thead sticky z-index raised + opaque background so it never bleeds
-//  ✅ All previous features retained (pagination, sort, Image No. col, drag-pan)
-
 import "./searchparts.css"
 import logo from "./assets/logo.jpg"
 import { useLocation, useNavigate } from "react-router-dom"
@@ -85,7 +79,7 @@ function ContactModal({ onClose }: ContactModalProps) {
     if (Object.values(errs).some(v => v)) return
     setServerErr(""); setSending(true)
     try {
-      await axios.post("/api/contact/send", {
+      await axios.post("/contact/send", {
         subject: form.subject, salutation: form.salutation,
         firstName: form.firstName, lastName: form.lastName,
         company: form.company, email: form.email.trim(),
@@ -201,6 +195,25 @@ const SearchParts = () => {
 
   const { modelId, assemblyId, assemblyName, assemblyImage, partPosition } = location.state || {}
 
+  // ── Read full context from partsPageState (written by assembly_catalogue
+  //    when navigating here) so breadcrumb back-nav carries variantId/colourId.
+  //    location.state only contains what assembly_catalogue passed, so we
+  //    also read sessionStorage as the authoritative full-context source.
+  const partsPageState = (() => {
+    try { return JSON.parse(sessionStorage.getItem("partsPageState") ?? "null") ?? {} }
+    catch { return {} }
+  })()
+
+  // ── assemblyPageState is what we pass back to assembly_catalogue via
+  //    breadcrumb. It MUST include variantId + colourId so the catalogue
+  //    re-fetches with the correct filters (not "show all").
+  //    Priority: location.state fields > partsPageState fields.
+  const assemblyPageState = {
+    modelId:   modelId   ?? partsPageState.modelId,
+    variantId: (location.state?.variantId) ?? partsPageState.variantId,
+    colourId:  (location.state?.colourId)  ?? partsPageState.colourId,
+  }
+
   const [allParts,      setAllParts]      = useState<PartWithPrice[]>([])
   const [visibleParts,  setVisibleParts]  = useState<PartWithPrice[]>([])
   const [selectedParts, setSelectedParts] = useState<number[]>([])
@@ -306,7 +319,7 @@ const SearchParts = () => {
 
   const fetchCart = useCallback(async () => {
     try {
-      const res = await axios.get("/api/cart/my-cart")
+      const res = await axios.get("/cart/my-cart")
       const cartItems: CartItemSummary[] = res.data?.items || []
       setCartCount(cartItems.length)
       setCartPartQtys(Object.fromEntries(cartItems.map(i => [i.partId, i.quantity])))
@@ -438,7 +451,7 @@ const SearchParts = () => {
     addingRef.current = true; setAddingToCart(true)
     try {
       for (const partId of selectedParts) {
-        await axios.post("/api/cart/add", { PartId: partId, Quantity: quantities[partId] || 1 })
+        await axios.post("/cart/add", { PartId: partId, Quantity: quantities[partId] || 1 })
       }
       await fetchCart(); navigate("/checkout")
     } catch (err: unknown) {
@@ -456,23 +469,16 @@ const SearchParts = () => {
     return ""
   }
 
-  const assemblyState = { searchType: undefined as string | undefined, vin: undefined as string | undefined, modelId }
-
   return (
     <div className="sp-wrapper">
       {showContact && <ContactModal onClose={() => setShowContact(false)} />}
 
-      {/* ✅ FIX 1: Zoom overlay at ROOT level — NOT inside sp-image-frame
-          This prevents overflow:hidden on sp-image-frame from clipping the
-          overlay and hiding the close button / controls bar               */}
+      {/* Zoom overlay at ROOT level */}
       {zoomOpen && (
         <div className="sp-zoom-overlay" onClick={closeZoom}>
-          {/* Close button — always visible top-right */}
           <button className="sp-zoom-close" onClick={e => { e.stopPropagation(); closeZoom() }}>
             <FaTimes />
           </button>
-
-          {/* Controls bar */}
           <div className="sp-zoom-controls" onClick={e => e.stopPropagation()}>
             <button className="sp-zoom-btn" onClick={zoomOut} disabled={zoomScale <= 1} title="Zoom out">
               <FaSearchMinus />
@@ -485,8 +491,6 @@ const SearchParts = () => {
               Reset
             </button>
           </div>
-
-          {/* Viewport — receives wheel + drag events */}
           <div
             ref={zoomViewportRef}
             className="sp-zoom-viewport"
@@ -531,9 +535,24 @@ const SearchParts = () => {
         </div>
       </nav>
 
+      {/*
+        ── FIX: assemblyPageState now carries variantId + colourId ──────────
+        Previously this was just { modelId }, which caused assembly_catalogue
+        to re-fetch without variantId and show ALL assemblies when the user
+        clicked "Assembly Catalogue" in the breadcrumb.
+
+        assemblyPageState is built at the top of this component from
+        location.state (set by assembly_catalogue's goToAssembly) merged with
+        partsPageState from sessionStorage, so variantId/colourId survive even
+        if location.state gets cleared during a browser back navigation.
+      */}
       <BreadcrumbPath
         current="parts"
-        stateMap={{ dashboard: null, vehicle_preview: null, assembly_catalogue: assemblyState }}
+        stateMap={{
+          dashboard:         null,
+          vehicle_preview:   null,
+          assembly_catalogue: assemblyPageState,
+        }}
       />
 
       <h2 className="sp-assembly-title">{assemblyName as string}</h2>
@@ -544,8 +563,6 @@ const SearchParts = () => {
         <aside className="sp-image-panel">
           {assemblyImage ? (
             <>
-              {/* ✅ sp-image-frame: overflow:hidden is fine now because the
-                  zoom overlay is rendered at root level, not inside here  */}
               <div className="sp-image-frame">
                 <img
                   src={assemblyImage as string}

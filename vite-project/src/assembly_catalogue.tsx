@@ -1,5 +1,5 @@
 // assembly_catalogue.tsx — fetches assemblies filtered by modelId + variantId
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./assembly_catalogue.css";
 import AppNavbar from "./components/AppNavbar";
@@ -18,6 +18,36 @@ interface VehicleSearchState {
 }
 interface CartCountResponse { items: { id: number }[] }
 
+const SESSION_KEY = "assemblyCatalogueState";
+
+// ── Resolve the best available state:
+//    1. location.state (fresh navigation)
+//    2. sessionStorage fallback (back button / stale state)
+//    Both are checked so we never fetch with a missing variantId.
+const resolveSearchState = (locationState: unknown): VehicleSearchState => {
+  const ls = locationState as VehicleSearchState | null | undefined;
+
+  // Consider location.state valid only when it has a modelId
+  if (ls && (ls.modelId !== undefined && ls.modelId !== null && ls.modelId !== "")) {
+    return ls;
+  }
+
+  // Fallback to sessionStorage
+  try {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as VehicleSearchState;
+      if (parsed.modelId !== undefined && parsed.modelId !== null && parsed.modelId !== "") {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+
+  return ls ?? {};
+};
+
 const resolveAssemblyImage = (imagePath?: string | null): string => {
   if (!imagePath) return "";
   if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) return imagePath;
@@ -30,9 +60,24 @@ const AssemblyCatalogue = () => {
   const location = useLocation();
   const navigate  = useNavigate();
 
-  const searchState = location.state as VehicleSearchState;
+  // ── Derive searchState ONCE per render from both sources ──────────────
+  // Using a ref so the derived value is stable even if location.state
+  // temporarily becomes null during back-navigation rehydration.
+  const searchState = resolveSearchState(location.state);
+
   const modelId   = Number(searchState?.modelId);
   const variantId = searchState?.variantId ? Number(searchState.variantId) : undefined;
+
+  // ── Keep sessionStorage in sync with the latest valid state ──────────
+  // Only write when modelId is present so we never overwrite a good value
+  // with an empty/stale one.
+  const persistedRef = useRef(false);
+  useEffect(() => {
+    if (searchState.modelId !== undefined && searchState.modelId !== null && searchState.modelId !== "") {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(searchState));
+      persistedRef.current = true;
+    }
+  }, [searchState]);
 
   const [assemblies,        setAssemblies]        = useState<Assembly[]>([]);
   const [visibleAssemblies, setVisibleAssemblies] = useState<Assembly[]>([]);
@@ -45,13 +90,6 @@ const AssemblyCatalogue = () => {
   const [scale,     setScale]     = useState(1);
   const [origin,    setOrigin]    = useState("center center");
 
-  // ── Persist state for breadcrumb back-nav ──
-  useEffect(() => {
-    if (searchState && Object.keys(searchState).length > 0) {
-      sessionStorage.setItem("assemblyCatalogueState", JSON.stringify(searchState));
-    }
-  }, [searchState]);
-
   const fetchCartCount = useCallback(async () => {
     try {
       const res = await axios.get<CartCountResponse>("/cart/my-cart");
@@ -60,27 +98,43 @@ const AssemblyCatalogue = () => {
   }, []);
 
   useEffect(() => {
+    // ── Guard: don't fetch at all if modelId is invalid ──────────────
+    // This is the key protection — if location.state hasn't fully
+    // rehydrated yet (modelId is NaN), we skip the fetch entirely
+    // instead of sending an unfiltered request to the backend.
+    if (!Number.isFinite(modelId) || modelId === 0) {
+      setAssemblies([]);
+      setVisibleAssemblies([]);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
     const fetchAssemblies = async () => {
-      if (!Number.isFinite(modelId)) {
-        setAssemblies([]); setVisibleAssemblies([]); setLoading(false); return;
-      }
       setLoading(true);
       try {
-        // ── Pass variantId to backend for variant-scoped filtering ──
-        // The API returns: assemblies matching variantId + assemblies with no variantId (fallback)
         const variantParam = variantId != null ? `&variantId=${variantId}` : "";
         const res = await fetch(`/api/assemblies?modelId=${modelId}${variantParam}`);
         if (!res.ok) throw new Error("Failed to fetch");
         const data: Assembly[] = await res.json();
-        setAssemblies(data); setVisibleAssemblies(data);
+        if (cancelled) return;
+        setAssemblies(data);
+        setVisibleAssemblies(data);
       } catch {
-        setAssemblies([]); setVisibleAssemblies([]);
+        if (!cancelled) {
+          setAssemblies([]);
+          setVisibleAssemblies([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
+
     void fetchAssemblies();
     void fetchCartCount();
+
+    return () => { cancelled = true; };
   }, [modelId, variantId, fetchCartCount]);
 
   useEffect(() => {
@@ -124,6 +178,8 @@ const AssemblyCatalogue = () => {
   const goToAssembly = (assembly: Assembly) => {
     const partsState = {
       modelId:       searchState?.modelId,
+      variantId:     searchState?.variantId,   // ← carry variantId forward too
+      colourId:      searchState?.colourId,    // ← carry colourId forward
       assemblyId:    assembly.id,
       assemblyName:  assembly.assemblyName,
       assemblyImage: resolveAssemblyImage(assembly.imagePath),

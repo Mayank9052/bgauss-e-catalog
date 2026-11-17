@@ -5,7 +5,7 @@ namespace BGAUSS.Api.Services
 {
     public class SearchService : ISearchService
     {
-        public async Task<List<T>> SearchAsync<T>(DbSet<T> dbSet, string searchTerm, params string[] properties) where T : class
+        public async Task<List<T>> SearchAsync<T>(IQueryable<T> dbSet, string searchTerm, params string[] properties) where T : class
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
                 return await dbSet.ToListAsync();
@@ -20,7 +20,7 @@ namespace BGAUSS.Api.Services
                 var tempWord = word.Trim();
 
                 // Build dynamic OR conditions across all columns
-                IQueryable<T> tempQuery = null;
+                IQueryable<T>? tempQuery = null;
 
                 foreach (var propName in properties)
                 {

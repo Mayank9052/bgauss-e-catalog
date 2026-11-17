@@ -661,3 +661,117 @@
   .sp-page-btn   { min-width: 30px; height: 30px; font-size: 12px; }
   .sp-page-info  { width: 100%; text-align: center; margin: 4px 0 0; }
 }
+/* ================================================================
+   CATALOGUE ENHANCEMENTS (17.11.2026)
+   drawing viewer, part images, part details drawer, PDF download
+   ================================================================ */
+
+/* title row: assembly name + vehicle chips + Download PDF */
+.sp-title-row {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  width: min(94%, 1480px); margin: 18px auto 14px;
+}
+.sp-title-row .sp-assembly-title { margin: 0 0 6px; }
+.sp-vehicle-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.sp-vchip {
+  font-size: 12px; background: var(--brand-light); color: var(--text-primary);
+  border-radius: 999px; padding: 3px 10px;
+}
+.sp-vchip b { font-weight: 700; color: var(--text-muted); margin-right: 4px; text-transform: uppercase; font-size: 10.5px; letter-spacing: .03em; }
+
+/* search with clear button */
+.sp-search-wrap { position: relative; flex: 1 1 280px; min-width: 200px; display: flex; }
+.sp-search-wrap .sp-search { flex: 1; padding-right: 36px; }
+.sp-search-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 24px; height: 24px; border-radius: 50%; border: none; background: #eef3f6; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer;
+}
+.sp-search-clear:hover { background: var(--brand-hover); color: var(--text-primary); }
+
+/* table additions */
+.sp-td--pic { padding: 4px !important; }
+.sp-imgno-btn {
+  border: 1px solid #c9d8e3; background: #fff; color: var(--brand-mid);
+  border-radius: 6px; padding: 2px 8px; font-weight: 800; font-size: 12.5px; cursor: pointer;
+  transition: background var(--tr), border-color var(--tr);
+}
+.sp-imgno-btn:hover { background: var(--brand-light); border-color: var(--brand-mid); }
+.sp-colour-tag {
+  display: inline-block; margin-left: 6px; font-size: 10.5px; font-weight: 600;
+  background: #f3e8ff; color: #6b21a8; border-radius: 999px; padding: 1px 7px; vertical-align: 1px;
+}
+.sp-skeleton-row td { padding: 12px 8px !important; }
+.sp-skel {
+  display: block; height: 12px; border-radius: 6px;
+  background: linear-gradient(90deg, #eef2f5 25%, #e2e8ee 37%, #eef2f5 63%);
+  background-size: 400% 100%; animation: sp-shimmer 1.3s ease infinite;
+}
+@keyframes sp-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+.sp-state { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 10px; }
+.sp-state p { margin: 0; color: var(--text-muted); font-size: 13.5px; text-align: center; }
+.sp-state__btn {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid #c9d8e3; background: #fff;
+  color: var(--brand-mid); padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 12.5px; cursor: pointer;
+}
+.sp-state__btn:hover { background: var(--brand-light); }
+
+/* transient notice (replaces blocking alerts) */
+.sp-notice {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 3000;
+  display: flex; align-items: center; gap: 8px; max-width: 92vw;
+  background: #0b3c4d; color: #fff; padding: 10px 18px; border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25); font-size: 13.5px; font-weight: 600;
+  animation: sp-up .18s ease-out;
+}
+@keyframes sp-up { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* part details drawer */
+.sp-drawer-bg { position: fixed; inset: 0; background: rgba(11,60,77,.35); z-index: 2500; }
+.sp-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 100vw); z-index: 2600;
+  background: #fff; box-shadow: -12px 0 40px rgba(0,0,0,.2);
+  display: flex; flex-direction: column; animation: sp-slide .2s ease-out;
+}
+@keyframes sp-slide { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sp-drawer__head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border-light); }
+.sp-drawer__back {
+  display: inline-flex; align-items: center; gap: 6px; border: none; background: var(--brand-light);
+  color: var(--brand-dark); font-weight: 700; font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer;
+}
+.sp-drawer__back:hover { background: var(--brand-hover); }
+.sp-drawer__x { border: none; background: none; font-size: 18px; color: var(--text-muted); cursor: pointer; }
+.sp-drawer__title { margin: 14px 16px 6px; font-size: 17px; display: flex; align-items: center; gap: 8px; color: var(--text-primary); }
+.sp-drawer__title small { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.sp-drawer__no { background: #dc2626; color: #fff; border-radius: 8px; padding: 1px 10px; }
+.sp-drawer__empty { margin: 12px 16px; padding: 14px; border-radius: 10px; background: #f8fafc; color: var(--text-muted); font-size: 13px; }
+.sp-drawer__list { flex: 1; overflow-y: auto; padding: 6px 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.sp-pd {
+  display: grid; grid-template-columns: 126px 1fr; gap: 14px; padding: 12px;
+  border: 1px solid var(--border); border-radius: 12px; background: #fff;
+}
+.sp-pd--sel { border-color: #93c5fd; background: #f8fbff; }
+.sp-pd__img { display: flex; align-items: flex-start; justify-content: center; }
+.sp-pd__pn { font-family: Consolas, "Courier New", monospace; font-weight: 800; color: var(--brand-dark); font-size: 14px; }
+.sp-pd__name { font-weight: 700; font-size: 14px; margin: 2px 0 4px; }
+.sp-pd__desc { margin: 0 0 6px; font-size: 12.5px; color: var(--text-muted); }
+.sp-pd__grid { display: grid; grid-template-columns: 74px 1fr; gap: 4px 8px; margin: 6px 0 10px; font-size: 12.5px; }
+.sp-pd__grid dt { color: var(--text-subtle); font-weight: 600; }
+.sp-pd__grid dd { margin: 0; color: var(--text-primary); }
+.sp-pd__mrp { font-weight: 800; color: var(--accent-blue); }
+.sp-pd__btn {
+  display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: 8px;
+  background: var(--accent-blue); color: #fff; font-weight: 700; font-size: 12.5px; padding: 7px 12px; cursor: pointer;
+}
+.sp-pd__btn--sel { background: #16a34a; }
+.sp-pd__btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .sp-title-row { width: calc(100% - 20px); margin: 14px auto 10px; }
+  .sp-title-row .cd-btn { width: 100%; justify-content: center; }
+  .sp-pd { grid-template-columns: 1fr; }
+  .sp-pd__img { justify-content: flex-start; }
+}
+@media (max-width: 640px) {
+  .sp-search-wrap { flex: 0 0 auto; width: 100%; }
+}

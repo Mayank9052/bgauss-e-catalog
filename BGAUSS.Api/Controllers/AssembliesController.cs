@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using BGAUSS.Api.DTOs;
 using OfficeOpenXml;
+using BGAUSS.Api.Infrastructure;
 
 namespace BGAUSS.Api.Controllers
 {
@@ -23,12 +24,18 @@ namespace BGAUSS.Api.Controllers
         // GET /api/assemblies?modelId=1
         // GET /api/assemblies?modelId=1&variantId=2
         [HttpGet]
-        public async Task<IActionResult> GetAll(int? modelId, int? variantId)
+        public async Task<IActionResult> GetAll(int? modelId, int? variantId, bool includeInactive = false)
         {
             var query = _context.Assemblies
                 .Include(a => a.Model)
                 .Include(a => a.Variant)
                 .AsQueryable();
+
+            // Customers: only active assemblies of an active model / active (or no) variant
+            if (!User.CanSeeInactive(includeInactive))
+                query = query.Where(a => a.IsActive
+                    && (a.Model == null || a.Model.IsActive)
+                    && (a.Variant == null || a.Variant.IsActive));
 
             if (modelId.HasValue)
                 query = query.Where(a => a.ModelId == modelId.Value);
@@ -51,6 +58,8 @@ namespace BGAUSS.Api.Controllers
                     VariantId    = a.VariantId,
                     ModelName    = a.Model != null   ? a.Model.ModelName     : null,
                     VariantName  = a.Variant != null ? a.Variant.VariantName : null,
+                    IsActive     = a.IsActive,
+                    HotspotCount = a.Hotspots.Count,
                 })
                 .ToListAsync();
 
@@ -74,6 +83,8 @@ namespace BGAUSS.Api.Controllers
                     VariantId    = a.VariantId,
                     ModelName    = a.Model != null   ? a.Model.ModelName     : null,
                     VariantName  = a.Variant != null ? a.Variant.VariantName : null,
+                    IsActive     = a.IsActive,
+                    HotspotCount = a.Hotspots.Count,
                 })
                 .FirstOrDefaultAsync();
 
@@ -88,7 +99,7 @@ namespace BGAUSS.Api.Controllers
         public async Task<IActionResult> GetImagesByModelId(int modelId, int? variantId)
         {
             var query = _context.Assemblies
-                .Where(a => a.ModelId == modelId && !string.IsNullOrWhiteSpace(a.ImagePath));
+                .Where(a => a.ModelId == modelId && a.IsActive && !string.IsNullOrWhiteSpace(a.ImagePath));
 
             if (variantId.HasValue)
                 query = query.Where(a => a.VariantId == variantId.Value || a.VariantId == null);
@@ -112,7 +123,7 @@ namespace BGAUSS.Api.Controllers
                 if (System.IO.File.Exists(filePath))
                 {
                     var relativeUrl = cleanPath.Replace("\\", "/").TrimStart('/');
-                    var url = $"{Request.Scheme}://{Request.Host}/{Uri.EscapeUriString(relativeUrl)}";
+                    var url = $"{Request.Scheme}://{Request.Host}/{string.Join("/", relativeUrl.Split('/').Select(Uri.EscapeDataString))}";
                     imageUrls.Add(url);
                 }
             }
@@ -129,6 +140,9 @@ namespace BGAUSS.Api.Controllers
         {
             if (string.IsNullOrWhiteSpace(dto.AssemblyName))
                 return BadRequest("Assembly Name is required.");
+
+            var dependencyError = await ValidateDependencies(dto.ModelId, dto.VariantId);
+            if (dependencyError != null) return BadRequest(dependencyError);
 
             var assembly = new Assembly
             {
@@ -152,6 +166,12 @@ namespace BGAUSS.Api.Controllers
             var assembly = await _context.Assemblies.FindAsync(id);
             if (assembly == null) return NotFound();
 
+            if (string.IsNullOrWhiteSpace(dto.AssemblyName))
+                return BadRequest("Assembly Name is required.");
+
+            var dependencyError = await ValidateDependencies(dto.ModelId, dto.VariantId);
+            if (dependencyError != null) return BadRequest(dependencyError);
+
             assembly.AssemblyName = dto.AssemblyName;
             assembly.ImagePath    = dto.ImagePath;
             assembly.ModelId      = dto.ModelId;
@@ -171,6 +191,102 @@ namespace BGAUSS.Api.Controllers
             _context.Assemblies.Remove(assembly);
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        // ================= ACTIVATE / DEACTIVATE =================
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> SetStatus(int id, [FromBody] StatusUpdateDto dto)
+        {
+            if (!User.IsAdmin()) return Forbid();
+
+            var assembly = await _context.Assemblies.FindAsync(id);
+            if (assembly == null) return NotFound();
+
+            assembly.IsActive = dto.IsActive;
+            await _context.SaveChangesAsync();
+            return Ok(new { id = assembly.Id, isActive = assembly.IsActive });
+        }
+
+        // ================= DRAWING HOTSPOTS (clickable part numbers) =================
+        // GET /api/assemblies/{id}/hotspots
+        [HttpGet("{id}/hotspots")]
+        public async Task<IActionResult> GetHotspots(int id)
+        {
+            var hotspots = await _context.AssemblyHotspots
+                .Where(h => h.AssemblyId == id)
+                .OrderBy(h => h.PageNumber).ThenBy(h => h.Label)
+                .Select(h => new AssemblyHotspotDto
+                {
+                    Id         = h.Id,
+                    Label      = h.Label,
+                    PageNumber = h.PageNumber,
+                    X          = h.X,
+                    Y          = h.Y,
+                    Width      = h.Width,
+                    Height     = h.Height,
+                })
+                .ToListAsync();
+
+            return Ok(hotspots);
+        }
+
+        // PUT /api/assemblies/{id}/hotspots — replaces the full mapping for the drawing
+        [HttpPut("{id}/hotspots")]
+        public async Task<IActionResult> SaveHotspots(int id, [FromBody] List<AssemblyHotspotDto> hotspots)
+        {
+            if (!User.IsAdmin()) return Forbid();
+
+            if (!await _context.Assemblies.AnyAsync(a => a.Id == id))
+                return NotFound("Assembly not found");
+
+            hotspots ??= new List<AssemblyHotspotDto>();
+
+            var invalid = hotspots.FirstOrDefault(h =>
+                string.IsNullOrWhiteSpace(h.Label) || h.Label.Trim().Length > 50 ||
+                h.PageNumber < 1 ||
+                !InUnitRange(h.X) || !InUnitRange(h.Y) ||
+                h.Width <= 0 || h.Width > 1 || h.Height <= 0 || h.Height > 1);
+
+            if (invalid != null)
+                return BadRequest($"Invalid hotspot '{invalid.Label}'. Label is required and coordinates must be between 0 and 1.");
+
+            var existing = await _context.AssemblyHotspots.Where(h => h.AssemblyId == id).ToListAsync();
+            _context.AssemblyHotspots.RemoveRange(existing);
+
+            _context.AssemblyHotspots.AddRange(hotspots.Select(h => new AssemblyHotspot
+            {
+                AssemblyId = id,
+                Label      = h.Label.Trim(),
+                PageNumber = h.PageNumber,
+                X          = h.X,
+                Y          = h.Y,
+                Width      = h.Width,
+                Height     = h.Height,
+            }));
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"{hotspots.Count} hotspot(s) saved", count = hotspots.Count });
+        }
+
+        private static bool InUnitRange(double v) => !double.IsNaN(v) && v >= 0 && v <= 1;
+
+        // ================= DEPENDENCY RULES =================
+        // An assembly's (optional) variant must belong to the assembly's model.
+        private async Task<string?> ValidateDependencies(int modelId, int? variantId)
+        {
+            if (modelId <= 0 || !await _context.VehicleModels.AnyAsync(m => m.Id == modelId))
+                return "A valid model is required.";
+
+            if (variantId.HasValue)
+            {
+                var variant = await _context.VehicleVariants.FindAsync(variantId.Value);
+                if (variant == null)
+                    return "Selected variant does not exist.";
+                if (variant.ModelId != modelId)
+                    return "Selected variant does not belong to the selected model.";
+            }
+
+            return null;
         }
 
         // ================= DOWNLOAD BLANK EXCEL TEMPLATE =================

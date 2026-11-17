@@ -23,3 +23,5 @@ BGAUSS.Api/obj/
 # OS
 .DS_Store
 Thumbs.db
+# Local backups
+_backup_*/

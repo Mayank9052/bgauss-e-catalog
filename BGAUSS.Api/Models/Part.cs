@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 
@@ -35,6 +35,9 @@ public partial class Part
     public int? ColourId { get; set; }
 
     public decimal? TorqueNm { get; set; }
+
+    /// <summary>Catalogue visibility. Inactive records stay in the database but are hidden from the customer catalogue.</summary>
+    public bool IsActive { get; set; } = true;
 
     public virtual Assembly? Assembly { get; set; }
 

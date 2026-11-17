@@ -26,6 +26,7 @@ const Dashboard = () => {
   const [variants, setVariants] = useState<VehicleVariant[]>([]);
   const [colours,  setColours]  = useState<VehicleColour[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [cartCount, setCartCount] = useState(0);
 
   // Fetch cart count for badge
@@ -40,7 +41,11 @@ const Dashboard = () => {
     const hasVehicleMapping = colours.some(c => c.modelId != null && c.variantId != null);
     if (!hasVehicleMapping) return colours;
     if (!model || !variant) return [];
-    return colours.filter(c => c.modelId === Number(model) && c.variantId === Number(variant));
+    // Colour dependency: a colour belongs to a model and (optionally) a variant.
+    // No variant on the colour = offered on every variant of that model.
+    return colours.filter(c =>
+      (c.modelId == null || c.modelId === Number(model)) &&
+      (c.variantId == null || c.variantId === Number(variant)));
   }, [colours, model, variant]);
 
   useEffect(() => {
@@ -54,6 +59,7 @@ const Dashboard = () => {
         setColours(coloursData);
       } catch (err) {
         console.error("Failed to fetch data:", err);
+        setLoadError("Vehicle options could not be loaded. Please refresh the page.");
       } finally {
         setLoading(false);
       }
@@ -132,7 +138,7 @@ const Dashboard = () => {
         {/* Model / Colour search card */}
         <div className="modern-card">
           <h3>Search by Model &amp; Colour</h3>
-          {loading ? <p>Loading options...</p> : (
+          {loading ? <p>Loading options...</p> : loadError ? <p className="error-text">{loadError}</p> : (
             <>
               <div className="floating-input">
                 <TableSelect
@@ -186,4 +192,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Dashboard;

@@ -83,6 +83,9 @@ namespace BGAUSS.Api.Controllers
             if (part == null)
                 return NotFound("Part not found");
 
+            if (!part.IsActive)
+                return BadRequest("This part is no longer available in the catalogue");
+
             int stockQty = ToInt(part.StockQuantity);
 
             if (stockQty < request.Quantity)

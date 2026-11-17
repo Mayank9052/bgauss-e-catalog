@@ -23,7 +23,8 @@ public class ModelPartsController : ControllerBase
             .Where(mp =>
                 mp.ModelId == modelId &&
                 mp.VariantId == variantId &&
-                (colourId == null || mp.ColourId == colourId))
+                (colourId == null || mp.ColourId == colourId) &&
+                mp.Part != null && mp.Part.IsActive)
             .Select(mp => mp.Part)
             .ToListAsync();
 

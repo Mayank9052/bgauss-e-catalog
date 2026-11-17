@@ -4,6 +4,7 @@ namespace BGAUSS.Api.Services
 {
     public interface ISearchService
     {
-        Task<List<T>> SearchAsync<T>(DbSet<T> dbSet, string searchTerm, params string[] properties) where T : class;
+        // Accepts any IQueryable (a DbSet or a pre-filtered query, e.g. active records only)
+        Task<List<T>> SearchAsync<T>(IQueryable<T> source, string searchTerm, params string[] properties) where T : class;
     }
 }

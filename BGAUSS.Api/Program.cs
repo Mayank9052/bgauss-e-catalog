@@ -7,6 +7,7 @@ using BGAUSS.Api.Services;
 using OfficeOpenXml;
 using QuestPDF.Infrastructure;
 using BGAUSS.Api.Settings;   // ← NEW
+using BGAUSS.Api.Infrastructure;
 
 // SET LICENSES FIRST
 ExcelPackage.License.SetNonCommercialOrganization("BGAUSS");
@@ -105,6 +106,11 @@ builder.Services.AddSingleton<IEmailService, EmailService>();
 
 // ================= BUILD APP =================
 var app = builder.Build();
+
+// ================= SCHEMA (idempotent, additive) =================
+// Adds IsActive columns + AssemblyHotspots table if they are missing.
+// See Database/2026-11-17_CatalogueEnhancements.sql
+await SchemaUpdater.ApplyAsync(app);
 
 // ================= MIDDLEWARE ORDER =================
 // CORS must be first

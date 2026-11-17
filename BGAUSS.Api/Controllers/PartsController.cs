@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using BGAUSS.Api.DTOs;
 using OfficeOpenXml;
+using BGAUSS.Api.Infrastructure;
 
 namespace BGAUSS.Api.Controllers;
 
@@ -18,10 +19,15 @@ public class PartsController : ControllerBase
     }
 
     // ================= GET ALL =================
+    // Admin Modules passes ?includeInactive=true; everyone else gets ACTIVE parts only.
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(bool includeInactive = false)
     {
-        var parts = await _context.Parts
+        var source = _context.Parts.AsQueryable();
+        if (!User.CanSeeInactive(includeInactive))
+            source = source.Where(p => p.IsActive);
+
+        var parts = await source
         .Include(p => p.PartColours)
         .Select(p => new
             {
@@ -40,7 +46,9 @@ public class PartsController : ControllerBase
             variantId      = p.VariantId,
             torqueNm       = p.TorqueNm ?? 0,
             imageNumber    = p.ImageNumber ?? "",
-            colourIds      = string.Join(",", p.PartColours.Select(pc => pc.ColourId))
+            colourIds      = string.Join(",", p.PartColours.Select(pc => pc.ColourId)),
+            isActive       = p.IsActive,
+            partImagePath  = p.PartImages.OrderBy(i => i.Id).Select(i => i.ImagePath).FirstOrDefault() ?? ""
             })
             .ToListAsync();
 
@@ -48,11 +56,26 @@ public class PartsController : ControllerBase
     }
 
     // ================= GET PARTS BY MODEL + ASSEMBLY =================
+    // Optional variantId / colourId narrow the list to the selected vehicle
+    // configuration: parts with no variant/colour are common to all.
+    // Only ACTIVE parts of an ACTIVE assembly are returned to the catalogue.
     [HttpGet("by-assembly")]
-    public async Task<IActionResult> GetPartsByAssembly(int modelId, int assemblyId)
+    public async Task<IActionResult> GetPartsByAssembly(int modelId, int assemblyId, int? variantId, int? colourId)
     {
-        var parts = await _context.Parts
+        var query = _context.Parts
             .Where(p => p.ModelId == modelId && p.AssemblyId == assemblyId)
+            .Where(p => p.IsActive && (p.Assembly == null || p.Assembly.IsActive));
+
+        if (variantId.HasValue)
+            query = query.Where(p => p.VariantId == null || p.VariantId == variantId.Value);
+
+        if (colourId.HasValue)
+            query = query.Where(p =>
+                (p.ColourId == null && !p.PartColours.Any()) ||
+                p.ColourId == colourId.Value ||
+                p.PartColours.Any(pc => pc.ColourId == colourId.Value));
+
+        var parts = await query
             .Select(p => new
             {
                 id            = p.Id,
@@ -72,6 +95,13 @@ public class PartsController : ControllerBase
                 imageNumber   = p.ImageNumber   ?? "",
                 imagePath     = "",
                 categoryName  = "",
+                isActive      = p.IsActive,
+                partImagePath = p.PartImages.OrderBy(i => i.Id).Select(i => i.ImagePath).FirstOrDefault() ?? "",
+                colourIds     = string.Join(",", p.PartColours.Select(pc => pc.ColourId)),
+                colourNames   = string.Join(", ", p.PartColours.Select(pc => pc.Colour.ColourName)),
+                modelName     = _context.VehicleModels.Where(m => m.Id == p.ModelId).Select(m => m.ModelName).FirstOrDefault() ?? "",
+                variantName   = p.Variant != null ? p.Variant.VariantName : "",
+                assemblyName  = p.Assembly != null ? p.Assembly.AssemblyName : "",
             })
             .ToListAsync();
 
@@ -85,20 +115,54 @@ public class PartsController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
+        if (string.IsNullOrWhiteSpace(part.PartNumber))
+            return BadRequest("Part number is required.");
+
+        var colourIds = ParseColourIds(part.ColourIds) ?? (part.ColourId.HasValue ? new List<int> { part.ColourId.Value } : new List<int>());
+
+        var dependencyError = await ValidateDependencies(part.ModelId, part.VariantId, part.AssemblyId, colourIds);
+        if (dependencyError != null) return BadRequest(dependencyError);
+
+        part.Remarks ??= "";
+        part.IsActive = true;
+        part.ColourId = colourIds.Count > 0 ? colourIds[0] : null;
+        foreach (var cid in colourIds)
+            part.PartColours.Add(new PartColour { ColourId = cid });
+
         _context.Parts.Add(part);
         await _context.SaveChangesAsync();
 
-        return Ok(part);
+        return Ok(new { id = part.Id, message = "Part created" });
     }
 
     // ================= UPDATE =================
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] Part updated)
     {
-        var part = await _context.Parts.FindAsync(id);
+        var part = await _context.Parts
+            .Include(p => p.PartColours)
+            .FirstOrDefaultAsync(p => p.Id == id);
 
         if (part == null)
             return NotFound();
+
+        if (string.IsNullOrWhiteSpace(updated.PartNumber))
+            return BadRequest("Part number is required.");
+
+        // colourIds is optional: when omitted the existing colour links are kept
+        var colourIds = ParseColourIds(updated.ColourIds);
+
+        var dependencyError = await ValidateDependencies(
+            updated.ModelId, updated.VariantId, updated.AssemblyId,
+            colourIds ?? part.PartColours.Select(pc => pc.ColourId).ToList());
+        if (dependencyError != null) return BadRequest(dependencyError);
+
+        if (colourIds != null)
+        {
+            _context.PartColours.RemoveRange(part.PartColours.Where(pc => !colourIds.Contains(pc.ColourId)).ToList());
+            foreach (var cid in colourIds.Where(c => part.PartColours.All(pc => pc.ColourId != c)))
+                part.PartColours.Add(new PartColour { ColourId = cid });
+        }
 
         part.PartNumber = updated.PartNumber;
         part.PartName = updated.PartName;
@@ -115,14 +179,16 @@ public class PartsController : ControllerBase
         part.AssemblyId = updated.AssemblyId;
         part.ModelId = updated.ModelId;
         part.VariantId = updated.VariantId;
-        part.ColourId = updated.ColourId;
+        part.ColourId = colourIds != null
+            ? (colourIds.Count > 0 ? colourIds[0] : null)
+            : updated.ColourId ?? part.ColourId;
 
         part.TorqueNm = updated.TorqueNm;
         part.ImageNumber = updated.ImageNumber;
 
         await _context.SaveChangesAsync();
 
-        return Ok(part);
+        return Ok(new { id = part.Id, message = "Part updated" });
     }
 
     // ====== Update remarks separately without affecting other fields =====/
@@ -147,6 +213,104 @@ public class PartsController : ControllerBase
         });
     }
 
+    // ================= ACTIVATE / DEACTIVATE =================
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> SetStatus(int id, [FromBody] StatusUpdateDto dto)
+    {
+        if (!User.IsAdmin()) return Forbid();
+
+        var part = await _context.Parts.FindAsync(id);
+        if (part == null) return NotFound();
+
+        part.IsActive = dto.IsActive;
+        await _context.SaveChangesAsync();
+        return Ok(new { id = part.Id, isActive = part.IsActive });
+    }
+
+    // ================= INDIVIDUAL PART IMAGE =================
+    // Stored in the existing PartImages table (one primary image per part).
+    // PUT /api/parts/{id}/image   { "imagePath": "images/parts/xxx.jpg" }  — empty path removes it
+    [HttpPut("{id}/image")]
+    public async Task<IActionResult> SetImage(int id, [FromBody] PartImageUpdateDto dto)
+    {
+        if (!User.IsAdmin()) return Forbid();
+
+        var part = await _context.Parts
+            .Include(p => p.PartImages)
+            .FirstOrDefaultAsync(p => p.Id == id);
+        if (part == null) return NotFound();
+
+        var path = (dto?.ImagePath ?? "").Replace("\\", "/").Trim();
+        var primary = part.PartImages.OrderBy(i => i.Id).FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            if (primary != null) _context.PartImages.Remove(primary);
+        }
+        else if (primary == null)
+        {
+            part.PartImages.Add(new PartImage { ImagePath = path });
+        }
+        else
+        {
+            primary.ImagePath = path;
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new { id = part.Id, partImagePath = path });
+    }
+
+    // ================= DEPENDENCY RULES =================
+    // Model → Variant → Colour → Assembly → Part must form a valid combination.
+    private async Task<string?> ValidateDependencies(int? modelId, int? variantId, int? assemblyId, IReadOnlyCollection<int> colourIds)
+    {
+        if (modelId.HasValue && !await _context.VehicleModels.AnyAsync(m => m.Id == modelId.Value))
+            return "Selected model does not exist.";
+
+        if (variantId.HasValue)
+        {
+            var variant = await _context.VehicleVariants.FindAsync(variantId.Value);
+            if (variant == null) return "Selected variant does not exist.";
+            if (modelId.HasValue && variant.ModelId != modelId)
+                return "Selected variant does not belong to the selected model.";
+        }
+
+        if (assemblyId.HasValue)
+        {
+            var assembly = await _context.Assemblies.FindAsync(assemblyId.Value);
+            if (assembly == null) return "Selected assembly does not exist.";
+            if (modelId.HasValue && assembly.ModelId != modelId)
+                return "Selected assembly does not belong to the selected model.";
+            if (variantId.HasValue && assembly.VariantId.HasValue && assembly.VariantId != variantId)
+                return "Selected assembly belongs to a different variant.";
+        }
+
+        if (colourIds.Count > 0)
+        {
+            var colours = await _context.VehicleColours.Where(c => colourIds.Contains(c.Id)).ToListAsync();
+            if (colours.Count != colourIds.Distinct().Count())
+                return "One or more selected colours do not exist.";
+
+            var bad = colours.FirstOrDefault(c =>
+                (modelId.HasValue && c.ModelId.HasValue && c.ModelId != modelId) ||
+                (variantId.HasValue && c.VariantId.HasValue && c.VariantId != variantId));
+            if (bad != null)
+                return $"Colour '{bad.ColourName}' is not available for the selected model/variant.";
+        }
+
+        return null;
+    }
+
+    private static List<int>? ParseColourIds(string? csv)
+    {
+        if (csv == null) return null;
+        return csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                  .Select(x => int.TryParse(x, out var n) ? n : 0)
+                  .Where(n => n > 0)
+                  .Distinct()
+                  .ToList();
+    }
+
     // ================= DELETE =================
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
@@ -166,7 +330,7 @@ public class PartsController : ControllerBase
     [HttpGet("search")]
     public async Task<IActionResult> Search(string? name, string? partNumber)
     {
-        var query = _context.Parts.Include(p => p.PartColours).AsQueryable();
+        var query = _context.Parts.Include(p => p.PartColours).Where(p => p.IsActive).AsQueryable();
 
     if (!string.IsNullOrWhiteSpace(name))
         query = query.Where(p => p.PartName!.Contains(name));
@@ -192,7 +356,8 @@ public class PartsController : ControllerBase
             variantId      = p.VariantId,
             torqueNm       = p.TorqueNm ?? 0,
             imageNumber    = p.ImageNumber ?? "",
-            colourIds      = string.Join(",", p.PartColours.Select(pc => pc.ColourId))
+            colourIds      = string.Join(",", p.PartColours.Select(pc => pc.ColourId)),
+            partImagePath  = p.PartImages.OrderBy(i => i.Id).Select(i => i.ImagePath).FirstOrDefault() ?? ""
         })            
         .ToListAsync();
 

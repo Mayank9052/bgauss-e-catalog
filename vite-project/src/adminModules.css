@@ -958,3 +958,81 @@
   border: 1px solid var(--border);
   display: block;
 }
+/* ================================================= */
+/*  CATALOGUE ENHANCEMENTS (17.11.2026)              */
+/*  status, filters, part images, part-number map    */
+/* ================================================= */
+
+/* wider manager so the Parts table has room */
+.am-modal { width: min(1320px, 96vw); max-height: 92vh; }
+.am-modal__body { scroll-behavior: smooth; }
+
+/* clickable summary cards */
+.am-card--btn { border: none; border-top: 4px solid; text-align: left; cursor: pointer; font: inherit; width: 100%; }
+.am-card--btn:focus-visible { outline: 3px solid rgba(12,129,181,.35); outline-offset: 2px; }
+.am-card__meta { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 11.5px; color: var(--text-sm); flex-wrap: wrap; }
+.am-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.am-dot--on  { background: var(--green); }
+.am-dot--off { background: var(--slate-lt); margin-left: 6px; }
+
+/* toasts */
+.am-toast--info { background: #e0f2fe; color: #075985; border-left: 4px solid #0284c7; }
+
+/* table header cells keep the existing gradient; sort/filter controls inherit */
+.am-table th.dt-th { padding: 9px 10px; }
+.am-table td .dt-status { white-space: nowrap; }
+.am-table td.am-table__actions { display: table-cell; }
+.am-table td.am-table__actions > .am-btn + .am-btn { margin-left: 6px; }
+.am-table-wrap { max-height: 58vh; overflow: auto; }
+.am-table thead th { position: sticky; top: 0; z-index: 2; background: var(--navy); }
+.am-table thead tr th:last-child { background: #1277a0; }
+
+.am-loading-cell { text-align: center; padding: 32px !important; color: var(--text-sm); font-weight: 600; }
+.am-spinner {
+  display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: -3px;
+  border: 2.5px solid #cbd5e1; border-top-color: var(--navy); border-radius: 50%; animation: am-spin .8s linear infinite;
+}
+@keyframes am-spin { to { transform: rotate(360deg); } }
+
+/* form helpers */
+.am-form-card__help { display: flex; align-items: center; gap: 6px; margin: -4px 0 10px; font-size: 12px; color: var(--text-sm); }
+.am-field__hint { font-size: 11px; color: var(--text-sm); margin-top: 3px; }
+.am-field__hint--warn { color: var(--red); font-weight: 600; }
+.am-field__select:disabled, .am-field__input:disabled { background: #f8fafc; color: var(--slate-lt); cursor: not-allowed; }
+
+/* colour multi-select */
+.am-colour-field { position: relative; }
+.am-colour-trigger { display: flex; align-items: center; justify-content: space-between; gap: 6px; text-align: left; background: #fff; }
+.am-colour-trigger svg { flex-shrink: 0; font-size: 10px; color: var(--slate); }
+.am-colour-menu {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 50; margin-top: 4px;
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md); max-height: 240px; overflow-y: auto; padding: 4px;
+}
+.am-colour-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.am-colour-item:hover { background: var(--bg); }
+.am-colour-item input { accent-color: var(--navy); }
+.am-colour-empty { padding: 10px; font-size: 12px; color: var(--text-sm); }
+.am-colour-clear { width: 100%; border: none; background: none; color: var(--red); font-size: 12px; font-weight: 600; padding: 6px; cursor: pointer; text-align: left; }
+.am-tag { font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 6px; margin-left: auto; }
+.am-tag--muted { background: #f1f5f9; color: var(--slate); }
+
+.am-badge--muted { opacity: .55; text-decoration: line-through; }
+
+/* assembly → part-number map */
+.am-map-btn {
+  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px;
+  border: 1.5px dashed #94a3b8; border-radius: 7px; background: #fff; color: var(--slate);
+  font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.am-map-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); background: #f0f9ff; }
+.am-map-btn--done { border-style: solid; border-color: #86efac; color: var(--green-dk); background: #f0fdf4; }
+.am-map-btn:disabled { opacity: .45; cursor: not-allowed; }
+.am-file-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--blue-dark); text-decoration: none; }
+.am-file-link:hover { text-decoration: underline; }
+
+@media (max-width: 768px) {
+  .am-modal { width: 100%; }
+  .am-table-wrap { max-height: 64vh; }
+}
+.am-td--name { min-width: 190px; }

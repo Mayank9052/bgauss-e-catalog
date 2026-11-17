@@ -1,0 +1,57 @@
+/* catalogue.css — Download PDF button + dialog */
+.cd-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px;
+  border: none; border-radius: 9px; background: #b91c1c; color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(185,28,28,.25); transition: background .15s, transform .15s;
+}
+.cd-btn:hover { background: #991b1b; transform: translateY(-1px); }
+.cd-btn--compact { height: 34px; padding: 0 12px; font-size: 13px; }
+
+.cd-overlay {
+  position: fixed; inset: 0; z-index: 35000; background: rgba(15,23,42,.55);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.cd-modal {
+  width: min(520px, 100%); background: #fff; border-radius: 16px; padding: 20px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.3); font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a;
+  animation: cd-pop .15s ease-out;
+}
+@keyframes cd-pop { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+.cd-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cd-head h3 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; color: #0b3c4d; }
+.cd-head h3 svg { color: #b91c1c; }
+.cd-x { border: none; background: #f1f5f9; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: #475569; }
+.cd-scopes { display: flex; flex-direction: column; gap: 8px; }
+.cd-scope {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.cd-scope:hover { border-color: #94a3b8; }
+.cd-scope--on { border-color: #0e5068; background: #f0f7fa; }
+.cd-scope input { margin-top: 3px; accent-color: #0e5068; }
+.cd-scope span { display: flex; flex-direction: column; gap: 2px; }
+.cd-scope strong { font-size: 14px; }
+.cd-scope small { font-size: 12px; color: #64748b; }
+.cd-opts { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 4px; font-size: 13px; }
+.cd-opts label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.cd-opts input { accent-color: #0e5068; width: 16px; height: 16px; }
+.cd-warn { margin: 0; font-size: 12px; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 6px 10px; }
+.cd-error { margin-top: 10px; font-size: 13px; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 10px; }
+.cd-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.cd-primary, .cd-ghost {
+  display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 9px;
+  font-weight: 700; font-size: 14px; cursor: pointer;
+}
+.cd-primary { border: none; background: #0e5068; color: #fff; }
+.cd-primary:hover { background: #0b3c4d; }
+.cd-ghost { border: 1.5px solid #e2e8f0; background: #fff; color: #334155; }
+.cd-ghost:hover { background: #f8fafc; }
+.cd-progress { padding: 8px 0; }
+.cd-progress__label { font-size: 13px; color: #334155; margin: 0 0 10px; min-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-bar { height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.cd-bar__fill { height: 100%; background: linear-gradient(90deg, #0e5068, #1d9bc6); border-radius: 999px; transition: width .25s ease; }
+.cd-progress__pct { margin: 6px 0 0; font-size: 12px; color: #64748b; text-align: right; }
+.cd-done { text-align: center; padding: 8px 0; }
+.cd-done__icon { width: 54px; height: 54px; margin: 0 auto 10px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.cd-done p { margin: 0; color: #334155; }

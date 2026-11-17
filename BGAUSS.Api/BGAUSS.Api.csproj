@@ -35,4 +35,9 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.7" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Idempotent schema scripts applied at start-up by Infrastructure/SchemaUpdater.cs -->
+    <None Include="Database\**\*.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

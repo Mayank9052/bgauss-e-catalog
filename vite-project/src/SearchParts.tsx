@@ -1,17 +1,26 @@
 // SearchParts.tsx — BGAUSS Electronic Parts Catalog
+//  • Assembly drawing (PDF or image) with zoom / pan / full-screen
+//  • Clickable part numbers on the drawing → part details + auto-selection
+//  • Individual Part Image column and preview
+//  • Only ACTIVE parts compatible with the selected model / variant / colour
+//  • Download the catalogue as PDF (this assembly / this vehicle / complete)
 import "./searchparts.css"
 import logo from "./assets/logo.jpg"
 import { useLocation, useNavigate } from "react-router-dom"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import axios from "axios"
 import AccountMenu from "./components/AccountMenu"
 import BreadcrumbPath from "./components/BreadcrumbPath"
 import type { Part } from "./services/api"
-import { commonSearch } from "./services/serachapi"
+import AssemblyDrawingViewer from "./components/drawing/AssemblyDrawingViewer"
+import { PartImageThumb } from "./components/PartImageThumb"
+import CatalogueDownload from "./components/catalogue/CatalogueDownload"
+import type { CatalogueScope } from "./components/catalogue/CatalogueDownload"
+import { resolveMediaUrl } from "./utils/media"
 import {
   FaHome, FaPhoneAlt, FaShoppingCart, FaShoppingBasket,
-  FaSearchPlus, FaSearchMinus, FaTimes, FaEnvelope,
-  FaChevronLeft, FaChevronRight,
+  FaTimes, FaEnvelope, FaChevronLeft, FaChevronRight, FaInfoCircle,
+  FaRedo, FaArrowLeft, FaCheck,
 } from "react-icons/fa"
 
 const PAGE_SIZE = 20
@@ -20,6 +29,12 @@ interface PartWithPrice extends Part {
   bdp?: number
   mrp?: number
   taxPercent?: number
+  partImagePath?: string
+  colourNames?: string
+  modelName?: string
+  variantName?: string
+  assemblyName?: string
+  torqueNm?: number
 }
 interface CartItemSummary {
   id: number; partId: number; quantity: number; price?: number
@@ -36,10 +51,17 @@ const toImgStr = (v: string | number | undefined | null): string =>
 const naturalCmp = (a: string, b: string) =>
   a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
 
+const money = (v?: number | null) => (v != null ? `₹${Number(v).toFixed(2)}` : "—")
+
 const StockBadge = ({ stock }: { stock: number }) => {
   if (stock === 0) return <span className="badge badge--out">OUT OF STOCK</span>
   if (stock <= 5)  return <span className="badge badge--low">LOW: {stock}</span>
   return               <span className="badge badge--in">IN STOCK: {stock}</span>
+}
+
+const readSession = <T,>(key: string): T | null => {
+  try { return JSON.parse(sessionStorage.getItem(key) ?? "null") as T | null }
+  catch { return null }
 }
 
 // ── Contact Modal ─────────────────────────────────────────────
@@ -188,56 +210,130 @@ function ContactModal({ onClose }: ContactModalProps) {
   )
 }
 
+// ── Part details drawer (opened from the drawing or the Img No. cell) ──
+function PartDetailsDrawer({
+  label, parts, selected, getStock, onToggle, onClose, vehicle,
+}: {
+  label: string
+  parts: PartWithPrice[]
+  selected: number[]
+  getStock: (p: PartWithPrice) => number
+  onToggle: (p: PartWithPrice) => void
+  onClose: () => void
+  vehicle: { model?: string; variant?: string; colour?: string }
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+
+  return (
+    <>
+      <div className="sp-drawer-bg" onClick={onClose} />
+      <aside className="sp-drawer" role="dialog" aria-label={`Parts for image number ${label}`}>
+        <div className="sp-drawer__head">
+          <button type="button" className="sp-drawer__back" onClick={onClose}>
+            <FaArrowLeft /> Back to drawing
+          </button>
+          <button type="button" className="sp-drawer__x" onClick={onClose} aria-label="Close"><FaTimes /></button>
+        </div>
+        <h3 className="sp-drawer__title">
+          Image No. <span className="sp-drawer__no">{label}</span>
+          <small>{parts.length} part{parts.length === 1 ? "" : "s"}</small>
+        </h3>
+
+        {parts.length === 0 && (
+          <div className="sp-drawer__empty">
+            No active part in this assembly is linked to image number <strong>{label}</strong> for the selected vehicle.
+          </div>
+        )}
+
+        <div className="sp-drawer__list">
+          {parts.map(p => {
+            const stock = getStock(p)
+            const isSel = selected.includes(p.id)
+            return (
+              <article key={p.id} className={`sp-pd${isSel ? " sp-pd--sel" : ""}`}>
+                <div className="sp-pd__img">
+                  <PartImageThumb path={p.partImagePath} alt={`${p.partNumber} ${p.partName}`} size={120}
+                    caption={`${p.partNumber} — ${p.partName}`} />
+                </div>
+                <div className="sp-pd__body">
+                  <div className="sp-pd__pn">{p.partNumber}</div>
+                  <div className="sp-pd__name">{p.partName}</div>
+                  {p.description && p.description !== p.partName && <p className="sp-pd__desc">{p.description}</p>}
+                  <dl className="sp-pd__grid">
+                    <dt>Model</dt><dd>{p.modelName || vehicle.model || "—"}</dd>
+                    <dt>Variant</dt><dd>{p.variantName || "All variants"}</dd>
+                    <dt>Colour</dt><dd>{p.colourNames || "All colours"}</dd>
+                    {p.assemblyName && (<><dt>Assembly</dt><dd>{p.assemblyName}</dd></>)}
+                    <dt>Stock</dt><dd><StockBadge stock={stock} /></dd>
+                    <dt>BDP</dt><dd>{money(p.bdp)}</dd>
+                    <dt>MRP</dt><dd className="sp-pd__mrp">{money(p.mrp ?? p.price)}</dd>
+                    {p.torqueNm ? (<><dt>Torque</dt><dd>{p.torqueNm} Nm</dd></>) : null}
+                    {p.remarks ? (<><dt>Remarks</dt><dd>{p.remarks}</dd></>) : null}
+                  </dl>
+                  <button type="button"
+                    className={`sp-pd__btn${isSel ? " sp-pd__btn--sel" : ""}`}
+                    disabled={stock === 0}
+                    onClick={() => onToggle(p)}>
+                    {stock === 0 ? "Out of stock" : isSel ? <><FaCheck /> Selected for cart</> : <><FaShoppingBasket /> Select for cart</>}
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      </aside>
+    </>
+  )
+}
+
 // ── Main Component ────────────────────────────────────────────
 const SearchParts = () => {
   const location = useLocation()
   const navigate  = useNavigate()
 
-  const { modelId, assemblyId, assemblyName, assemblyImage, partPosition } = location.state || {}
+  // ── Full context: location.state (fresh navigation) → sessionStorage (refresh / back)
+  const partsPageState = readSession<Record<string, unknown>>("partsPageState") ?? {}
+  const searchState    = readSession<Record<string, unknown>>("partsSearchState") ?? {}
+  const st = (location.state ?? {}) as Record<string, unknown>
 
-  // ── Read full context from partsPageState (written by assembly_catalogue
-  //    when navigating here) so breadcrumb back-nav carries variantId/colourId.
-  //    location.state only contains what assembly_catalogue passed, so we
-  //    also read sessionStorage as the authoritative full-context source.
-  const partsPageState = (() => {
-    try { return JSON.parse(sessionStorage.getItem("partsPageState") ?? "null") ?? {} }
-    catch { return {} }
-  })()
+  const modelId       = (st.modelId       ?? partsPageState.modelId)       as number | undefined
+  const assemblyId    = (st.assemblyId    ?? partsPageState.assemblyId)    as number | undefined
+  const assemblyName  = (st.assemblyName  ?? partsPageState.assemblyName ?? "") as string
+  const assemblyImage = resolveMediaUrl((st.assemblyImage ?? partsPageState.assemblyImage ?? "") as string)
+  const partPosition  = st.partPosition as string | number | undefined
+  const variantId     = (st.variantId ?? partsPageState.variantId) as number | undefined
+  const colourId      = (st.colourId  ?? partsPageState.colourId)  as number | undefined
 
-  // ── assemblyPageState is what we pass back to assembly_catalogue via
-  //    breadcrumb. It MUST include variantId + colourId so the catalogue
-  //    re-fetches with the correct filters (not "show all").
-  //    Priority: location.state fields > partsPageState fields.
-  const assemblyPageState = {
-    modelId:   modelId   ?? partsPageState.modelId,
-    variantId: (location.state?.variantId) ?? partsPageState.variantId,
-    colourId:  (location.state?.colourId)  ?? partsPageState.colourId,
+  const vehicle = {
+    model:   (searchState.modelName   as string) || undefined,
+    variant: (searchState.variantName as string) || undefined,
+    colour:  (searchState.colourName  as string) || undefined,
   }
 
+  // breadcrumb back-navigation must carry variantId + colourId
+  const assemblyPageState = { modelId, variantId, colourId }
+
   const [allParts,      setAllParts]      = useState<PartWithPrice[]>([])
-  const [visibleParts,  setVisibleParts]  = useState<PartWithPrice[]>([])
   const [selectedParts, setSelectedParts] = useState<number[]>([])
   const [quantities,    setQuantities]    = useState<Record<number, number>>({})
   const [remarks,       setRemarks]       = useState<Record<number, string>>({})
   const [cartCount,     setCartCount]     = useState(0)
   const [cartPartQtys,  setCartPartQtys]  = useState<Record<number, number>>({})
   const [partsLoading,  setPartsLoading]  = useState(true)
-  const [searchLoading, setSearchLoading] = useState(false)
+  const [partsError,    setPartsError]    = useState("")
+  const [reloadKey,     setReloadKey]     = useState(0)
   const [searchTerm,    setSearchTerm]    = useState("")
   const [showContact,   setShowContact]   = useState(false)
   const [currentPage,   setCurrentPage]   = useState(1)
+  const [detailLabel,   setDetailLabel]   = useState<string | null>(null)
+  const [notice,        setNotice]        = useState("")
 
   const addingRef = useRef(false)
   const [addingToCart, setAddingToCart] = useState(false)
-
-  // ── Zoom / pan ────────────────────────────────────────────────
-  const [zoomOpen,  setZoomOpen]  = useState(false)
-  const [zoomScale, setZoomScale] = useState(1)
-  const [panX, setPanX] = useState(0)
-  const [panY, setPanY] = useState(0)
-  const isDragging     = useRef(false)
-  const dragStart      = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
-  const zoomViewportRef = useRef<HTMLDivElement>(null)
 
   // Chip state
   const [activeNums, setActiveNums] = useState<Set<string>>(new Set())
@@ -245,72 +341,6 @@ const SearchParts = () => {
 
   const tableScrollRef = useRef<HTMLDivElement>(null)
   const rowRefs        = useRef<Record<string, HTMLTableRowElement | null>>({})
-
-  // Body scroll lock
-  useEffect(() => {
-    document.body.style.overflow = zoomOpen ? "hidden" : ""
-    return () => { document.body.style.overflow = "" }
-  }, [zoomOpen])
-
-  // ── Wheel zoom — zooms toward cursor ──────────────────────────
-  useEffect(() => {
-    const el = zoomViewportRef.current
-    if (!el || !zoomOpen) return
-    const handler = (e: WheelEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      const rect    = el.getBoundingClientRect()
-      const cursorX = e.clientX - rect.left - rect.width  / 2
-      const cursorY = e.clientY - rect.top  - rect.height / 2
-      setZoomScale(prev => {
-        const next = Math.max(1, Math.min(5, prev + (e.deltaY < 0 ? 0.25 : -0.25)))
-        if (next === prev) return prev
-        const factor = next / prev
-        setPanX(px => next <= 1 ? 0 : cursorX - factor * (cursorX - px))
-        setPanY(py => next <= 1 ? 0 : cursorY - factor * (cursorY - py))
-        return next
-      })
-    }
-    el.addEventListener("wheel", handler, { passive: false })
-    return () => el.removeEventListener("wheel", handler)
-  }, [zoomOpen])
-
-  // ── Drag to pan ───────────────────────────────────────────────
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (zoomScale <= 1) return
-    isDragging.current = true
-    dragStart.current  = { x: e.clientX, y: e.clientY, panX, panY }
-    e.preventDefault()
-  }
-  const onMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging.current) return
-    setPanX(dragStart.current.panX + (e.clientX - dragStart.current.x))
-    setPanY(dragStart.current.panY + (e.clientY - dragStart.current.y))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  const onMouseUp = useCallback(() => { isDragging.current = false }, [])
-
-  useEffect(() => {
-    if (!zoomOpen) return
-    window.addEventListener("mousemove", onMouseMove)
-    window.addEventListener("mouseup",   onMouseUp)
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove)
-      window.removeEventListener("mouseup",   onMouseUp)
-    }
-  }, [zoomOpen, onMouseMove, onMouseUp])
-
-  const openZoom  = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setZoomOpen(true); setZoomScale(1); setPanX(0); setPanY(0)
-  }
-  const closeZoom = () => { setZoomOpen(false); setZoomScale(1); setPanX(0); setPanY(0) }
-  const zoomIn    = (e: React.MouseEvent) => { e.stopPropagation(); setZoomScale(p => Math.min(5, +(p + 0.5).toFixed(1))) }
-  const zoomOut   = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setZoomScale(p => { const n = Math.max(1, +(p - 0.5).toFixed(1)); if (n <= 1) { setPanX(0); setPanY(0) }; return n })
-  }
-  const zoomReset = (e: React.MouseEvent) => { e.stopPropagation(); setZoomScale(1); setPanX(0); setPanY(0) }
 
   const hydratePartState = (items: PartWithPrice[]) => {
     setQuantities(prev => { const n = { ...prev }; items.forEach(p => { if (n[p.id] == null) n[p.id] = 1 }); return n })
@@ -326,51 +356,53 @@ const SearchParts = () => {
     } catch { setCartCount(0); setCartPartQtys({}) }
   }, [])
 
+  // ── Parts for the selected configuration (active only, variant/colour compatible)
   useEffect(() => {
+    let cancelled = false
     const fetchParts = async () => {
       if (modelId == null || assemblyId == null) {
-        setAllParts([]); setVisibleParts([]); setPartsLoading(false); return
+        setAllParts([]); setPartsLoading(false)
+        setPartsError("No assembly selected. Please choose an assembly from the Assembly Catalogue.")
+        return
       }
       try {
-        setPartsLoading(true)
-        const posFilter = partPosition != null ? `&partPosition=${encodeURIComponent(String(partPosition))}` : ""
-        const res = await fetch(`/api/parts/by-assembly?modelId=${modelId}&assemblyId=${assemblyId}${posFilter}`)
-        if (!res.ok) { setAllParts([]); setVisibleParts([]); return }
-        const raw: PartWithPrice[] = await res.json()
-        const normalised = (Array.isArray(raw) ? raw : []).map(p => ({
+        setPartsLoading(true); setPartsError("")
+        const res = await axios.get<PartWithPrice[]>("/parts/by-assembly", {
+          params: {
+            modelId, assemblyId,
+            variantId: variantId ?? undefined,
+            colourId:  colourId ?? undefined,
+            partPosition: partPosition ?? undefined,
+          },
+        })
+        if (cancelled) return
+        const normalised = (Array.isArray(res.data) ? res.data : []).map(p => ({
           ...p, imageNumber: toImgStr(p.imageNumber), stockQuantity: toStockInt(p.stockQuantity),
         })).sort((a, b) => naturalCmp(toImgStr(a.imageNumber), toImgStr(b.imageNumber)))
-        setAllParts(normalised); setVisibleParts(normalised); hydratePartState(normalised)
-      } catch { setAllParts([]); setVisibleParts([]) }
-      finally { setPartsLoading(false) }
+        setAllParts(normalised); hydratePartState(normalised)
+      } catch {
+        if (!cancelled) { setAllParts([]); setPartsError("Parts could not be loaded. Please check your connection and try again.") }
+      } finally {
+        if (!cancelled) setPartsLoading(false)
+      }
     }
     void fetchParts(); void fetchCart()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assemblyId, modelId, partPosition, fetchCart])
+    return () => { cancelled = true }
+  }, [assemblyId, modelId, variantId, colourId, partPosition, fetchCart, reloadKey])
+
+  // ── Instant client-side search within this assembly (every word must match)
+  const visibleParts = useMemo(() => {
+    const words = searchTerm.trim().toLowerCase().split(/\s+/).filter(Boolean)
+    if (words.length === 0) return allParts
+    return allParts.filter(p => {
+      const hay = [p.partNumber, p.partName, p.description, p.imageNumber, p.remarks, p.colourNames]
+        .map(x => String(x ?? "").toLowerCase()).join(" ")
+      return words.every(w => hay.includes(w))
+    })
+  }, [allParts, searchTerm])
 
   useEffect(() => {
-    const trimmed = searchTerm.trim()
-    if (!trimmed) { setVisibleParts(allParts); setSearchLoading(false); return }
-    let cancelled = false
-    setSearchLoading(true)
-    const t = window.setTimeout(async () => {
-      try {
-        const data = await commonSearch<PartWithPrice>("parts", trimmed)
-        const filtered = data
-          .filter(p => Number(p.modelId) === Number(modelId) && Number(p.assemblyId) === Number(assemblyId))
-          .map(p => ({ ...p, imageNumber: toImgStr(p.imageNumber), stockQuantity: toStockInt(p.stockQuantity) }))
-          .sort((a, b) => naturalCmp(toImgStr(a.imageNumber), toImgStr(b.imageNumber)))
-        if (cancelled) return
-        hydratePartState(filtered); setVisibleParts(filtered)
-      } catch { if (!cancelled) setVisibleParts([]) }
-      finally  { if (!cancelled) setSearchLoading(false) }
-    }, 300)
-    return () => { cancelled = true; window.clearTimeout(t) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allParts, assemblyId, modelId, searchTerm])
-
-  useEffect(() => {
-    setActiveNums(new Set()); setHoveredNum(null); rowRefs.current = {}; setCurrentPage(1)
+    setActiveNums(new Set()); setHoveredNum(null); rowRefs.current = {}; setCurrentPage(1); setDetailLabel(null)
   }, [assemblyId, modelId])
 
   useEffect(() => { setCurrentPage(1) }, [searchTerm, activeNums])
@@ -384,13 +416,19 @@ const SearchParts = () => {
     }
   }, [hoveredNum])
 
+  useEffect(() => {
+    if (!notice) return
+    const t = window.setTimeout(() => setNotice(""), 3500)
+    return () => window.clearTimeout(t)
+  }, [notice])
+
   const getAvailableStock = useCallback((p: PartWithPrice): number =>
     Math.max(0, toStockInt(p.stockQuantity) - (cartPartQtys[p.id] ?? 0)),
   [cartPartQtys])
 
-  const hotspotNumbers: string[] = Array.from(
+  const hotspotNumbers: string[] = useMemo(() => Array.from(
     new Set(allParts.map(p => toImgStr(p.imageNumber)).filter(n => n.length > 0))
-  ).sort(naturalCmp)
+  ).sort(naturalCmp), [allParts])
 
   const displayParts = activeNums.size > 0
     ? visibleParts.filter(p => { const n = toImgStr(p.imageNumber); return n.length > 0 && activeNums.has(n) })
@@ -418,8 +456,18 @@ const SearchParts = () => {
     })
   }
 
+  // ── Click on a part number in the drawing: highlight, filter, select and show details
+  const handleHotspotClick = (num: string) => {
+    const matches = allParts.filter(p => toImgStr(p.imageNumber) === num)
+    setActiveNums(prev => (prev.has(num) ? prev : new Set([...prev, num])))
+    const inStock = matches.filter(p => getAvailableStock(p) > 0).map(p => p.id)
+    if (inStock.length) setSelectedParts(sp => Array.from(new Set([...sp, ...inStock])))
+    if (matches.length > 0 && inStock.length === 0) setNotice(`Image no. ${num} is currently out of stock.`)
+    setDetailLabel(num)
+  }
+
   const toggleSelect = (part: PartWithPrice) => {
-    if (getAvailableStock(part) === 0) { alert(`"${part.partName}" is out of stock.`); return }
+    if (getAvailableStock(part) === 0) { setNotice(`"${part.partName}" is out of stock.`); return }
     setSelectedParts(prev => prev.includes(part.id) ? prev.filter(x => x !== part.id) : [...prev, part.id])
   }
 
@@ -440,13 +488,13 @@ const SearchParts = () => {
     setQuantities(prev => {
       const cur = prev[id] || 1; const next = cur + delta
       if (next < 1) return prev
-      if (next > stock) { alert(`Only ${stock} item(s) available`); return prev }
+      if (next > stock) { setNotice(`Only ${stock} item(s) available`); return prev }
       return { ...prev, [id]: next }
     })
   }
 
   const addSelectedToCart = async () => {
-    if (selectedParts.length === 0) { alert("Please select at least one part"); return }
+    if (selectedParts.length === 0) { setNotice("Please select at least one part"); return }
     if (addingRef.current) return
     addingRef.current = true; setAddingToCart(true)
     try {
@@ -456,7 +504,7 @@ const SearchParts = () => {
       await fetchCart(); navigate("/checkout")
     } catch (err: unknown) {
       const msg = axios.isAxiosError(err) ? (err.response?.data as string | undefined) : undefined
-      alert(msg ?? "Failed to add items to cart.")
+      alert(typeof msg === "string" && msg ? msg : "Failed to add items to cart.")
     } finally { addingRef.current = false; setAddingToCart(false) }
   }
 
@@ -469,51 +517,46 @@ const SearchParts = () => {
     return ""
   }
 
+  // ── PDF catalogue scopes
+  const vehicleTitle = [vehicle.model, vehicle.variant, vehicle.colour].filter(Boolean).join(" · ") || "Selected vehicle"
+  const pdfScopes: CatalogueScope[] = [
+    {
+      key: "assembly", label: "This assembly",
+      description: `${assemblyName || "Current assembly"} — drawing and parts list`,
+      title: `${vehicleTitle} · ${assemblyName}`,
+      params: { modelId, variantId, colourId, assemblyId },
+    },
+    {
+      key: "vehicle", label: "This vehicle configuration",
+      description: `All active assemblies for ${vehicleTitle}`,
+      title: vehicleTitle,
+      params: { modelId, variantId, colourId },
+    },
+    {
+      key: "all", label: "Complete catalogue",
+      description: "Every active model, variant and assembly",
+      title: "Complete Parts Catalogue",
+      params: {}, heavy: true,
+    },
+  ]
+
+  const detailParts = detailLabel ? allParts.filter(p => toImgStr(p.imageNumber) === detailLabel) : []
+
   return (
     <div className="sp-wrapper">
       {showContact && <ContactModal onClose={() => setShowContact(false)} />}
-
-      {/* Zoom overlay at ROOT level */}
-      {zoomOpen && (
-        <div className="sp-zoom-overlay" onClick={closeZoom}>
-          <button className="sp-zoom-close" onClick={e => { e.stopPropagation(); closeZoom() }}>
-            <FaTimes />
-          </button>
-          <div className="sp-zoom-controls" onClick={e => e.stopPropagation()}>
-            <button className="sp-zoom-btn" onClick={zoomOut} disabled={zoomScale <= 1} title="Zoom out">
-              <FaSearchMinus />
-            </button>
-            <span className="sp-zoom-level">{Math.round(zoomScale * 100)}%</span>
-            <button className="sp-zoom-btn" onClick={zoomIn} disabled={zoomScale >= 5} title="Zoom in">
-              <FaSearchPlus />
-            </button>
-            <button className="sp-zoom-btn sp-zoom-btn--reset" onClick={zoomReset} disabled={zoomScale === 1}>
-              Reset
-            </button>
-          </div>
-          <div
-            ref={zoomViewportRef}
-            className="sp-zoom-viewport"
-            onClick={e => e.stopPropagation()}
-            onMouseDown={onMouseDown}
-            style={{ cursor: zoomScale > 1 ? (isDragging.current ? "grabbing" : "grab") : "zoom-in" }}
-          >
-            <img
-              src={assemblyImage as string}
-              alt={assemblyName as string}
-              draggable={false}
-              style={{
-                transform: `scale(${zoomScale}) translate(${panX / zoomScale}px, ${panY / zoomScale}px)`,
-                transition: isDragging.current ? "none" : "transform 0.15s ease",
-                maxWidth: "90%", maxHeight: "90%",
-                objectFit: "contain",
-                userSelect: "none", pointerEvents: "none",
-              }}
-            />
-          </div>
-          <p className="sp-zoom-hint">Scroll to zoom · Drag to pan · Click outside to close</p>
-        </div>
+      {detailLabel && (
+        <PartDetailsDrawer
+          label={detailLabel}
+          parts={detailParts}
+          selected={selectedParts}
+          getStock={getAvailableStock}
+          onToggle={toggleSelect}
+          onClose={() => setDetailLabel(null)}
+          vehicle={vehicle}
+        />
       )}
+      {notice && <div className="sp-notice" role="status"><FaInfoCircle /> {notice}</div>}
 
       {/* Navbar */}
       <nav className="sp-navbar">
@@ -535,110 +578,110 @@ const SearchParts = () => {
         </div>
       </nav>
 
-      {/*
-        ── FIX: assemblyPageState now carries variantId + colourId ──────────
-        Previously this was just { modelId }, which caused assembly_catalogue
-        to re-fetch without variantId and show ALL assemblies when the user
-        clicked "Assembly Catalogue" in the breadcrumb.
-
-        assemblyPageState is built at the top of this component from
-        location.state (set by assembly_catalogue's goToAssembly) merged with
-        partsPageState from sessionStorage, so variantId/colourId survive even
-        if location.state gets cleared during a browser back navigation.
-      */}
       <BreadcrumbPath
         current="parts"
         stateMap={{
-          dashboard:         null,
-          vehicle_preview:   null,
+          dashboard:          null,
+          vehicle_preview:    null,
           assembly_catalogue: assemblyPageState,
         }}
       />
 
-      <h2 className="sp-assembly-title">{assemblyName as string}</h2>
+      <div className="sp-title-row">
+        <div>
+          <h2 className="sp-assembly-title">{assemblyName}</h2>
+          {(vehicle.model || vehicle.variant || vehicle.colour) && (
+            <div className="sp-vehicle-chips">
+              {vehicle.model   && <span className="sp-vchip"><b>Model</b> {vehicle.model}</span>}
+              {vehicle.variant && <span className="sp-vchip"><b>Variant</b> {vehicle.variant}</span>}
+              {vehicle.colour  && <span className="sp-vchip"><b>Colour</b> {vehicle.colour}</span>}
+            </div>
+          )}
+        </div>
+        {modelId != null && <CatalogueDownload scopes={pdfScopes} />}
+      </div>
 
       <div className="sp-layout">
 
-        {/* LEFT */}
+        {/* LEFT — drawing */}
         <aside className="sp-image-panel">
           {assemblyImage ? (
-            <>
-              <div className="sp-image-frame">
-                <img
-                  src={assemblyImage as string}
-                  className="sp-assembly-img"
-                  alt={assemblyName as string}
-                  onClick={openZoom}
-                />
-                <button className="sp-zoom-trigger" onClick={openZoom} title="Zoom image">
-                  <FaSearchPlus style={{ fontSize: 11 }} /> Zoom
-                </button>
-              </div>
+            <AssemblyDrawingViewer
+              src={assemblyImage}
+              title={assemblyName}
+              assemblyId={assemblyId}
+              labels={hotspotNumbers}
+              activeLabels={activeNums}
+              focusLabel={detailLabel}
+              hoveredLabel={hoveredNum}
+              onHotspotClick={handleHotspotClick}
+              onHotspotHover={setHoveredNum}
+            />
+          ) : (
+            <div className="sp-image-empty">Drawing not available for this assembly</div>
+          )}
 
-              {!partsLoading && (
-                <div className="sp-chip-panel">
-                  <div className="sp-chip-panel__header">
-                    <span className="sp-chip-panel__label">
-                      Image No.
-                      {hotspotNumbers.length > 0 && activeNums.size > 0 && (
-                        <span className="sp-chip-panel__count">&nbsp;({activeNums.size}/{hotspotNumbers.length})</span>
-                      )}
-                    </span>
-                    {activeNums.size > 0 && (
-                      <button className="sp-chip-panel__clear"
-                        onClick={() => { setActiveNums(new Set()); setSelectedParts([]) }}>
-                        ✕ Clear
-                      </button>
-                    )}
+          {!partsLoading && !partsError && (
+            <div className="sp-chip-panel">
+              <div className="sp-chip-panel__header">
+                <span className="sp-chip-panel__label">
+                  Image No.
+                  {hotspotNumbers.length > 0 && activeNums.size > 0 && (
+                    <span className="sp-chip-panel__count">&nbsp;({activeNums.size}/{hotspotNumbers.length})</span>
+                  )}
+                </span>
+                {activeNums.size > 0 && (
+                  <button className="sp-chip-panel__clear"
+                    onClick={() => { setActiveNums(new Set()); setSelectedParts([]) }}>
+                    ✕ Clear
+                  </button>
+                )}
+              </div>
+              {hotspotNumbers.length > 0 ? (
+                <>
+                  <div className="sp-chip-list">
+                    {hotspotNumbers.map(num => (
+                      <button
+                        key={num} type="button"
+                        className={["sp-chip", activeNums.has(num) ? "sp-chip--active" : "", hoveredNum === num ? "sp-chip--hover" : ""].filter(Boolean).join(" ")}
+                        onMouseEnter={() => setHoveredNum(num)}
+                        onMouseLeave={() => setHoveredNum(null)}
+                        onClick={() => handleChipClick(num)}
+                        onDoubleClick={() => setDetailLabel(num)}
+                        title={`Filter image no. ${num} (double-click for details)`}
+                      >{num}</button>
+                    ))}
                   </div>
-                  {hotspotNumbers.length > 0 ? (
-                    <>
-                      <div className="sp-chip-list">
-                        {hotspotNumbers.map(num => (
-                          <button
-                            key={num} type="button"
-                            className={["sp-chip", activeNums.has(num) ? "sp-chip--active" : "", hoveredNum === num ? "sp-chip--hover" : ""].filter(Boolean).join(" ")}
-                            onMouseEnter={() => setHoveredNum(num)}
-                            onMouseLeave={() => setHoveredNum(null)}
-                            onClick={() => handleChipClick(num)}
-                            title={`Filter image no. ${num}`}
-                          >{num}</button>
-                        ))}
-                      </div>
-                      {hoveredNum && (
-                        <div className="sp-chip-hover-hint">
-                          <span className="sp-chip-hover-arrow">▶</span>
-                          Scrolling to image no. <strong>{hoveredNum}</strong>
-                        </div>
-                      )}
-                      {activeNums.size > 0 && (
-                        <p className="sp-chip-panel__info">
-                          Showing {displayParts.length} part{displayParts.length !== 1 ? "s" : ""} for img no.&nbsp;
-                          <strong>{Array.from(activeNums).sort(naturalCmp).join(", ")}</strong>
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
-                      No image numbers assigned to parts in this assembly.
+                  {activeNums.size > 0 && (
+                    <p className="sp-chip-panel__info">
+                      Showing {displayParts.length} part{displayParts.length !== 1 ? "s" : ""} for img no.&nbsp;
+                      <strong>{Array.from(activeNums).sort(naturalCmp).join(", ")}</strong>
                     </p>
                   )}
-                </div>
+                </>
+              ) : (
+                <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
+                  No image numbers assigned to parts in this assembly.
+                </p>
               )}
-            </>
-          ) : (
-            <div className="sp-image-empty">Image not available</div>
+            </div>
           )}
         </aside>
 
-        {/* RIGHT */}
+        {/* RIGHT — parts table */}
         <section className="sp-table-panel">
           <div className="sp-toolbar">
-            <input
-              type="text" className="sp-search"
-              placeholder="Search parts by name, number, or description…"
-              value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-            />
+            <div className="sp-search-wrap">
+              <input
+                type="text" className="sp-search"
+                placeholder="Search parts by number, name, description or image no.…"
+                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                aria-label="Search parts"
+              />
+              {searchTerm && (
+                <button type="button" className="sp-search-clear" onClick={() => setSearchTerm("")} aria-label="Clear search"><FaTimes /></button>
+              )}
+            </div>
             <button disabled={!selectedParts.length || addingToCart}
               onClick={() => void addSelectedToCart()} className="sp-add-btn">
               <FaShoppingBasket />
@@ -649,7 +692,7 @@ const SearchParts = () => {
           <div className="sp-status-bar">
             <span className="sp-status-bar__text">
               {partsLoading ? "Loading parts…"
-                : searchLoading ? "Searching…"
+                : partsError ? "—"
                 : activeNums.size > 0
                   ? `${displayParts.length} part${displayParts.length !== 1 ? "s" : ""} for img no. ${Array.from(activeNums).sort(naturalCmp).join(", ")}`
                   : `${displayParts.length} part${displayParts.length !== 1 ? "s" : ""} found`}
@@ -667,6 +710,7 @@ const SearchParts = () => {
               <colgroup>
                 <col style={{ width: 40  }} />
                 <col style={{ width: 38  }} />
+                <col style={{ width: 62  }} />
                 <col style={{ width: 60  }} />
                 <col style={{ width: "13%" }} />
                 <col />
@@ -684,6 +728,7 @@ const SearchParts = () => {
                       onChange={e => toggleSelectAll(e.target.checked)}
                       className="sp-checkbox" title="Select all in-stock" />
                   </th>
+                  <th style={{ textAlign: "center" }}>Image</th>
                   <th style={{ textAlign: "center" }}>Img No.</th>
                   <th>Part No.</th>
                   <th>Part Name</th>
@@ -695,11 +740,38 @@ const SearchParts = () => {
                 </tr>
               </thead>
               <tbody>
-                {pagedParts.length === 0 ? (
+                {partsLoading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={`sk${i}`} className="sp-skeleton-row">
+                      {Array.from({ length: 11 }).map((__, j) => <td key={j}><span className="sp-skel" /></td>)}
+                    </tr>
+                  ))
+                ) : partsError ? (
                   <tr>
-                    <td colSpan={10} className="sp-table__empty" data-label="">
-                      {partsLoading ? "Loading parts…" : searchLoading ? "Searching parts…"
-                        : activeNums.size > 0 ? "No parts for selected image numbers" : "No parts found"}
+                    <td colSpan={11} className="sp-table__empty" data-label="">
+                      <div className="sp-state">
+                        <p>{partsError}</p>
+                        {modelId != null && assemblyId != null ? (
+                          <button type="button" className="sp-state__btn" onClick={() => setReloadKey(k => k + 1)}><FaRedo /> Try again</button>
+                        ) : (
+                          <button type="button" className="sp-state__btn" onClick={() => navigate("/assembly_catalogue", { state: assemblyPageState })}><FaArrowLeft /> Assembly Catalogue</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : pagedParts.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="sp-table__empty" data-label="">
+                      <div className="sp-state">
+                        <p>{searchTerm ? `No parts match "${searchTerm}"`
+                          : activeNums.size > 0 ? "No parts for the selected image numbers"
+                          : "No active parts are listed for this assembly and vehicle configuration."}</p>
+                        {(searchTerm || activeNums.size > 0) && (
+                          <button type="button" className="sp-state__btn" onClick={() => { setSearchTerm(""); setActiveNums(new Set()) }}>
+                            Clear search &amp; filters
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ) : pagedParts.map((part, idx) => {
@@ -722,21 +794,25 @@ const SearchParts = () => {
                         <input type="checkbox" checked={selectedParts.includes(part.id)}
                           disabled={stock === 0} onChange={() => toggleSelect(part)} className="sp-checkbox" />
                       </td>
+                      <td data-label="Image" style={{ textAlign: "center" }} onClick={e => e.stopPropagation()} className="sp-td--pic">
+                        <PartImageThumb path={part.partImagePath} alt={`${part.partNumber} ${part.partName}`} size={44}
+                          caption={`${part.partNumber} — ${part.partName}`} />
+                      </td>
                       <td
                         data-label="Img No."
                         className="sp-td--img-num"
-                        style={{
-                          textAlign: "center",
-                          wordBreak: "break-word",
-                          whiteSpace: "normal",
-                          overflowWrap: "break-word",
-                          maxWidth: "120px"
-                        }}
+                        style={{ textAlign: "center", wordBreak: "break-word", whiteSpace: "normal", overflowWrap: "break-word", maxWidth: "120px" }}
+                        onClick={e => { if (imgNum) { e.stopPropagation(); setDetailLabel(imgNum) } }}
                       >
-                        {imgNum || "—"}
+                        {imgNum ? (
+                          <button type="button" className="sp-imgno-btn" title="View part details">{imgNum}</button>
+                        ) : "—"}
                       </td>
                       <td className="sp-td--part-num" data-label="Part No.">{part.partNumber}</td>
-                      <td className="sp-td--part-name" data-label="Part Name">{part.partName}</td>
+                      <td className="sp-td--part-name" data-label="Part Name">
+                        {part.partName}
+                        {part.colourNames && <span className="sp-colour-tag" title="Colour-specific part">{part.colourNames}</span>}
+                      </td>
                       <td data-label="Stock" style={{ textAlign: "center" }} onClick={e => e.stopPropagation()}>
                         <StockBadge stock={stock} />
                       </td>

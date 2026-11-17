@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using OfficeOpenXml;
+using BGAUSS.Api.DTOs;
+using BGAUSS.Api.Infrastructure;
 
 namespace BGAUSS.Api.Controllers;
 
@@ -17,10 +19,26 @@ public class VehicleColoursController : ControllerBase
     }
 
     // ================= GET ALL =================
+    // Optional filters: modelId / variantId. A colour with no variant applies to
+    // every variant of its model; a colour with no model applies to all models.
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(int? modelId, int? variantId, bool includeInactive = false)
     {
-        var colours = await _context.VehicleColours.ToListAsync();
+        IQueryable<VehicleColour> query = _context.VehicleColours;
+
+        if (modelId.HasValue)
+            query = query.Where(c => c.ModelId == null || c.ModelId == modelId.Value);
+
+        if (variantId.HasValue)
+            query = query.Where(c => c.VariantId == null || c.VariantId == variantId.Value);
+
+        // Customers: only active colours whose model/variant are active too
+        if (!User.CanSeeInactive(includeInactive))
+            query = query.Where(c => c.IsActive
+                && (c.Model == null || c.Model.IsActive)
+                && (c.Variant == null || c.Variant.IsActive));
+
+        var colours = await query.OrderBy(c => c.ColourName).ToListAsync();
         return Ok(colours);
     }
 
@@ -61,6 +79,9 @@ public class VehicleColoursController : ControllerBase
         if (string.IsNullOrWhiteSpace(colour.ColourName))
             return BadRequest("ColourName is required.");
 
+        var dependencyError = await ValidateDependencies(colour.ModelId, colour.VariantId);
+        if (dependencyError != null) return BadRequest(dependencyError);
+
         await _context.VehicleColours.AddAsync(colour);
         await _context.SaveChangesAsync();
         return Ok(colour);
@@ -73,6 +94,12 @@ public class VehicleColoursController : ControllerBase
         var colour = await _context.VehicleColours.FindAsync(id);
         if (colour == null) return NotFound();
 
+        if (string.IsNullOrWhiteSpace(updated.ColourName))
+            return BadRequest("ColourName is required.");
+
+        var dependencyError = await ValidateDependencies(updated.ModelId, updated.VariantId);
+        if (dependencyError != null) return BadRequest(dependencyError);
+
         colour.ColourName = updated.ColourName;
         colour.ModelId = updated.ModelId;
         colour.VariantId = updated.VariantId;
@@ -80,6 +107,42 @@ public class VehicleColoursController : ControllerBase
 
         await _context.SaveChangesAsync();
         return Ok(colour);
+    }
+
+    // ================= ACTIVATE / DEACTIVATE =================
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> SetStatus(int id, [FromBody] StatusUpdateDto dto)
+    {
+        if (!User.IsAdmin()) return Forbid();
+
+        var colour = await _context.VehicleColours.FindAsync(id);
+        if (colour == null) return NotFound();
+
+        colour.IsActive = dto.IsActive;
+        await _context.SaveChangesAsync();
+        return Ok(new { id = colour.Id, isActive = colour.IsActive });
+    }
+
+    // ================= DEPENDENCY RULES =================
+    // Model → Variant → Colour: a colour's variant must belong to its model.
+    private async Task<string?> ValidateDependencies(int? modelId, int? variantId)
+    {
+        if (modelId.HasValue && !await _context.VehicleModels.AnyAsync(m => m.Id == modelId.Value))
+            return "Selected model does not exist.";
+
+        if (variantId.HasValue)
+        {
+            if (!modelId.HasValue)
+                return "Select a model before selecting a variant.";
+
+            var variant = await _context.VehicleVariants.FindAsync(variantId.Value);
+            if (variant == null)
+                return "Selected variant does not exist.";
+            if (variant.ModelId != modelId)
+                return "Selected variant does not belong to the selected model.";
+        }
+
+        return null;
     }
 
     // ================= DELETE =================

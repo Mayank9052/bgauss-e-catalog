@@ -27,12 +27,19 @@ public class VehiclesController : ControllerBase
         if (vehicle == null)
             return NotFound("Vehicle not found");
 
+        // Business rule: inactive models / variants / colours are not offered in the catalogue
+        if ((vehicle.Model != null && !vehicle.Model.IsActive) ||
+            (vehicle.Variant != null && !vehicle.Variant.IsActive) ||
+            (vehicle.Colour != null && !vehicle.Colour.IsActive))
+            return NotFound("This vehicle configuration is currently not available in the catalogue");
+
         var parts = await _context.ModelParts
             .Include(mp => mp.Part)
             .Where(mp =>
                 mp.ModelId == vehicle.ModelId &&
                 mp.VariantId == vehicle.VariantId &&
-                (mp.ColourId == null || mp.ColourId == vehicle.ColourId))
+                (mp.ColourId == null || mp.ColourId == vehicle.ColourId) &&
+                mp.Part != null && mp.Part.IsActive)
             .Select(mp => mp.Part)
             .ToListAsync();
 

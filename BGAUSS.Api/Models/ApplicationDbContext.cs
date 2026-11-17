@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +18,8 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<Assembly> Assemblies { get; set; }
 
     public virtual DbSet<AssemblyPart> AssemblyParts { get; set; }
+
+    public virtual DbSet<AssemblyHotspot> AssemblyHotspots { get; set; }
 
     public virtual DbSet<Cart> Carts { get; set; }
 
@@ -56,6 +58,16 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.Variant).WithMany(p => p.Assemblies)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_Assemblies_VehicleVariants");
+        });
+
+        modelBuilder.Entity<AssemblyHotspot>(entity =>
+        {
+            entity.HasIndex(e => e.AssemblyId, "IX_AssemblyHotspots_AssemblyId");
+
+            entity.HasOne(d => d.Assembly).WithMany(p => p.Hotspots)
+                .HasForeignKey(d => d.AssemblyId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_AssemblyHotspots_Assemblies");
         });
 
         modelBuilder.Entity<AssemblyPart>(entity =>

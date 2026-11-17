@@ -13,4 +13,8 @@ public class AssemblyDto
     // ── Read-only display helpers (returned from GET, ignored on POST/PUT) ──
     public string? ModelName    { get; set; }
     public string? VariantName  { get; set; }
+
+    // ── Catalogue enhancements (read-only on POST/PUT; use PATCH /status) ──
+    public bool    IsActive      { get; set; } = true;
+    public int     HotspotCount  { get; set; }
 }

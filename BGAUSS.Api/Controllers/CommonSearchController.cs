@@ -33,12 +33,17 @@ namespace BGAUSS.Api.Controllers
 
             switch (entityName.ToLower())
             {
+                // Customer catalogue search — ACTIVE records only
                 case "parts":
-                    var parts = await _searchService.SearchAsync(_context.Parts, query, "PartName", "PartNumber", "Description");
+                    var parts = await _searchService.SearchAsync(
+                        _context.Parts.Where(p => p.IsActive && (p.Assembly == null || p.Assembly.IsActive)),
+                        query, "PartName", "PartNumber", "Description");
                     return Ok(parts);
 
                 case "assemblies":
-                    var assemblies = await _searchService.SearchAsync(_context.Assemblies, query, "AssemblyName", "ImageNo");
+                    var assemblies = await _searchService.SearchAsync(
+                        _context.Assemblies.Where(a => a.IsActive),
+                        query, "AssemblyName", "ImageNo");
                     return Ok(assemblies);
 
                 /*case "categories":
@@ -46,15 +51,15 @@ namespace BGAUSS.Api.Controllers
                     return Ok(categories);*/
 
                 case "vehiclemodels":
-                    var models = await _searchService.SearchAsync(_context.VehicleModels, query, "ModelName");
+                    var models = await _searchService.SearchAsync(_context.VehicleModels.Where(m => m.IsActive), query, "ModelName");
                     return Ok(models);
 
                 case "vehiclevariants":
-                    var variants = await _searchService.SearchAsync(_context.VehicleVariants, query, "VariantName");
+                    var variants = await _searchService.SearchAsync(_context.VehicleVariants.Where(v => v.IsActive), query, "VariantName");
                     return Ok(variants);
 
                 case "vehiclecolours":
-                    var colours = await _searchService.SearchAsync(_context.VehicleColours, query, "ColourName");
+                    var colours = await _searchService.SearchAsync(_context.VehicleColours.Where(c => c.IsActive), query, "ColourName");
                     return Ok(colours);
 
                 case "users":

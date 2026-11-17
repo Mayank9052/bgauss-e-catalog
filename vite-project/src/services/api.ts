@@ -7,12 +7,14 @@ export interface LoginResponse {
 export interface VehicleModel {
   id: number;
   modelName: string;
+  isActive?: boolean;
 }
 
 export interface VehicleVariant {
   id: number;
   variantName: string;
   modelId: number;
+  isActive?: boolean;
 }
 
 export interface VehicleColour {
@@ -21,6 +23,7 @@ export interface VehicleColour {
   modelId?: number | null;
   variantId?: number | null;
   imagePath?: string | null;
+  isActive?: boolean;
 }
 
 export interface VehicleImage {
@@ -37,7 +40,10 @@ export interface Assembly {
   id: number;
   assemblyName: string;
   imagePath?: string | null;
-  modelId?: number
+  modelId?: number;
+  variantId?: number | null;
+  isActive?: boolean;
+  hotspotCount?: number;     // clickable part numbers mapped on the drawing
 }
 
 export interface Part {
@@ -56,6 +62,9 @@ export interface Part {
   stockQuantity: number;
   modelId?:      number | null;
   assemblyId?:   number | null;
+  variantId?:    number | null;
+  isActive?:     boolean;
+  partImagePath?: string;     // individual part image (dbo.PartImages)
   subParts?:     Part[];
 }
 

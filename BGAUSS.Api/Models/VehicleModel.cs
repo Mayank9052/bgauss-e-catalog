@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -13,6 +13,9 @@ public partial class VehicleModel
 
     [StringLength(100)]
     public string ModelName { get; set; } = null!;
+
+    /// <summary>Catalogue visibility. Inactive records stay in the database but are hidden from the customer catalogue.</summary>
+    public bool IsActive { get; set; } = true;
 
     [InverseProperty("Model")]
     public virtual ICollection<Assembly> Assemblies { get; set; } = new List<Assembly>();

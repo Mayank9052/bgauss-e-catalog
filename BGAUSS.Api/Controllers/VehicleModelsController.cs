@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using OfficeOpenXml;
+using BGAUSS.Api.DTOs;
+using BGAUSS.Api.Infrastructure;
 
 namespace BGAUSS.Api.Controllers;
 
@@ -17,11 +19,31 @@ public class VehicleModelsController : ControllerBase
     }
 
     // ================= GET ALL =================
+    // Customers get ACTIVE models only. Admin Modules passes ?includeInactive=true.
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(bool includeInactive = false)
     {
-        var models = await _context.VehicleModels.ToListAsync();
+        IQueryable<VehicleModel> query = _context.VehicleModels;
+
+        if (!User.CanSeeInactive(includeInactive))
+            query = query.Where(m => m.IsActive);
+
+        var models = await query.OrderBy(m => m.ModelName).ToListAsync();
         return Ok(models);
+    }
+
+    // ================= ACTIVATE / DEACTIVATE =================
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> SetStatus(int id, [FromBody] StatusUpdateDto dto)
+    {
+        if (!User.IsAdmin()) return Forbid();
+
+        var model = await _context.VehicleModels.FindAsync(id);
+        if (model == null) return NotFound();
+
+        model.IsActive = dto.IsActive;
+        await _context.SaveChangesAsync();
+        return Ok(new { id = model.Id, isActive = model.IsActive });
     }
 
     // ================= CREATE =================

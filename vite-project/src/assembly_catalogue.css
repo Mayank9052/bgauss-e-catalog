@@ -264,3 +264,31 @@
   .assembly-image { height: 90px; }
   .assembly-name  { font-size: 12px; }
 }
+/* ── Catalogue enhancements (17.11.2026) ───────────────────── */
+.ac-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ac-search { position: relative; }
+.ac-search__clear {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 24px; height: 24px; border-radius: 50%; border: none; background: #eef3f6; color: #587082;
+  display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer;
+}
+.ac-state {
+  grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 40px 16px; color: #587082; text-align: center;
+}
+.ac-state p { margin: 0; font-size: 14px; }
+.ac-state button {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid #c9d8e3; background: #fff;
+  color: #0e5068; padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer;
+}
+.ac-state button:hover { background: #dce8ef; }
+.ac-skeleton {
+  min-height: 190px; cursor: default !important;
+  background: linear-gradient(90deg, #eef2f5 25%, #e2e8ee 37%, #eef2f5 63%) !important;
+  background-size: 400% 100% !important; animation: ac-shimmer 1.3s ease infinite;
+}
+@keyframes ac-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+.ac-badge {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; vertical-align: middle;
+  font-size: 10.5px; font-weight: 700; color: #15803d; background: #dcfce7; border-radius: 999px; padding: 2px 8px;
+}

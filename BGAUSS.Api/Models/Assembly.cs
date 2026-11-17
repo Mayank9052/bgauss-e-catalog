@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -21,6 +21,12 @@ public partial class Assembly
     public int? ModelId { get; set; }
 
     public int? VariantId { get; set; }
+
+    /// <summary>Catalogue visibility. Inactive records stay in the database but are hidden from the customer catalogue.</summary>
+    public bool IsActive { get; set; } = true;
+
+    [InverseProperty("Assembly")]
+    public virtual ICollection<AssemblyHotspot> Hotspots { get; set; } = new List<AssemblyHotspot>();
 
     [InverseProperty("Assembly")]
     public virtual ICollection<AssemblyPart> AssemblyParts { get; set; } = new List<AssemblyPart>();

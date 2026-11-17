@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BGAUSS.Api.Models;
 using OfficeOpenXml;
+using BGAUSS.Api.DTOs;
+using BGAUSS.Api.Infrastructure;
 
 namespace BGAUSS.Api.Controllers;
 
@@ -18,12 +20,16 @@ public class VehicleVariantsController : ControllerBase
 
     // ================= GET ALL =================
     [HttpGet]
-    public async Task<IActionResult> GetAll(int? modelId)
+    public async Task<IActionResult> GetAll(int? modelId, bool includeInactive = false)
     {
         IQueryable<VehicleVariant> query = _context.VehicleVariants;
 
         if (modelId.HasValue)
             query = query.Where(v => v.ModelId == modelId.Value);
+
+        // Customers: only active variants of active models
+        if (!User.CanSeeInactive(includeInactive))
+            query = query.Where(v => v.IsActive && (v.Model == null || v.Model.IsActive));
 
         var variants = await query.ToListAsync();
         return Ok(variants);
@@ -34,7 +40,7 @@ public class VehicleVariantsController : ControllerBase
     public async Task<IActionResult> GetByModel(int modelId)
     {
         var variants = await _context.VehicleVariants
-            .Where(v => v.ModelId == modelId)
+            .Where(v => v.ModelId == modelId && v.IsActive && (v.Model == null || v.Model.IsActive))
             .ToListAsync();
 
         return Ok(variants);
@@ -46,6 +52,9 @@ public class VehicleVariantsController : ControllerBase
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
+
+        if (variant.ModelId == null || !await _context.VehicleModels.AnyAsync(m => m.Id == variant.ModelId))
+            return BadRequest("A valid model is required for the variant.");
 
         _context.VehicleVariants.Add(variant);
         await _context.SaveChangesAsync();
@@ -61,12 +70,35 @@ public class VehicleVariantsController : ControllerBase
         if (variant == null)
             return NotFound();
 
+        if (updated.ModelId == null || !await _context.VehicleModels.AnyAsync(m => m.Id == updated.ModelId))
+            return BadRequest("A valid model is required for the variant.");
+
+        // Moving a variant to another model would orphan its colour/assembly links.
+        if (variant.ModelId != updated.ModelId &&
+            (await _context.VehicleColours.AnyAsync(c => c.VariantId == id) ||
+             await _context.Assemblies.AnyAsync(a => a.VariantId == id)))
+            return BadRequest("This variant has colours or assemblies linked to its current model. Re-assign or remove them before moving the variant to another model.");
+
         variant.VariantName = updated.VariantName;
         variant.ModelId = updated.ModelId;
 
         await _context.SaveChangesAsync();
 
         return Ok(variant);
+    }
+
+    // ================= ACTIVATE / DEACTIVATE =================
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> SetStatus(int id, [FromBody] StatusUpdateDto dto)
+    {
+        if (!User.IsAdmin()) return Forbid();
+
+        var variant = await _context.VehicleVariants.FindAsync(id);
+        if (variant == null) return NotFound();
+
+        variant.IsActive = dto.IsActive;
+        await _context.SaveChangesAsync();
+        return Ok(new { id = variant.Id, isActive = variant.IsActive });
     }
 
     // ================= DELETE =================

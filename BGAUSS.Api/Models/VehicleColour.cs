@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace BGAUSS.Api.Models;
@@ -14,6 +14,9 @@ public partial class VehicleColour
     public int? VariantId { get; set; }
 
     public string? ImagePath { get; set; }
+
+    /// <summary>Catalogue visibility. Inactive records stay in the database but are hidden from the customer catalogue.</summary>
+    public bool IsActive { get; set; } = true;
 
     public virtual VehicleModel? Model { get; set; }
 

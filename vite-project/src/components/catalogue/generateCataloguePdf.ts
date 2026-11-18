@@ -4,7 +4,7 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import logoUrl from "../../assets/logo.jpg";
 import { formatDate, isPdfPath, resolveMediaUrl } from "../../utils/media";
-import { loadPdfDocument, renderPageToCanvas } from "../drawing/pdf";
+import { loadPdfDocument, startPageRender } from "../drawing/pdf";
 
 /* ── data shape returned by GET /api/catalogue/data ── */
 export interface CataloguePart {
@@ -54,6 +54,10 @@ const MUTED: [number, number, number] = [88, 112, 130];
 
 interface LoadedImage { data: string; w: number; h: number }
 
+const DRAWING_PX = 1600;            // drawing raster width (sharp on A4, quick to render)
+const DRAWING_TIMEOUT_MS = 45000;
+const IMAGE_TIMEOUT_MS = 12000;
+
 class AbortError extends Error { constructor() { super("Cancelled"); this.name = "AbortError"; } }
 
 export async function generateCataloguePdf(data: CatalogueData, opts: PdfOptions): Promise<Blob> {
@@ -76,6 +80,18 @@ export async function generateCataloguePdf(data: CatalogueData, opts: PdfOptions
     if (!imageCache.has(key)) imageCache.set(key, loadRaster(resolveMediaUrl(path), maxPx, quality));
     return imageCache.get(key)!;
   };
+
+  // Part images: start loading all of them in parallel (6 at a time) right away,
+  // instead of one by one while the table is drawn. Drawings are prepared meanwhile.
+  if (opts.includePartImages) {
+    const paths = [...new Set(groups.flatMap(g => g.assemblies.flatMap(a =>
+      a.parts.map(p => p.partImagePath).filter((x): x is string => !!x))))];
+    let next = 0;
+    const worker = async () => {
+      while (next < paths.length) { const path = paths[next++]; await getImage(path, 220, 0.8); }
+    };
+    void Promise.all(Array.from({ length: Math.min(6, paths.length) }, worker));
+  }
 
   const logo = await loadRaster(logoUrl, 300, 0.9).catch(() => null);
 
@@ -373,6 +389,8 @@ function loadRaster(url: string, maxPx: number, quality: number): Promise<Loaded
       } catch { resolve(null); }
     };
     img.onerror = () => resolve(null);
+    // never let one slow or missing image hold up the whole PDF
+    window.setTimeout(() => { img.src = ""; resolve(null); }, IMAGE_TIMEOUT_MS);
     img.src = url;
   });
 }
@@ -383,7 +401,7 @@ async function loadDrawing(
   getImage: (p: string, maxPx: number, q: number) => Promise<LoadedImage | null>,
 ): Promise<LoadedImage[]> {
   if (!isPdfPath(path)) {
-    const img = await getImage(path, 1800, 0.82);
+    const img = await getImage(path, DRAWING_PX, 0.82);
     return img ? [img] : [];
   }
   try {
@@ -392,8 +410,14 @@ async function loadDrawing(
     for (let i = 1; i <= Math.min(pdf.numPages, 4); i++) {
       const page = await pdf.getPage(i);
       const canvas = document.createElement("canvas");
-      await renderPageToCanvas(page, canvas, 1800);
-      out.push({ data: canvas.toDataURL("image/jpeg", 0.85), w: canvas.width, h: canvas.height });
+      const job = startPageRender(page, canvas, DRAWING_PX);
+      // a very heavy CAD page must not block the download: give up on it after the time limit
+      let timer = 0;
+      const timedOut = new Promise<"timeout">(res => { timer = window.setTimeout(() => res("timeout"), DRAWING_TIMEOUT_MS); });
+      const result = await Promise.race([job.promise, timedOut]);
+      window.clearTimeout(timer);
+      if (result === "timeout") { job.cancel(); break; }
+      out.push({ data: canvas.toDataURL("image/jpeg", 0.82), w: canvas.width, h: canvas.height });
     }
     return out;
   } catch {

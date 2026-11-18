@@ -8,8 +8,9 @@
 .ds-overlay { position: absolute; inset: 0; }
 .ds-loading {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px;
-  background: rgba(255,255,255,.85); color: #475569; font-size: 13px; font-weight: 600; min-height: 160px;
+  background: #fff; color: #475569; font-size: 13px; font-weight: 600; text-align: center; padding: 10px;
 }
+.ds-loading a, .ds-error a { color: #0e5068; font-weight: 700; text-decoration: underline; margin-left: 4px; }
 .ds-spinner {
   width: 18px; height: 18px; border-radius: 50%;
   border: 2.5px solid #cbd5e1; border-top-color: #0e5068; animation: ds-spin .8s linear infinite;

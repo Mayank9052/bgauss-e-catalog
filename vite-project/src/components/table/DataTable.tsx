@@ -25,7 +25,8 @@ export function HeaderCell<T>({
   width?: number | string;
 }) {
   const col = table.columns.find(c => c.key === colKey);
-  const btnRef = useRef<HTMLButtonElement>(null);
+  // the filter button element is kept in state (not a ref) so the dropdown can be positioned from it
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
 
   if (!col) return <th>{children}</th>;
@@ -55,7 +56,7 @@ export function HeaderCell<T>({
         )}
         {filterable && (
           <button
-            ref={btnRef}
+            ref={setAnchor}
             type="button"
             className={`dt-th__filter${filterOn ? " dt-th__filter--on" : ""}`}
             onClick={() => setOpen(o => !o)}
@@ -69,7 +70,7 @@ export function HeaderCell<T>({
       </div>
       {open && filterable && (
         <FilterDropdown table={table} colKey={colKey} label={col.label}
-          anchor={btnRef.current} onClose={() => setOpen(false)} />
+          anchor={anchor} onClose={() => setOpen(false)} />
       )}
     </th>
   );

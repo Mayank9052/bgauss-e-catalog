@@ -8,6 +8,7 @@
 // "Image No." chips remain the way to pick parts.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { createPortal } from "react-dom";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import {
   FaSearchPlus, FaSearchMinus, FaExpand, FaCompress, FaUndo, FaChevronLeft,
@@ -54,6 +55,7 @@ export default function AssemblyDrawingViewer({
   const [showMarkers, setShowMarkers] = useState(true);
   const [error, setError]         = useState<string | null>(null);
   const detectedPages = useRef<Set<number>>(new Set());
+  const [viewH, setViewH] = useState(() => window.innerHeight);
 
   // ── saved mapping
   useEffect(() => {
@@ -103,8 +105,14 @@ export default function AssemblyDrawingViewer({
     if (!expanded) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setExpanded(false); };
     window.addEventListener("keydown", onKey);
+    const onResize = () => setViewH(window.innerHeight);
+    window.addEventListener("resize", onResize);
     document.body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
+      document.body.style.overflow = "";
+    };
   }, [expanded]);
 
   // jump to the page that holds the focused label
@@ -127,7 +135,7 @@ export default function AssemblyDrawingViewer({
     return labels.find(l => normaliseLabel(l) === n) ?? label;
   };
 
-  return (
+  const view = (
     <div className={`dv${expanded ? " dv--expanded" : ""}`}>
       {expanded && <div className="dv__backdrop" onClick={() => setExpanded(false)} />}
       <div className="dv__frame">
@@ -164,7 +172,7 @@ export default function AssemblyDrawingViewer({
                   <a href={src} target="_blank" rel="noopener noreferrer" title={pdf ? "Open original PDF" : "Open original image"}>
                     <FaExternalLinkAlt />
                   </a>
-                  <button type="button" onClick={() => { setExpanded(e => !e); resetTransform(0); }}
+                  <button type="button" onClick={() => { setViewH(window.innerHeight); setExpanded(e => !e); resetTransform(0); }}
                     title={expanded ? "Exit full screen (Esc)" : "Full screen"}>
                     {expanded ? <FaCompress /> : <FaExpand />}
                   </button>
@@ -178,6 +186,7 @@ export default function AssemblyDrawingViewer({
                   alt={title}
                   onInfo={setInfo}
                   onError={setError}
+                  fitHeight={expanded ? viewH - 140 : undefined}
                 >
                   {pageHotspots.map((h, i) => {
                     const label = resolveLabel(h.label);
@@ -228,4 +237,7 @@ export default function AssemblyDrawingViewer({
       {error && <div className="dv__status dv__status--error">{error} <a href={src} target="_blank" rel="noopener noreferrer">Open file</a></div>}
     </div>
   );
+
+  // Full screen is rendered at the top of the page so no sticky panel or table can cover it.
+  return expanded ? createPortal(view, document.body) : view;
 }

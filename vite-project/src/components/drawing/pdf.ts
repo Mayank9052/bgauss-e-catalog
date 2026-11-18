@@ -30,24 +30,46 @@ export const loadPdfDocument = async (url: string): Promise<PDFDocumentProxy> =>
   return p;
 };
 
-/** Renders a page into the canvas so that its pixel width ≈ targetWidthPx. */
-export const renderPageToCanvas = async (
+export interface RenderJob {
+  promise: Promise<{ width: number; height: number }>;
+  cancel: () => void;
+}
+
+/**
+ * Starts rendering a page into the canvas so that its pixel width ≈ targetWidthPx.
+ * Returns a job that can be cancelled — always cancel a render you no longer need,
+ * otherwise PDF.js keeps drawing it and blocks the browser.
+ */
+export const startPageRender = (
   page: PDFPageProxy,
   canvas: HTMLCanvasElement,
   targetWidthPx: number,
-): Promise<{ width: number; height: number }> => {
+): RenderJob => {
   const base = page.getViewport({ scale: 1 });
   const scale = Math.max(0.1, targetWidthPx / base.width);
   const viewport = page.getViewport({ scale });
   canvas.width  = Math.floor(viewport.width);
   canvas.height = Math.floor(viewport.height);
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas not supported");
+  if (!ctx) return { promise: Promise.reject(new Error("Canvas not supported")), cancel: () => {} };
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  await page.render({ canvasContext: ctx, viewport }).promise;
-  return { width: base.width, height: base.height };
+  const task = page.render({ canvasContext: ctx, viewport });
+  return {
+    promise: task.promise.then(() => ({ width: base.width, height: base.height })),
+    cancel: () => { try { task.cancel(); } catch { /* already finished */ } },
+  };
 };
+
+/** Renders a page into the canvas so that its pixel width ≈ targetWidthPx. */
+export const renderPageToCanvas = (
+  page: PDFPageProxy,
+  canvas: HTMLCanvasElement,
+  targetWidthPx: number,
+): Promise<{ width: number; height: number }> => startPageRender(page, canvas, targetWidthPx).promise;
+
+export const isRenderCancelled = (e: unknown): boolean =>
+  (e as { name?: string } | null)?.name === "RenderingCancelledException";
 
 export interface DetectedCallout {
   label: string;

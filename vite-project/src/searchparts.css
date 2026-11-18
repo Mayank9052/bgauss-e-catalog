@@ -775,3 +775,24 @@
 @media (max-width: 640px) {
   .sp-search-wrap { flex: 0 0 auto; width: 100%; }
 }
+
+/* ================================================================
+   LAYOUT FIX (18.11.2026) — 100% browser zoom on 1280–1440px screens
+   The fixed-width columns used to add up to more than the table width,
+   which squeezed "Part Name" to 0px and made every row very tall.
+   ================================================================ */
+.sp-table { min-width: 860px; }                       /* Part Name always keeps ≥ 130px; scrolls sideways if needed */
+.sp-td--part-num  { white-space: nowrap; text-overflow: ellipsis; overflow-wrap: normal; word-break: normal; }
+.sp-td--part-name { overflow-wrap: break-word; word-break: normal; }
+.sp-table th      { word-break: normal; }
+
+@media (max-width: 1440px) {
+  .sp-layout { grid-template-columns: minmax(250px, 0.72fr) minmax(0, 2fr); gap: 20px; }
+}
+@media (max-width: 900px) {
+  .sp-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .sp-table { min-width: 0; }
+  .sp-td--part-num { white-space: normal; }
+}

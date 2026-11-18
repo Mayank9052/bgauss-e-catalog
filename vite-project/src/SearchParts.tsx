@@ -708,17 +708,17 @@ const SearchParts = () => {
           <div className="sp-table-scroll" ref={tableScrollRef}>
             <table className="sp-table">
               <colgroup>
-                <col style={{ width: 40  }} />
-                <col style={{ width: 38  }} />
-                <col style={{ width: 62  }} />
-                <col style={{ width: 60  }} />
-                <col style={{ width: "13%" }} />
-                <col />
-                <col style={{ width: 96  }} />
-                <col style={{ width: 78  }} />
-                <col style={{ width: 78  }} />
-                <col style={{ width: "13%" }} />
-                <col style={{ width: 92  }} />
+                <col style={{ width: 36  }} />
+                <col style={{ width: 34  }} />
+                <col style={{ width: 56  }} />
+                <col style={{ width: 56  }} />
+                <col style={{ width: 118 }} />
+                <col />{/* Part Name takes the remaining width (table has a min-width, see .sp-table) */}
+                <col style={{ width: 88  }} />
+                <col style={{ width: 72  }} />
+                <col style={{ width: 72  }} />
+                <col style={{ width: 110 }} />
+                <col style={{ width: 88  }} />
               </colgroup>
               <thead>
                 <tr>

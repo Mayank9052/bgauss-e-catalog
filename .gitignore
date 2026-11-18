@@ -25,3 +25,7 @@ BGAUSS.Api/obj/
 Thumbs.db
 # Local backups
 _backup_*/
+
+# Publish output
+publish/
+BGAUSS.Api/publish/

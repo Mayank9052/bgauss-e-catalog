@@ -13,6 +13,7 @@ import {
 } from "react-icons/fa";
 import type { TableState } from "./useTableState";
 import "./dataTable.css";
+import { appZoom } from "../../utils/media";
 
 /* ───────────────────────── Header cell ───────────────────────── */
 export function HeaderCell<T>({
@@ -105,10 +106,12 @@ function FilterDropdown<T>({
   useLayoutEffect(() => {
     if (!anchor) return;
     const place = () => {
+      // screen pixels → page CSS pixels (the page may be zoomed, see appZoom)
+      const z = appZoom();
       const r = anchor.getBoundingClientRect();
       const w = 260;
-      const left = Math.min(Math.max(8, r.right - w), window.innerWidth - w - 8);
-      setPos({ top: r.bottom + 6, left });
+      const left = Math.min(Math.max(8, r.right / z - w), window.innerWidth / z - w - 8);
+      setPos({ top: r.bottom / z + 6, left });
     };
     place();
     window.addEventListener("resize", place);

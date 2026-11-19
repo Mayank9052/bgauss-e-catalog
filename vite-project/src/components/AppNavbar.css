@@ -66,8 +66,8 @@
 .an-modal {
   position: fixed; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  width: min(600px, 96vw);
-  max-height: 90vh;
+  width: min(600px, calc(96vw * var(--vz, 1)));
+  max-height: calc(90vh * var(--vz, 1));
   overflow-y: auto;
   background: #fff;
   border-radius: 16px;
@@ -78,8 +78,8 @@
 
 /* Policy modal — slightly wider */
 .an-modal--policy {
-  width: min(720px, 96vw);
-  max-height: 88vh;
+  width: min(720px, calc(96vw * var(--vz, 1)));
+  max-height: calc(88vh * var(--vz, 1));
   z-index: 3200;
 }
 
@@ -228,7 +228,7 @@
 }
 .an-policy-content {
   font-size: 13px; color: #374151; line-height: 1.7;
-  max-height: 55vh; overflow-y: auto;
+  max-height: calc(55vh * var(--vz, 1)); overflow-y: auto;
   border: 1px solid #e2e8f0; border-radius: 8px;
   padding: 16px 20px; background: #fafbfc;
   margin-bottom: 18px;
@@ -264,4 +264,4 @@
   .an-row--3    { grid-template-columns: 1fr 1fr; }
   .an-row--2    { grid-template-columns: 1fr; }
   .an-modal__body { padding: 16px 16px 22px; }
-}
+}

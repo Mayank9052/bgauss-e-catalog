@@ -17,7 +17,7 @@ import {
 import DrawingSurface from "./DrawingSurface";
 import type { SurfaceInfo } from "./DrawingSurface";
 import { detectCalloutsOnPage, normaliseLabel } from "./pdf";
-import { isPdfPath } from "../../utils/media";
+import { appZoom, isPdfPath } from "../../utils/media";
 import "./drawing.css";
 
 export interface Hotspot {
@@ -55,7 +55,7 @@ export default function AssemblyDrawingViewer({
   const [showMarkers, setShowMarkers] = useState(true);
   const [error, setError]         = useState<string | null>(null);
   const detectedPages = useRef<Set<number>>(new Set());
-  const [viewH, setViewH] = useState(() => window.innerHeight);
+  const [viewH, setViewH] = useState(() => window.innerHeight / appZoom());
 
   // ── saved mapping
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function AssemblyDrawingViewer({
     if (!expanded) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setExpanded(false); };
     window.addEventListener("keydown", onKey);
-    const onResize = () => setViewH(window.innerHeight);
+    const onResize = () => setViewH(window.innerHeight / appZoom());
     window.addEventListener("resize", onResize);
     document.body.style.overflow = "hidden";
     return () => {
@@ -172,7 +172,7 @@ export default function AssemblyDrawingViewer({
                   <a href={src} target="_blank" rel="noopener noreferrer" title={pdf ? "Open original PDF" : "Open original image"}>
                     <FaExternalLinkAlt />
                   </a>
-                  <button type="button" onClick={() => { setViewH(window.innerHeight); setExpanded(e => !e); resetTransform(0); }}
+                  <button type="button" onClick={() => { setViewH(window.innerHeight / appZoom()); setExpanded(e => !e); resetTransform(0); }}
                     title={expanded ? "Exit full screen (Esc)" : "Full screen"}>
                     {expanded ? <FaCompress /> : <FaExpand />}
                   </button>

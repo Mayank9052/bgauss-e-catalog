@@ -45,3 +45,13 @@ export const errorMessage = (e: unknown, fallback = "Something went wrong"): str
   }
   return fallback;
 };
+
+/**
+ * The page-wide CSS zoom set in index.css (1, 0.9 or 0.8 depending on screen width).
+ * Pixel values measured from the screen (getBoundingClientRect, innerWidth/innerHeight)
+ * must be divided by this before they are used as CSS lengths inside the page.
+ */
+export const appZoom = (): number => {
+  const z = parseFloat(getComputedStyle(document.documentElement).zoom || "1");
+  return Number.isFinite(z) && z > 0 ? z : 1;
+};

@@ -1,5 +1,5 @@
 .checkout-page {
-  min-height: 100vh;
+  min-height: calc(100vh * var(--vz, 1));
   background: #edf2f5;
   font-family: "Segoe UI", Tahoma, sans-serif;
 }
@@ -184,7 +184,7 @@
 
 .checkout-table-wrap {
   width: 100%;
-  max-height: calc(100vh - 250px);
+  max-height: calc(calc(100vh * var(--vz, 1)) - 250px);
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -450,7 +450,7 @@
   .checkout-topbar { padding: 0 24px; }
   .checkout-content { padding: 0 16px 24px; }
   .checkout-cart-table { min-width: 880px; }
-  .checkout-table-wrap { max-height: calc(100vh - 220px); }
+  .checkout-table-wrap { max-height: calc(calc(100vh * var(--vz, 1)) - 220px); }
 }
 
 /* ========================= */
@@ -661,4 +661,4 @@
 
   .checkout-icon-btn.danger  { color: #ff6b6b; }
   .checkout-icon-btn.success { color: #4dd9a0; }
-}
+}

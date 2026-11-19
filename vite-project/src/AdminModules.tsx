@@ -17,7 +17,7 @@ import "./adminModules.css";
 import {
   FaHome, FaPhoneAlt, FaShoppingCart, FaPlus, FaEdit, FaTrash,
   FaDownload, FaUpload, FaTimes, FaCheck, FaExclamationTriangle,
-  FaImage, FaMapMarkerAlt, FaChevronDown, FaInfoCircle,
+  FaImage, FaMapMarkerAlt, FaChevronDown, FaInfoCircle, FaEye, FaFileExcel, FaFilePdf,
 } from "react-icons/fa";
 
 import { useTableState } from "./components/table/useTableState";
@@ -25,7 +25,10 @@ import type { ColumnDef } from "./components/table/useTableState";
 import { HeaderCell, TableToolbar, Pagination, EmptyRow, StatusToggle } from "./components/table/DataTable";
 import { PartImageThumb } from "./components/PartImageThumb";
 import HotspotEditor from "./components/drawing/HotspotEditor";
-import { errorMessage, resolveMediaUrl } from "./utils/media";
+import { errorMessage, resolveMediaUrl, formatDate } from "./utils/media";
+import ColourMatrixViewer from "./components/colourMatrix/ColourMatrixViewer";
+import type { ColourMatrixInfo } from "./components/colourMatrix/colourMatrixApi";
+import { downloadColourMatrix, formatFileSize, listColourMatrices } from "./components/colourMatrix/colourMatrixApi";
 
 /* ═══════════════════════════════════════════════════
    TYPES
@@ -53,7 +56,7 @@ interface Part {
   partImagePath?: string;
 }
 
-type ActiveTab = "models" | "variants" | "colours" | "assemblies" | "parts";
+type ActiveTab = "models" | "variants" | "colours" | "assemblies" | "parts" | "colourMatrix";
 type StatusEntity = "VehicleModels" | "VehicleVariants" | "VehicleColours" | "Assemblies" | "Parts";
 
 const statusText = (active?: boolean) => (active === false ? "Inactive" : "Active");
@@ -437,7 +440,7 @@ const AdminModules = () => {
 
   /* ═══════════ STATE ═══════════ */
   const [loading, setLoading] = useState<Record<ActiveTab, boolean>>({
-    models: true, variants: true, colours: true, assemblies: true, parts: true,
+    models: true, variants: true, colours: true, assemblies: true, parts: true, colourMatrix: false,
   });
   const setLoaded = (k: ActiveTab) => setLoading(p => ({ ...p, [k]: false }));
   const [statusBusy, setStatusBusy] = useState<Record<string, boolean>>({});
@@ -469,6 +472,8 @@ const AdminModules = () => {
   const [partForm,     setPartForm]     = useState<Part>(blankPart());
   const [editPart,     setEditPart]     = useState<Part | null>(null);
   const [showPartForm, setShowPartForm] = useState(false);
+
+  const [matrixCount, setMatrixCount] = useState({ all: 0, active: 0 });
 
   /* ═══════════ AUTH ═══════════ */
   useEffect(() => {
@@ -511,6 +516,13 @@ const AdminModules = () => {
   useEffect(() => {
     void fetchModels(); void fetchVariants(); void fetchColours(); void fetchAssemblies(); void fetchParts();
   }, [fetchModels, fetchVariants, fetchColours, fetchAssemblies, fetchParts]);
+
+  // colour matrix count for the summary card (the tab loads the full list itself)
+  useEffect(() => {
+    listColourMatrices({ includeInactive: true })
+      .then(l => setMatrixCount({ all: l.length, active: l.filter(m => m.isActive).length }))
+      .catch(() => { /* the tab shows its own error */ });
+  }, []);
 
   /* ═══════════ LOOKUPS ═══════════ */
   const modelById   = useMemo(() => new Map(models.map(m => [m.id!, m])), [models]);
@@ -785,6 +797,7 @@ const AdminModules = () => {
     colours:    { all: colours.length,    active: colours.filter(x => x.isActive !== false).length },
     assemblies: { all: assemblies.length, active: assemblies.filter(x => x.isActive !== false).length },
     parts:      { all: parts.length,      active: parts.filter(x => x.isActive !== false).length },
+    colourMatrix: matrixCount,
   };
 
   const TABS: { key: ActiveTab; label: string }[] = [
@@ -793,6 +806,7 @@ const AdminModules = () => {
     { key: "colours",    label: "Colours"    },
     { key: "assemblies", label: "Assemblies" },
     { key: "parts",      label: "Parts"      },
+    { key: "colourMatrix", label: "Colour Matrix" },
   ];
 
   const ASSEMBLY_ACCEPT = "image/*,.pdf";
@@ -855,6 +869,7 @@ const AdminModules = () => {
             { key: "colours",    label: "Colours",    color: "#0f766e" },
             { key: "assemblies", label: "Assemblies", color: "#b45309" },
             { key: "parts",      label: "Parts",      color: "#7c3aed" },
+            { key: "colourMatrix", label: "Colour Matrix", color: "#be185d" },
           ] as const).map(c => (
             <button key={c.label} type="button" className="am-card am-card--btn" style={{ borderTopColor: c.color }}
               onClick={() => { setActiveTab(c.key); setShowModal(true); }} title={`Manage ${c.label}`}>
@@ -1392,6 +1407,15 @@ const AdminModules = () => {
                 </div>
               )}
 
+              {/* ════════════ COLOUR MATRIX TAB ════════════ */}
+              {activeTab === "colourMatrix" && (
+                <ColourMatrixTab
+                  models={models} variants={variants} colours={colours}
+                  modelOpts={modelOpts} variantOptsFor={variantOptsFor} coloursFor={coloursFor}
+                  ok={ok} err={err} onCount={setMatrixCount}
+                />
+              )}
+
             </div>
           </div>
         </div>
@@ -1399,5 +1423,274 @@ const AdminModules = () => {
     </div>
   );
 };
+
+/* ═══════════════════════════════════════════════════
+   COLOUR MATRIX TAB
+   Upload an Excel (.xlsx) or PDF colour matrix for a Model (required),
+   optionally narrowed to a Variant and/or Colour. Shown on the
+   Assembly Catalogue page. Records are switched Inactive, never deleted.
+═══════════════════════════════════════════════════ */
+interface ColourMatrixTabProps {
+  models: VehicleModel[];
+  variants: VehicleVariant[];
+  colours: VehicleColour[];
+  modelOpts: { id: number; label: string }[];
+  variantOptsFor: (modelId: number | null | undefined) => { id: number; label: string }[];
+  coloursFor: (modelId: number | null | undefined, variantId: number | null | undefined) => VehicleColour[];
+  ok: (msg: string) => void;
+  err: (msg: string) => void;
+  onCount: (c: { all: number; active: number }) => void;
+}
+
+const MATRIX_ACCEPT = ".xlsx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const MATRIX_MAX_MB = 25;
+
+function checkMatrixFile(f: File | null): string | null {
+  if (!f) return null;
+  const ext = f.name.toLowerCase().split(".").pop();
+  if (ext === "xls") return "Old Excel (.xls) files are not supported. Open the file in Excel and save it as .xlsx.";
+  if (ext !== "xlsx" && ext !== "pdf") return "Only Excel (.xlsx) and PDF files are allowed.";
+  if (f.size > MATRIX_MAX_MB * 1024 * 1024) return `The file is larger than ${MATRIX_MAX_MB} MB.`;
+  return null;
+}
+
+function ColourMatrixTab({ models, variants, colours, modelOpts, variantOptsFor, coloursFor, ok, err, onCount }: ColourMatrixTabProps) {
+  const [items, setItems] = useState<ColourMatrixInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const blank = { modelId: 0, variantId: 0, colourId: 0, title: "" };
+  const [form, setForm] = useState(blank);
+  const [file, setFile] = useState<File | null>(null);
+  const [fileKey, setFileKey] = useState(0);            // resets the <input type=file>
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [edit, setEdit] = useState<(typeof blank & { id: number }) | null>(null);
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState<Record<number, boolean>>({});
+  const [viewing, setViewing] = useState<ColourMatrixInfo | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const l = await listColourMatrices({ includeInactive: true });
+      setItems(l);
+      onCount({ all: l.length, active: l.filter(m => m.isActive).length });
+    } catch (e) { err(`Failed to load colour matrices: ${errorMessage(e)}`); }
+    finally { setLoading(false); }
+  }, [err, onCount]);
+  useEffect(() => { void load(); }, [load]);
+
+  const modelLabel   = (id: number) => models.find(m => m.id === id)?.modelName ?? `#${id}`;
+  const variantLabel = (id?: number | null) => (id ? variants.find(v => v.id === id)?.variantName ?? `#${id}` : "All Variants");
+  const colourLabel  = (id?: number | null) => (id ? colours.find(c => c.id === id)?.colourName ?? `#${id}` : "All Colours");
+  const colourOptsFor = (modelId: number, variantId: number) =>
+    modelId ? coloursFor(modelId, variantId || null).map(c => ({ id: c.id!, label: c.colourName + (c.isActive === false ? " (inactive)" : "") })) : [];
+
+  const toForm = (f: typeof blank, newFile: File | null) => {
+    const fd = new FormData();
+    fd.append("modelId", String(f.modelId));
+    if (f.variantId) fd.append("variantId", String(f.variantId));
+    if (f.colourId) fd.append("colourId", String(f.colourId));
+    if (f.title.trim()) fd.append("title", f.title.trim());
+    if (newFile) fd.append("file", newFile);
+    return fd;
+  };
+
+  const upload = async () => {
+    if (!form.modelId) return err("Model is required");
+    if (!file) return err("Choose an Excel (.xlsx) or PDF file to upload");
+    const problem = checkMatrixFile(file);
+    if (problem) return err(problem);
+    setUploading(true); setProgress(0);
+    try {
+      await axios.post("/colour-matrix", toForm(form, file), {
+        onUploadProgress: e => { if (e.total) setProgress(Math.round((e.loaded / e.total) * 100)); },
+      });
+      ok("Colour matrix uploaded");
+      setForm(blank); setFile(null); setFileKey(k => k + 1);
+      void load();
+    } catch (e) { err(errorMessage(e)); }
+    finally { setUploading(false); }
+  };
+
+  const save = async () => {
+    if (!edit) return;
+    if (!edit.modelId) return err("Model is required");
+    const problem = checkMatrixFile(editFile);
+    if (problem) return err(problem);
+    setBusy(b => ({ ...b, [edit.id]: true }));
+    try {
+      await axios.put(`/colour-matrix/${edit.id}`, toForm(edit, editFile));
+      ok(editFile ? "Colour matrix updated and file replaced" : "Colour matrix updated");
+      setEdit(null); setEditFile(null);
+      void load();
+    } catch (e) { err(errorMessage(e)); }
+    finally { setBusy(b => { const n = { ...b }; delete n[edit.id]; return n; }); }
+  };
+
+  const setStatus = async (m: ColourMatrixInfo, next: boolean) => {
+    setBusy(b => ({ ...b, [m.id]: true }));
+    setItems(l => l.map(x => x.id === m.id ? { ...x, isActive: next } : x));      // optimistic
+    try {
+      await axios.patch(`/colour-matrix/${m.id}/status`, { isActive: next });
+      ok(`Colour matrix ${next ? "activated" : "deactivated"}`);
+      const nextItems = items.map(x => x.id === m.id ? { ...x, isActive: next } : x);
+      onCount({ all: nextItems.length, active: nextItems.filter(x => x.isActive).length });
+    } catch (e) {
+      setItems(l => l.map(x => x.id === m.id ? { ...x, isActive: !next } : x));  // rollback
+      err(`Status not saved: ${errorMessage(e)}`);
+    } finally { setBusy(b => { const n = { ...b }; delete n[m.id]; return n; }); }
+  };
+
+  const download = async (m: ColourMatrixInfo) => {
+    setBusy(b => ({ ...b, [m.id]: true }));
+    try { await downloadColourMatrix(m); }
+    catch (e) { err(`Download failed: ${errorMessage(e)}`); }
+    finally { setBusy(b => { const n = { ...b }; delete n[m.id]; return n; }); }
+  };
+
+  const cols = useMemo<ColumnDef<ColourMatrixInfo>[]>(() => [
+    { key: "id", label: "ID", value: r => r.id, type: "number" },
+    { key: "title", label: "Title", value: r => r.title, filterable: true },
+    { key: "model", label: "Model", value: r => r.modelName ?? "", filterable: true },
+    { key: "variant", label: "Variant", value: r => r.variantName ?? "All Variants", filterable: true },
+    { key: "colour", label: "Colour", value: r => r.colourName ?? "All Colours", filterable: true },
+    { key: "file", label: "File", value: r => r.originalFileName, filterText: r => (r.fileType === "pdf" ? "PDF" : "Excel"), filterable: true },
+    { key: "uploaded", label: "Uploaded", value: r => r.uploadedAt, type: "date", searchable: false },
+    { key: "status", label: "Status", value: r => statusText(r.isActive), filterable: true },
+  ], []);
+  const table = useTableState(items, cols, { initialSort: { key: "model", dir: "asc" } });
+
+  const FileBadge = ({ m }: { m: ColourMatrixInfo }) => (
+    <span className={`am-file-badge am-file-badge--${m.fileType === "pdf" ? "pdf" : "xls"}`}>
+      {m.fileType === "pdf" ? <FaFilePdf /> : <FaFileExcel />}
+      <span className="am-file-badge__name" title={m.originalFileName}>{m.originalFileName}</span>
+      <span className="am-file-badge__size">{formatFileSize(m.fileSize)}</span>
+    </span>
+  );
+
+  return (
+    <div className="am-section">
+      {viewing && <ColourMatrixViewer matrix={viewing} onClose={() => setViewing(null)} />}
+
+      <div className="am-form-card">
+        <div className="am-form-card__title">Upload Colour Matrix</div>
+        <p className="am-form-card__help">
+          <FaInfoCircle /> Dependency: Model → Variant → Colour. Leave Variant / Colour empty when the matrix covers the whole model.
+          Excel (.xlsx) or PDF, up to {MATRIX_MAX_MB} MB. It is shown on the Assembly Catalogue page, where customers can view and download it.
+        </p>
+        <div className="am-form-grid am-form-grid--matrix">
+          <SelectField label="Model *" value={form.modelId || ""} options={modelOpts}
+            onChange={v => setForm(p => ({ ...p, modelId: +v, variantId: 0, colourId: 0 }))} />
+          <SelectField label="Variant" value={form.variantId || ""} disabled={!form.modelId}
+            placeholder={form.modelId ? "— All variants —" : "Select a model first"} options={variantOptsFor(form.modelId)}
+            onChange={v => setForm(p => ({ ...p, variantId: +v, colourId: 0 }))} />
+          <SelectField label="Colour" value={form.colourId || ""} disabled={!form.modelId}
+            placeholder={form.modelId ? "— All colours —" : "Select a model first"} options={colourOptsFor(form.modelId, form.variantId)}
+            onChange={v => setForm(p => ({ ...p, colourId: +v }))} />
+          <Field label="Title (optional)" value={form.title} placeholder="e.g. C12 MAX R colour matrix"
+            onChange={v => setForm(p => ({ ...p, title: v }))} />
+          <div className="am-field">
+            <label className="am-field__label">File * (.xlsx / .pdf)</label>
+            <input key={fileKey} className="am-field__input am-field__file" type="file" accept={MATRIX_ACCEPT}
+              onChange={e => { const f = e.target.files?.[0] ?? null; const p = checkMatrixFile(f); if (p) { err(p); e.target.value = ""; setFile(null); } else setFile(f); }} />
+            {file && <span className="am-field__hint">{file.name} · {formatFileSize(file.size)}</span>}
+          </div>
+        </div>
+        <div className="am-form-actions">
+          <button className="am-btn am-btn--success am-btn--icon" onClick={upload} disabled={uploading}>
+            <FaUpload /> {uploading ? `Uploading… ${progress}%` : "Upload Colour Matrix"}
+          </button>
+          {uploading && <div className="am-progress"><div className="am-progress__bar" style={{ width: `${progress}%` }} /></div>}
+        </div>
+      </div>
+
+      <TableToolbar table={table} placeholder="Search title, model, variant, colour or file name…" statusKey="status" />
+      <div className="am-table-wrap">
+        <table className="am-table">
+          <thead><tr>
+            <HeaderCell table={table} colKey="id" width={70} />
+            <HeaderCell table={table} colKey="title" />
+            <HeaderCell table={table} colKey="model" />
+            <HeaderCell table={table} colKey="variant" />
+            <HeaderCell table={table} colKey="colour" />
+            <HeaderCell table={table} colKey="file" />
+            <HeaderCell table={table} colKey="uploaded" width={120} />
+            <HeaderCell table={table} colKey="status" width={130} />
+            <th style={{ width: 210 }}>Actions</th>
+          </tr></thead>
+          <tbody>
+            {loading ? <LoadingRow colSpan={9} /> : <EmptyRow table={table} colSpan={9} entity="colour matrices" />}
+            {!loading && table.pageRows.map(m => (
+              edit?.id === m.id ? (
+                <tr key={m.id} className="am-table__edit-row">
+                  <td>#{m.id}</td>
+                  <td><input className="am-inline-input" value={edit.title} placeholder="Title" autoFocus
+                    onChange={e => setEdit(p => p && ({ ...p, title: e.target.value }))} /></td>
+                  <td>
+                    <select className="am-inline-select" value={edit.modelId || ""}
+                      onChange={e => setEdit(p => p && ({ ...p, modelId: +e.target.value, variantId: 0, colourId: 0 }))}>
+                      <option value="">— Model —</option>
+                      {modelOpts.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <select className="am-inline-select" value={edit.variantId || ""} disabled={!edit.modelId}
+                      onChange={e => setEdit(p => p && ({ ...p, variantId: +e.target.value, colourId: 0 }))}>
+                      <option value="">All Variants</option>
+                      {variantOptsFor(edit.modelId).map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <select className="am-inline-select" value={edit.colourId || ""} disabled={!edit.modelId}
+                      onChange={e => setEdit(p => p && ({ ...p, colourId: +e.target.value }))}>
+                      <option value="">All Colours</option>
+                      {colourOptsFor(edit.modelId, edit.variantId).map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <FileBadge m={m} />
+                    <label className="am-replace-file">
+                      Replace file:
+                      <input type="file" accept={MATRIX_ACCEPT} onChange={e => setEditFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                  </td>
+                  <td>{formatDate(new Date(m.uploadedAt))}</td>
+                  <td><StatusToggle active={m.isActive} busy={!!busy[m.id]} onChange={nv => void setStatus(m, nv)} /></td>
+                  <td className="am-table__actions">
+                    <button className="am-btn am-btn--success am-btn--xs" onClick={save} disabled={!!busy[m.id]}><FaCheck /> Save</button>
+                    <button className="am-btn am-btn--ghost am-btn--xs" onClick={() => { setEdit(null); setEditFile(null); }} title="Cancel"><FaTimes /></button>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={m.id} className={m.isActive ? "" : "dt-row--inactive"}>
+                  <td><span className="am-id">#{m.id}</span></td>
+                  <td className="am-td--name"><strong>{m.title}</strong></td>
+                  <td><span className="am-badge">{m.modelName ?? modelLabel(m.modelId)}</span></td>
+                  <td><span className="am-badge am-badge--teal">{m.variantName ?? variantLabel(m.variantId)}</span></td>
+                  <td><span className="am-badge am-badge--pink">{m.colourName ?? colourLabel(m.colourId)}</span></td>
+                  <td><FileBadge m={m} /></td>
+                  <td>
+                    {formatDate(new Date(m.uploadedAt))}
+                    {m.uploadedBy && <div className="am-muted">{m.uploadedBy}</div>}
+                  </td>
+                  <td><StatusToggle active={m.isActive} busy={!!busy[m.id]} onChange={nv => void setStatus(m, nv)} /></td>
+                  <td className="am-table__actions">
+                    <button className="am-btn am-btn--view am-btn--xs" onClick={() => setViewing(m)}><FaEye /> View</button>
+                    <button className="am-btn am-btn--ghost am-btn--xs" onClick={() => void download(m)} disabled={!!busy[m.id]} title="Download"><FaDownload /></button>
+                    <button className="am-btn am-btn--edit am-btn--xs"
+                      onClick={() => { setEdit({ id: m.id, modelId: m.modelId, variantId: m.variantId ?? 0, colourId: m.colourId ?? 0, title: m.title }); setEditFile(null); }}>
+                      <FaEdit /> Edit
+                    </button>
+                  </td>
+                </tr>
+              )
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Pagination table={table} />
+    </div>
+  );
+}
 
 export default AdminModules;

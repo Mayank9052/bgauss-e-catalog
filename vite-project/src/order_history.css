@@ -2,7 +2,7 @@
 
 .oh-wrapper {
   background: #f1f3f6;
-  min-height: 100vh;
+  min-height: calc(100vh * var(--vz, 1));
   font-family: "Segoe UI", Arial, sans-serif;
 }
 

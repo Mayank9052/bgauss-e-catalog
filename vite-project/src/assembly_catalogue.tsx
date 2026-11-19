@@ -10,6 +10,7 @@ import type { Assembly } from "./services/api";
 import { FaSearchPlus, FaTimes, FaRedo, FaMapMarkerAlt } from "react-icons/fa";
 import CatalogueDownload from "./components/catalogue/CatalogueDownload";
 import type { CatalogueScope } from "./components/catalogue/CatalogueDownload";
+import ColourMatrixButton from "./components/colourMatrix/ColourMatrixButton";
 import { resolveMediaUrl } from "./utils/media";
 
 interface VehicleSearchState {
@@ -215,7 +216,12 @@ const AssemblyCatalogue = () => {
       <main className="assembly-content">
         <div className="ac-head">
           <h2>Assembly Catalogue</h2>
-          {Number.isFinite(modelId) && modelId > 0 && <CatalogueDownload scopes={pdfScopes} />}
+          {Number.isFinite(modelId) && modelId > 0 && (
+            <div className="ac-head__actions">
+              <ColourMatrixButton modelId={modelId} variantId={variantId} colourId={colourId} />
+              <CatalogueDownload scopes={pdfScopes} />
+            </div>
+          )}
         </div>
 
         <div className="content-search-bar ac-search">
@@ -370,11 +376,11 @@ const AssemblyCatalogue = () => {
             style={{ position: "absolute", top: 18, right: 24, background: "none", border: "none",
               color: "#fff", fontSize: 28, cursor: "pointer", lineHeight: 1 }}>✕</button>
           <div className="zoom-container" onClick={e => e.stopPropagation()} onWheel={handleWheel}
-            style={{ overflow: "hidden", maxWidth: "90vw", maxHeight: "90vh", cursor: scale > 1 ? "zoom-out" : "zoom-in" }}>
+            style={{ overflow: "hidden", maxWidth: "calc(90vw * var(--vz, 1))", maxHeight: "calc(90vh * var(--vz, 1))", cursor: scale > 1 ? "zoom-out" : "zoom-in" }}>
             <img src={zoomImage} alt="Zoomed assembly"
               style={{ transform: `scale(${scale})`, transformOrigin: origin,
                 transition: "transform 0.1s ease", display: "block",
-                maxWidth: "90vw", maxHeight: "90vh", userSelect: "none" }} />
+                maxWidth: "calc(90vw * var(--vz, 1))", maxHeight: "calc(90vh * var(--vz, 1))", userSelect: "none" }} />
           </div>
           <div style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)",
             color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
@@ -386,4 +392,4 @@ const AssemblyCatalogue = () => {
   );
 };
 
-export default AssemblyCatalogue;
+export default AssemblyCatalogue;

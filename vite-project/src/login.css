@@ -1,6 +1,6 @@
 /* ===== BACKGROUND ===== */
 .login-wrapper {
-  min-height: 100vh; /* changed from height to min-height */
+  min-height: calc(100vh * var(--vz, 1)); /* changed from height to min-height */
   width: 100%;
   background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
   display: flex;
@@ -142,7 +142,7 @@
   .login-card {
     flex-direction: column;
     height: auto;
-    min-height: 100vh;
+    min-height: calc(100vh * var(--vz, 1));
     border-radius: 0;
     max-width: 100%;
   }
@@ -191,4 +191,4 @@
   .login-right {
     flex: 0 0 140px;
   }
-}
+}

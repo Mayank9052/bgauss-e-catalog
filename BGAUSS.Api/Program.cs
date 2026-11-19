@@ -126,13 +126,23 @@ app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Serve static files from wwwroot (images, CSS, JS)
-app.UseStaticFiles();
+// Serve static files from wwwroot (images, CSS, JS).
+// index.html is never cached, so a new deployment is picked up on the next page load
+// (the JS/CSS files have content hashes in their names and can be cached safely).
+var noCacheIndex = new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        if (string.Equals(ctx.File.Name, "index.html", StringComparison.OrdinalIgnoreCase))
+            ctx.Context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+    }
+};
+app.UseStaticFiles(noCacheIndex);
 
 // API controllers
 app.MapControllers();
 
 // SPA fallback — serves index.html for all non-API routes
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", noCacheIndex);
 
-app.Run();
+app.Run();

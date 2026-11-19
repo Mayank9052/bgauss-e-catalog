@@ -1,6 +1,6 @@
 /* ===== GLOBAL ===== */
 .epc-wrapper {
-  min-height: 100vh;
+  min-height: calc(100vh * var(--vz, 1));
   background: linear-gradient(135deg, #e8f0f5, #cbd6df);
   font-family: "Segoe UI", sans-serif;
 }
@@ -482,4 +482,4 @@
   .logo-text   { font-size: 13px; }
   .sub-title   { font-size: 9px; }
   .modern-card { padding: 18px 14px; }
-}
+}

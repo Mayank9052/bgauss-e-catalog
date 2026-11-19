@@ -21,6 +21,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<AssemblyHotspot> AssemblyHotspots { get; set; }
 
+    public virtual DbSet<ColourMatrix> ColourMatrices { get; set; }
+
     public virtual DbSet<Cart> Carts { get; set; }
 
     public virtual DbSet<CartItem> CartItems { get; set; }
@@ -68,6 +70,17 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.AssemblyId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_AssemblyHotspots_Assemblies");
+        });
+
+        modelBuilder.Entity<ColourMatrix>(entity =>
+        {
+            entity.Property(e => e.UploadedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.HasOne(d => d.Model).WithMany().HasForeignKey(d => d.ModelId)
+                .OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_ColourMatrices_VehicleModels");
+            entity.HasOne(d => d.Variant).WithMany().HasForeignKey(d => d.VariantId)
+                .OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_ColourMatrices_VehicleVariants");
+            entity.HasOne(d => d.Colour).WithMany().HasForeignKey(d => d.ColourId)
+                .OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_ColourMatrices_VehicleColours");
         });
 
         modelBuilder.Entity<AssemblyPart>(entity =>

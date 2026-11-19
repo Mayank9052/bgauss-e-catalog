@@ -1,6 +1,6 @@
 /* ===== PAGE ===== */
 .assembly-page {
-  min-height: 100vh;
+  min-height: calc(100vh * var(--vz, 1));
   background: #f4f8fb;
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -186,7 +186,7 @@
 .image-modal {
   position: fixed;
   top: 0; left: 0;
-  width: 100vw; height: 100vh;
+  width: calc(100vw * var(--vz, 1)); height: calc(100vh * var(--vz, 1));
   background: rgba(0,0,0,0.85);
   display: flex;
   align-items: center;
@@ -197,8 +197,8 @@
 
 .zoom-container {
   position: relative;
-  max-width: 80vw;
-  max-height: 80vh;
+  max-width: calc(80vw * var(--vz, 1));
+  max-height: calc(80vh * var(--vz, 1));
   background: white;
   border-radius: 12px;
   padding: 25px;
@@ -210,7 +210,7 @@
 
 .zoomed-image {
   max-width: 100%;
-  max-height: 70vh;
+  max-height: calc(70vh * var(--vz, 1));
   object-fit: contain;
   transition: transform 0.15s ease;
 }
@@ -236,7 +236,7 @@
   .nav-search   { max-width: 100%; }
   .assembly-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
   .assembly-image { height: 120px; }
-  .zoom-container { max-width: 90vw; }
+  .zoom-container { max-width: calc(90vw * var(--vz, 1)); }
 }
 
 @media (max-width: 480px) {
@@ -253,8 +253,8 @@
   .assembly-image { height: 100px; }
   .assembly-card  { padding: 8px; border-radius: 10px; }
   .assembly-name  { font-size: 13px; margin-top: 8px; }
-  .zoom-container { max-width: 95vw; padding: 12px; border-radius: 8px; }
-  .zoomed-image   { max-height: 60vh; }
+  .zoom-container { max-width: calc(95vw * var(--vz, 1)); padding: 12px; border-radius: 8px; }
+  .zoomed-image   { max-height: calc(60vh * var(--vz, 1)); }
 }
 
 @media (max-width: 360px) {
@@ -266,6 +266,7 @@
 }
 /* ── Catalogue enhancements (17.11.2026) ───────────────────── */
 .ac-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ac-head__actions { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
 .ac-search { position: relative; }
 .ac-search__clear {
   position: absolute; right: 10px; top: 50%; transform: translateY(-50%);

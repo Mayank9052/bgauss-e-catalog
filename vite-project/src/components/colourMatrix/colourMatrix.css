@@ -1,0 +1,103 @@
+/* colourMatrix.css — Colour Matrix button (catalogue pages) + full-screen viewer */
+
+/* ── Button ───────────────────────────────────────── */
+.cmb { position: relative; display: inline-flex; flex-direction: column; align-items: flex-end; }
+.cmb__split { display: inline-flex; }
+.cmb__btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px;
+  border: none; border-radius: 9px; background: #0f766e; color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(15,118,110,.25); transition: background .15s, transform .15s;
+}
+.cmb__btn:hover:not(:disabled) { background: #115e59; transform: translateY(-1px); }
+.cmb__btn:disabled { opacity: .6; cursor: wait; }
+.cmb__split .cmb__btn:first-child { border-radius: 9px 0 0 9px; }
+.cmb__split .cmb__btn--icon { border-radius: 0 9px 9px 0; padding: 0 12px; border-left: 1px solid rgba(255,255,255,.35); }
+.cmb__count { background: rgba(255,255,255,.25); border-radius: 10px; padding: 0 7px; font-size: 12px; line-height: 18px; }
+.cmb__chev { font-size: 11px; }
+.cmb__menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 900; width: min(420px, calc(92vw * var(--vz, 1)));
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px;
+  box-shadow: 0 14px 40px rgba(15,23,42,.18);
+}
+.cmb__item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; }
+.cmb__item:hover { background: #f1f5f9; }
+.cmb__item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cmb__item-text strong { font-size: 13px; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmb__item-text span { font-size: 12px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmb__ico { font-size: 20px; flex-shrink: 0; }
+.cmb__ico--xls { color: #15803d; }
+.cmb__ico--pdf { color: #b91c1c; }
+.cmb__mini {
+  border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 7px;
+  height: 30px; padding: 0 10px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.cmb__mini:hover:not(:disabled) { border-color: #0f766e; color: #0f766e; }
+.cmb__error { margin-top: 4px; font-size: 12px; color: #b91c1c; }
+
+/* ── Viewer ───────────────────────────────────────── */
+.cmv-overlay {
+  position: fixed; inset: 0; z-index: 36000; background: rgba(15,23,42,.6);
+  display: flex; align-items: stretch; justify-content: center; padding: 18px;
+}
+.cmv {
+  display: flex; flex-direction: column; width: 100%; max-width: 1600px; background: #fff;
+  border-radius: 14px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.35);
+  font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a;
+}
+.cmv__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; background: #0b3c4d; color: #fff;
+}
+.cmv__title { display: flex; flex-direction: column; min-width: 0; }
+.cmv__title strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmv__title span { font-size: 12px; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmv__tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cmv__btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; min-width: 34px; justify-content: center;
+  padding: 0 10px; border: 1px solid rgba(255,255,255,.3); border-radius: 8px;
+  background: rgba(255,255,255,.08); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.cmv__btn:hover:not(:disabled) { background: rgba(255,255,255,.18); }
+.cmv__btn--on { background: rgba(255,255,255,.25); }
+.cmv__btn--primary { background: #0f766e; border-color: #0f766e; }
+.cmv__btn--primary:hover:not(:disabled) { background: #115e59; }
+.cmv__zoom { min-width: 44px; text-align: center; font-size: 12.5px; font-weight: 700; }
+.cmv__find {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 8px 0 10px;
+  background: #fff; color: #475569; border-radius: 8px; margin-right: 6px;
+}
+.cmv__find input { border: none; outline: none; width: 190px; font-size: 13px; color: #0f172a; background: transparent; }
+.cmv__find button { border: none; background: none; color: #94a3b8; cursor: pointer; display: inline-flex; }
+.cmv__find-count { font-size: 12px; font-weight: 700; color: #0f766e; white-space: nowrap; }
+.cmv__sheets { display: flex; gap: 4px; padding: 6px 12px 0; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; overflow-x: auto; }
+.cmv__sheet {
+  border: 1px solid #e2e8f0; border-bottom: none; background: #e2e8f0; color: #334155; cursor: pointer;
+  padding: 6px 14px; border-radius: 8px 8px 0 0; font-size: 12.5px; font-weight: 600; white-space: nowrap;
+}
+.cmv__sheet--on { background: #fff; color: #0b3c4d; }
+.cmv__body { flex: 1; overflow: auto; padding: 12px; background: #f8fafc; }
+.cmv__table { border-collapse: collapse; table-layout: fixed; background: #fff; font-family: Calibri, 'Segoe UI', Arial, sans-serif; }
+.cmv-cell {
+  border: 1px solid #d0d7de; padding: 2px 5px; overflow: hidden; text-overflow: ellipsis; line-height: 1.25;
+}
+.cmv-cell--img { text-align: center !important; vertical-align: middle !important; padding: 3px; }
+.cmv-cell--img img { max-width: 100%; object-fit: contain; display: inline-block; }
+.cmv-cell--hit { outline: 3px solid #f59e0b; outline-offset: -3px; background-image: linear-gradient(rgba(253,224,71,.45), rgba(253,224,71,.45)); }
+.cmv__pdf { width: 100%; height: 100%; min-height: calc(70vh * var(--vz, 1)); border: none; background: #fff; border-radius: 6px; }
+.cmv__msg { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 240px; color: #475569; font-size: 14px; text-align: center; }
+.cmv__msg--error { color: #b91c1c; }
+.cmv__note { font-size: 12.5px; color: #64748b; margin: 10px 2px 0; }
+.cmv__spinner {
+  width: 22px; height: 22px; border-radius: 50%; border: 3px solid #cbd5e1; border-top-color: #0f766e;
+  animation: cmv-spin .8s linear infinite; display: inline-block;
+}
+.cmv__spinner--sm { width: 14px; height: 14px; border-width: 2px; }
+@keyframes cmv-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 700px) {
+  .cmv-overlay { padding: 0; }
+  .cmv { border-radius: 0; }
+  .cmv__find input { width: 120px; }
+  .cmb__btn { height: 36px; padding: 0 12px; font-size: 13px; }
+}

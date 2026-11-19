@@ -8,3 +8,23 @@ body {
   background: #cfd8df;
   font-family: "Segoe UI", sans-serif;
 }
+/* ─────────────────────────────────────────────────────────────────────
+   Comfortable density on laptop screens (18.11.2026)
+   At 100% browser zoom with Windows display scaling 125–150%, the page is
+   only 1100–1600 CSS px wide and everything looks oversized. On those widths
+   the whole app is scaled down so 100% looks the same as 80% / 90% zoom.
+   Wider screens, tablets and phones are not affected, and the user's own
+   browser zoom still works on top of this.
+   --vz compensates vh / vw units (CSS zoom would otherwise shrink them too);
+   use calc(Nvh * var(--vz, 1)) instead of plain Nvh in stylesheets.
+   ───────────────────────────────────────────────────────────────────── */
+@supports (zoom: 1) {
+  :root { --app-zoom: 1; --vz: 1; }
+  @media (min-width: 1100px) and (max-width: 1399.98px) {
+    :root { --app-zoom: 0.8; --vz: 1.25; }
+  }
+  @media (min-width: 1400px) and (max-width: 1599.98px) {
+    :root { --app-zoom: 0.9; --vz: 1.1111; }
+  }
+  html { zoom: var(--app-zoom); }
+}

@@ -5,7 +5,7 @@ import "./admin.css"
 import logo from "./assets/logo.jpg"
 import { getRoleFromToken } from "./auth"
 import AccountMenu from "./components/AccountMenu"
-import { FaHome, FaPhoneAlt, FaShoppingCart } from "react-icons/fa"
+import { FaHome, FaPhoneAlt, FaShoppingCart, FaKey, FaTrash } from "react-icons/fa"
 
 interface User {
   id: number
@@ -53,6 +53,10 @@ const AdminUsers = () => {
 
   /* ── Create user ── */
   const createUser = async () => {
+    if (!newUser.username.trim() || !newUser.password) {
+      alert("Username and password are required")
+      return
+    }
     try {
       await axios.post("/admin/users", newUser)
       setShowCreate(false)
@@ -133,30 +137,43 @@ const AdminUsers = () => {
 
           {/* ── Create-user form (shown inline when showCreate is true) ── */}
           {showCreate && (
-            <div className="admin-create-form">
-              <h3>Create New User</h3>
-              <input
-                type="text"
-                placeholder="Username"
-                value={newUser.username}
-                onChange={e => setNewUser(prev => ({ ...prev, username: e.target.value }))}
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={newUser.password}
-                onChange={e => setNewUser(prev => ({ ...prev, password: e.target.value }))}
-              />
-              <select
-                value={newUser.role}
-                onChange={e => setNewUser(prev => ({ ...prev, role: e.target.value }))}
-              >
-                <option value="User">User</option>
-                <option value="Admin">Admin</option>
-              </select>
+            <div className="admin-create-form" role="form" aria-label="Create new user">
+              <h3 className="admin-create-form__title">Create New User</h3>
+              <div className="admin-create-form__grid">
+                <label className="admin-field">
+                  <span>Username *</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. dealer.pune"
+                    autoComplete="off"
+                    value={newUser.username}
+                    onChange={e => setNewUser(prev => ({ ...prev, username: e.target.value }))}
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Password *</span>
+                  <input
+                    type="password"
+                    placeholder="Enter password"
+                    autoComplete="new-password"
+                    value={newUser.password}
+                    onChange={e => setNewUser(prev => ({ ...prev, password: e.target.value }))}
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Role</span>
+                  <select
+                    value={newUser.role}
+                    onChange={e => setNewUser(prev => ({ ...prev, role: e.target.value }))}
+                  >
+                    <option value="User">User</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                </label>
+              </div>
               <div className="admin-create-form__actions">
-                <button className="create-user-btn" onClick={() => void createUser()}>Save</button>
-                <button className="back-btn" onClick={() => setShowCreate(false)}>Cancel</button>
+                <button className="create-user-btn" onClick={() => void createUser()}>Save User</button>
+                <button className="back-btn admin-btn--ghost" onClick={() => setShowCreate(false)}>Cancel</button>
               </div>
             </div>
           )}
@@ -181,8 +198,10 @@ const AdminUsers = () => {
                       </span>
                     </td>
                     <td>
-                      <button className="icon-btn lock" onClick={() => void changePassword(user.id)}>🔒</button>
-                      <button className="icon-btn delete" onClick={() => void deleteUser(user.id)}>🗑</button>
+                      <button className="icon-btn lock" title="Change password" aria-label={`Change password for ${user.username}`}
+                        onClick={() => void changePassword(user.id)}><FaKey /></button>
+                      <button className="icon-btn delete" title="Delete user" aria-label={`Delete ${user.username}`}
+                        onClick={() => void deleteUser(user.id)}><FaTrash /></button>
                     </td>
                   </tr>
                 ))}
@@ -196,4 +215,4 @@ const AdminUsers = () => {
   )
 }
 
-export default AdminUsers
+export default AdminUsers

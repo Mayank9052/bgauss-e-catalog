@@ -6,7 +6,7 @@
 
 .od-wrapper {
   background: #f1f3f6;
-  min-height: 100vh;
+  min-height: calc(100vh * var(--vz, 1));
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
   color: #1a1a2e;
 }
@@ -373,4 +373,4 @@
   .od-item__subtotal { font-size: 14px; }
   .od-nav-orders-btn span { display: none; }
   .od-nav-orders-btn { padding: 6px 10px; }
-}
+}
